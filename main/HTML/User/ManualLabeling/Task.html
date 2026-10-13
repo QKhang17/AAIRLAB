@@ -50,11 +50,11 @@
             <!-- <span class="text-on-surface-variant"> : </span>  -->
             <!-- Progress Bar -->
             <div id="sessionProgressTrack" class="w-48 bg-surface-container-highest h-2 rounded-full overflow-hidden"
-                role="progressbar" aria-label="Tiến độ tài liệu trong session" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                role="progressbar" aria-label="Document progress in session" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                 <div id="sessionProgressBar" class="h-full aair-gradient rounded-full transition-all duration-500 ease-out" style="width:0%"> </div>
             </div>
             <!-- Percentage -->
-            <span id="sessionProgressText" class="text-label-sm font-bold text-primary whitespace-nowrap">0/0 tài liệu · 0%</span>
+                <span id="sessionProgressText" class="text-label-sm font-bold text-primary whitespace-nowrap">0/0 documents · 0%</span>
         </div>
 
 
@@ -66,8 +66,8 @@
                 <option value="Gemini">Gemini</option>
             </select>
 
-            <button type="button" class="manual-submit-button px-4 py-2 rounded-lg text-[12px] shadow-sm" title="Hãy xác nhận tất cả field trước khi nộp bài">Nộp bài</button>
-            <button type="button" class="manual-run-ai-button px-4 py-2 rounded-lg text-[12px] shadow-sm">Chạy AI</button>
+            <button type="button" class="manual-submit-button px-4 py-2 rounded-lg text-[12px] shadow-sm" title="Confirm all fields before submitting the task" aria-label="Submit Task">Submit Task</button>
+            <button type="button" class="manual-run-ai-button px-4 py-2 rounded-lg text-[12px] shadow-sm" aria-label="Run AI">Run AI</button>
 
 
         </div>
@@ -152,13 +152,8 @@
 
                 <div class="flex items-center gap-2">
 
-                    <span class="material-symbols-outlined text-primary">
-                        article
-                    </span>
-
-                    <h2 class="text-sm font-semibold text-on-surface">
-                        Chi tiết tài liệu
-                    </h2>
+                        <span class="material-symbols-outlined text-primary">article</span>
+                        <h2 class="text-sm font-semibold text-on-surface">Document Details</h2>
 
                 </div>
 
@@ -176,7 +171,7 @@
                 <div>
 
                     <h3 class="text-sm font-semibold text-on-surface mb-3">
-                            Thông tin tài liệu
+                            Document Info
                     </h3>
 
                     <div class="space-y-3">
@@ -337,7 +332,7 @@
                     <div class="flex items-center justify-between mb-3">
 
                         <h3 class="text-sm font-semibold text-on-surface">
-                            Thông tin trích xuất
+                            Extracted Information
                         </h3>
 
                     </div>

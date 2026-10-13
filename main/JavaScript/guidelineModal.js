@@ -1,15 +1,20 @@
 window.AAIRGuidelineModal = (() => {
     const PDF_URL = '/resource/guidelines/aair-labeling-guidelines.pdf#page=1&zoom=100';
     function init() {
-        if (document.querySelector('[data-guideline-trigger]')) return;
+        const existingTrigger = document.querySelector('[data-guideline-trigger]');
+        if (document.querySelector('.guideline-modal') && existingTrigger) return;
         document.querySelectorAll('a[href*="aair-labeling-guidelines.pdf"]').forEach(link => link.remove());
         const account = document.querySelector('.review-account, .ra-account, .aa-account, header:first-of-type > div:last-child');
-        if (!account) return;
-        const button = document.createElement('button');
-        button.type = 'button'; button.dataset.guidelineTrigger = '';
-        button.className = 'guideline-icon-button'; button.title = 'Mở tài liệu hướng dẫn'; button.setAttribute('aria-label', 'Mở tài liệu hướng dẫn');
-        button.innerHTML = '<span class="material-symbols-outlined">menu_book</span>';
-        account.insertBefore(button, account.firstChild);
+        const button = existingTrigger || (() => {
+            if (!account) return null;
+            const created = document.createElement('button');
+            created.type = 'button'; created.dataset.guidelineTrigger = '';
+            created.className = 'guideline-icon-button'; created.title = 'Open labeling guidelines'; created.setAttribute('aria-label', 'Open labeling guidelines');
+            created.innerHTML = '<span class="material-symbols-outlined">menu_book</span>';
+            account.insertBefore(created, account.firstChild);
+            return created;
+        })();
+        if (!button) return;
 
         const modal = document.createElement('div');
         modal.className = 'guideline-modal'; modal.hidden = true;

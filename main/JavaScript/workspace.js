@@ -7,7 +7,7 @@
     const page = location.pathname.split('/').pop();
     const request = AAIR.request;
     const tableStyles = new WeakMap();
-    const taskSuccessNotices = new Set(['Lưu dữ liệu thành công.', 'Submit task thành công.']);
+    const taskSuccessNotices = new Set(['Lưu dữ liệu thành công.', 'Data saved successfully.', 'Submit task thành công.', 'Task submitted successfully.']);
     let noticeTimer;
     let user;
     function notice(message, error = false) {
@@ -503,7 +503,7 @@
         const save=buttons(/^Create$/,modal)[0];
         const reset=()=>{editing=null;username.value='';username.disabled=false;email.value='';email.disabled=false;role.value='MANAGER';save.textContent='Create';$('h3',modal).textContent='Create User';};
         function edit(row){reset();editing=row;username.value=row.username;username.disabled=true;email.value=row.email||'';email.disabled=true;if(![...role.options].some(o=>o.value===row.role))role.add(new Option(row.role,row.role));role.value=row.role;save.textContent='Save';$('h3',modal).textContent='Edit User';modalOpen();}
-        bindText(/New Manager|New User/,()=>{reset();modalOpen();});
+        bindText(/^New$|New Manager|New User/,()=>{reset();modalOpen();});
         bind(save,async()=>{
             const isEditing=Boolean(editing);
             const json=editing?{role:role.value,active:editing.is_active}:{username:required(username,'tên tài khoản'),email:required(email,'Gmail'),role:role.value};
@@ -560,11 +560,6 @@
         const modelSection=typeList.parentElement;
         $('p',modelSection).textContent='Session Type';
         $$('p',modelSection)[1].textContent='Chọn gán nhãn AI, thủ công hoặc cả hai.';
-        const assistanceSection=document.createElement('div');
-        assistanceSection.className='space-y-2';
-        assistanceSection.innerHTML='<label class="block text-[11px] font-semibold text-on-surface">AI assistance</label><select id="taskAssistanceMode" class="w-full rounded-lg border border-outline-variant bg-white px-3 py-2 text-[12px]"><option value="NONE">Không dùng AI hỗ trợ</option><option value="AI_ASSISTED">Có AI hỗ trợ</option></select><p class="text-[10px] text-on-surface-variant">Dùng để so sánh thời gian làm thủ công và có AI hỗ trợ.</p>';
-        modelSection.after(assistanceSection);
-        const assistanceMode=$('#taskAssistanceMode',assistanceSection);
         const modelSearch=$('input[placeholder="Search AI models..."]',modal);modelSearch.parentElement.hidden=true;
         checkList(memberList,assignees.map(u=>({id:u.id,name:`${u.username} — ${u.role}`})),'members');
         const userSection=memberList.parentElement;
@@ -798,15 +793,12 @@
                 previousType=type;
             }
             if(type==='AI'){
-                assistanceMode.value='AI_ASSISTED';
-                assistanceMode.disabled=true;
                 manualAssignContainer.hidden=true;
                 aiAssignContainer.hidden=false;
                 if(userSearchRow)userSearchRow.hidden=true;
                 memberList.hidden=true;
                 syncAiAssignmentOptions();
             }else{
-                assistanceMode.disabled=false;
                 manualAssignContainer.hidden=false;
                 aiAssignContainer.hidden=true;
                 if(userSearchRow)userSearchRow.hidden=true;
@@ -839,7 +831,6 @@
             editing=null;name.value='';description.value='';dueDate.value='';name.disabled=false;description.disabled=false;
             $$('input',documentList).forEach(i=>i.checked=false);$$('input',memberList).forEach(i=>i.checked=false);
             documentList.parentElement.hidden=false;typeList.parentElement.hidden=false;dueDate.parentElement.parentElement.hidden=false;
-            assistanceSection.hidden=false;assistanceMode.value='NONE';
             m1Select.value='';m2Select.value='';reviewerSelect.value='';
             aiLabelerSelect.value='';aiReviewerSelect.value='';
             const typeInputs=$$('input',typeList);if(typeInputs[0])typeInputs[0].checked=true;
@@ -850,7 +841,6 @@
         const edit=row=>{
             reset();editing=row;name.value=row.name;description.value=row.description||'';name.disabled=true;description.disabled=true;
             documentList.parentElement.hidden=true;typeList.parentElement.hidden=true;dueDate.parentElement.parentElement.hidden=true;
-            assistanceSection.hidden=true;
             manualAssignContainer.hidden=true;aiAssignContainer.hidden=true;if(userSearchRow)userSearchRow.hidden=false;memberList.hidden=false;
             $$('input',memberList).forEach(i=>i.checked=row.members.some(m=>String(m.id)===i.value));save.textContent='Save Members';$('h3',modal).textContent='Assign Users';modalOpen();
         };
@@ -916,7 +906,7 @@
                     manualLabelerIds,
                     aiLabelerId:null,
                     reviewerId:revId,
-                    assistanceMode:assistanceMode.value
+                    assistanceMode:'NONE'
                 };
 
                 await request('/sessions',{method:'POST',json:payload});
@@ -954,7 +944,7 @@
                     manualLabelerIds:[],
                     aiLabelerId:aiId,
                     reviewerId:revId,
-                    assistanceMode:assistanceMode.value
+                    assistanceMode:'AI_ASSISTED'
                 };
 
                 await request('/sessions',{method:'POST',json:payload});
@@ -1200,7 +1190,23 @@
             documentCheckboxes().forEach(checkbox=>{checkbox.classList.toggle('hidden',!selectionMode);checkbox.checked=selectionMode;});
             updateSelection();
         });
+        const dotStateKey=taskId=>`aair:document-dot-state:${taskId}`;
+        const dotStateLabel={saved:'Saved','ai-pending':'AI run – not saved',none:'Not run yet'};
+        const readDocumentSaveState=taskId=>{try{return localStorage.getItem(dotStateKey(taskId))||'none';}catch{return'none';}};
+        const setDocumentSaveState=(taskId,state)=>{
+            const next=state||'none';
+            try{localStorage.setItem(dotStateKey(taskId),next);}catch{}
+            const dot=documentButtons.get(Number(taskId))?.querySelector('.document-status-dot');
+            if(dot){dot.dataset.saveState=next;dot.title=dotStateLabel[next]||dotStateLabel.none;}
+        };
+        const addDocumentStatusLegend=sidebar=>{
+            if(!sidebar||sidebar.querySelector('.document-status-legend'))return;
+            const legend=document.createElement('div');legend.className='document-status-legend';
+            legend.innerHTML='<span class="document-status-legend__item document-status-legend__item--saved"><i></i>Saved</span><span class="document-status-legend__item document-status-legend__item--pending"><i></i>AI run, not saved</span><span class="document-status-legend__item document-status-legend__item--none"><i></i>Not run yet</span>';
+            sidebar.append(legend);
+        };
         if(container){
+            addDocumentStatusLegend(container.closest('aside'));
             container.replaceChildren();
             for(const row of tasks){
                 const entry=document.createElement('div');entry.className='flex w-full items-center gap-2 px-2';
@@ -1211,40 +1217,28 @@
                 b.replaceChildren();
                 const icon=document.createElement('span');icon.className='material-symbols-outlined text-[16px]';icon.textContent='picture_as_pdf';
                 const label=document.createElement('span');label.className='truncate';label.textContent=row.document_title;
-<<<<<<< HEAD
-                b.append(icon,label);b.title=row.document_title;b.setAttribute('aria-label',`Mở tài liệu ${row.document_title}`);
+                const states={PENDING:'Pending',IN_PROGRESS:'Pending',SUBMITTED:'Completed',APPROVED:'Completed',REJECTED:'Error'};
+                const statusLabel=states[row.status]||'Pending';
+                const statusDot=document.createElement('span');statusDot.className='document-status-dot';const savedState=readDocumentSaveState(row.id);statusDot.dataset.saveState=savedState;statusDot.title=dotStateLabel[savedState]||dotStateLabel.none;b.dataset.status=row.status||'PENDING';
+                b.append(icon,label,statusDot);b.title=row.document_title;b.setAttribute('aria-label',`Open document ${row.document_title} - ${statusLabel}`);
                 bind(b,()=>loadTask(row));documentButtons.set(row.id,b);entry.append(checkbox,b);container.append(entry);
             }
         }
         updateSelection();
-        // Reuse the original Term / Definition cards as editable annotation fields.
-        const heading=$$('main h2,main h3').find(h=>text(h)==='Extracted Information');
-        let panel=heading?.parentElement;
-        while(panel && !$('label',panel))panel=panel.parentElement;
-=======
-                const status=document.createElement('span');status.className='document-status';
-                const statusIcon=document.createElement('span');statusIcon.className='material-symbols-outlined';
-                const states={PENDING:['schedule','Chưa làm'],IN_PROGRESS:['edit','Đang làm'],SUBMITTED:['check_circle','Hoàn thành'],APPROVED:['check_circle','Hoàn thành'],REJECTED:['error','Có lỗi']};
-                const [statusName,statusLabel]=states[row.status]||['schedule','Chưa làm'];
-                statusIcon.textContent=statusName;status.append(statusIcon);status.title=statusLabel;b.dataset.status=row.status||'PENDING';
-                b.append(icon,label,status);b.title=row.document_title;b.setAttribute('aria-label',`Mở tài liệu ${row.document_title} - ${statusLabel}`);
-                bind(b,()=>loadTask(row));documentButtons.set(row.id,b);container.append(b);
-            }
-        }
-        // Render each extracted field as a compact review card.
         const heading=$$('main h2,main h3').find(h=>['Extracted Information','Thông tin trích xuất'].includes(text(h)));
         let panel=$('[data-annotation-panel]')||heading?.parentElement;
->>>>>>> c0400a00ec48da9a12cd8761452fdf2e1e35bbe8
         const reviewBodies=$$('main .overflow-y-auto').filter(el=>$('input[type="checkbox"]',el));
         if(!panel)panel=reviewBodies[0];
         if(!panel)throw new Error('Không tìm thấy vùng nhãn của tác vụ.');
-        const labeler=['AI_LABELER','MANUAL_LABELER'].includes(user.role);
+        const normalizedRole=String(user?.role||'').trim().toUpperCase().replace(/[\s-]+/g,'_');
+        const isManualLabeler=normalizedRole==='MANUAL_LABELER';
+        const labeler=['AI_LABELER','MANUAL_LABELER'].includes(normalizedRole);
         let readonly=!labeler;
         const cards=[];
         let pdfPageCount=null,queueAutoSave=()=>{},flushAutoSave=async()=>{};
         const clearCards=()=>{
             cards.length=0;
-            if(heading){const keep=[...panel.children].filter(c=>c===heading||c.classList.contains('annotation-panel-save')||c.contains(heading)||$$('h2,h3',c).some(h=>['Document Information','Thông tin tài liệu'].includes(text(h))));[...panel.children].filter(c=>!keep.includes(c)).forEach(c=>c.remove());}
+            if(heading){const keep=[...panel.children].filter(c=>c===heading||c.classList.contains('annotation-panel-save')||c.contains(heading)||$$('h2,h3',c).some(h=>['Document Information','Document Info','Thông tin tài liệu'].includes(text(h))));[...panel.children].filter(c=>!keep.includes(c)).forEach(c=>c.remove());}
             else panel.replaceChildren();
         };
         function addLabel(row={labelName:'',labelValue:'',sourceLabel:'',sourcePage:null,confidence:null}){
@@ -1261,7 +1255,7 @@
             const editButton=document.createElement('button');editButton.type='button';editButton.className='annotation-icon-button';editButton.title=readonly?'Bấm Mở khóa để chỉnh sửa':'Sửa field';editButton.disabled=readonly;editButton.innerHTML='<span class="material-symbols-outlined">edit</span>';
             const confirmButton=document.createElement('button');confirmButton.type='button';confirmButton.className='annotation-icon-button annotation-icon-button--confirm';confirmButton.title='Xác nhận (Enter)';confirmButton.innerHTML='<span class="material-symbols-outlined">check</span>';
             top.append(labelBlock,termInput,stateBadge,editButton,confirmButton);
-            const valueInput=document.createElement('textarea');valueInput.value=parts.editableValue;valueInput.placeholder='Nhập giá trị...';valueInput.maxLength=20000;valueInput.rows=4;valueInput.setAttribute('aria-label','Giá trị field');valueInput.className='annotation-definition-input';valueInput.disabled=readonly;
+            const valueInput=document.createElement('textarea');valueInput.value=parts.editableValue;valueInput.placeholder='Enter value...';valueInput.maxLength=20000;valueInput.rows=4;valueInput.setAttribute('aria-label','Field value');valueInput.className='annotation-definition-input';valueInput.disabled=readonly;
             const meta=document.createElement('div');meta.className='annotation-field-card__meta';
             const pageInput=document.createElement('input');pageInput.type='number';pageInput.min='1';pageInput.max=String(pdfPageCount||9999);pageInput.step='1';pageInput.required=true;pageInput.value=row.sourcePage==null?'':String(row.sourcePage);pageInput.setAttribute('aria-label','Trang nguồn');pageInput.className='annotation-page-input';pageInput.disabled=readonly;pageInput.hidden=true;
             const pageButton=document.createElement('button');pageButton.type='button';pageButton.className='annotation-page-chip';pageButton.title='Đến trang nguồn trong PDF';
@@ -1273,7 +1267,7 @@
             const hasSavedValue=Boolean(row.labelName||row.labelValue||row.sourcePage);
             const saveState=document.createElement('span');saveState.className='annotation-save-state';
             const cardState={termInput,valueInput,pageInput,sourceLabel:parts.sourceLabel,confidence:row.confidence,saveState,dirty:false,saved:hasSavedValue,confirmed:false};
-            const paintState=()=>{const state=readonly?'Chỉ xem':cardState.confirmed?'Đã duyệt':cardState.dirty?'Đã chỉnh sửa':hasSavedValue?'Chưa duyệt':'Chưa nhập';stateBadge.textContent=state;stateBadge.dataset.state=readonly?'readonly':cardState.confirmed?'confirmed':cardState.dirty?'edited':'pending';saveState.textContent=readonly?'Chỉ xem':cardState.dirty?'Chưa lưu':cardState.saved?'Đã lưu':'Chưa nhập';pageButton.textContent=pageInput.value?`Trang ${pageInput.value}`:'Chưa có trang';pageButton.disabled=!pageInput.value;sourceToggle.disabled=!pageInput.value;sourceToggle.title=pageInput.value?'Xem nguồn':'Chưa có trang nguồn';};
+            const paintState=()=>{const state=readonly?'Read-only':cardState.confirmed?'Approved':cardState.dirty?'Edited':hasSavedValue?'Pending review':'Empty';stateBadge.textContent=state;stateBadge.dataset.state=readonly?'readonly':cardState.confirmed?'confirmed':cardState.dirty?'edited':'pending';saveState.textContent=readonly?'Read-only':cardState.dirty?'Unsaved':cardState.saved?'Saved':'Empty';pageButton.textContent=pageInput.value?`Page ${pageInput.value}`:'No source page';pageButton.disabled=!pageInput.value;sourceToggle.disabled=!pageInput.value;sourceToggle.title=pageInput.value?'View source label':'No source page';};
             const changed=()=>{if(readonly)return;cardState.dirty=true;cardState.confirmed=false;saveState.dataset.state='dirty';paintState();queueAutoSave(cardState);};
             const jumpToSource=()=>{const page=Number(pageInput.value);if(!Number.isInteger(page)||page<1)return;const iframe=$('#pdfViewer');const viewer=iframe?.contentWindow?.PDFViewerApplication?.pdfViewer;if(viewer){viewer.currentPageNumber=page;return;}if(iframe?.src)iframe.src=iframe.src.replace(/#.*/,'')+`#page=${page}&zoom=page-width`;};
             const original={term:termInput.value,value:valueInput.value,page:pageInput.value};
@@ -1281,8 +1275,8 @@
             confirmButton.onclick=()=>{cardState.confirmed=true;changed();paintState();};
             const definitionLabel=document.createElement('label');definitionLabel.className='annotation-legacy-label';definitionLabel.textContent='Definition';
             const source=document.createElement('div');source.className='annotation-source-label';source.hidden=false;
-            const sourceTitle=document.createElement('strong');sourceTitle.textContent='NHÃN NGUỒN';
-            const sourceValue=document.createElement('span');sourceValue.textContent=parts.sourceLabel||'Chưa có nhãn nguồn từ AI';
+            const sourceTitle=document.createElement('strong');sourceTitle.textContent='SOURCE LABEL';
+            const sourceValue=document.createElement('span');sourceValue.textContent=parts.sourceLabel||'NO AI SOURCE LABEL YET';
             source.append(sourceTitle,sourceValue);
             sourceToggle.onclick=()=>{if(sourceToggle.disabled)return;source.hidden=!source.hidden;sourceToggle.textContent=source.hidden?'Xem nguồn':'Ẩn nguồn';};pageButton.onclick=jumpToSource;
             termInput.addEventListener('input',changed);valueInput.addEventListener('input',changed);pageInput.addEventListener('input',changed);
@@ -1293,19 +1287,19 @@
             get value(){return JSON.stringify(cards.map(c=>{const editableValue=c.valueInput.value;return {labelName:c.termInput.value.trim(),labelValue:c.sourceLabel?`${editableValue}\nNhãn nguồn: ${c.sourceLabel}`:editableValue,sourcePage:c.pageInput.value?Number(c.pageInput.value):null,confidence:c.confidence};}).filter(c=>c.labelName||c.labelValue));},
             set value(value){clearCards();const rows=JSON.parse(value);rows.forEach(addLabel);if(!rows.length&&labeler)addLabel();const saveDock=panel.querySelector('.annotation-panel-save');if(saveDock)panel.append(saveDock);},
             get readOnly(){return readonly;},
-            set readOnly(value){readonly=value;cards.forEach(c=>{c.termInput.disabled=readonly;c.valueInput.readOnly=readonly;c.pageInput.disabled=readonly;c.saveState.textContent=readonly?'Chỉ xem':c.dirty?'Chưa lưu':c.saved?'Đã lưu':'Chưa nhập';});},
+            set readOnly(value){readonly=value;cards.forEach(c=>{c.termInput.disabled=readonly;c.valueInput.readOnly=readonly;c.pageInput.disabled=readonly;c.saveState.textContent=readonly?'Read-only':c.dirty?'Unsaved':c.saved?'Saved':'Empty';});},
             focus(){cards[0]?.valueInput.focus();},
         };
         editor.value='[]';
         reviewBodies.slice(1).forEach(body=>body.replaceChildren());
         // Other extraction/status panels contain mock results and are unavailable until an inference API exists.
         $$('main h2,main h3').filter(h=>['Extraction Status','Processing Details'].includes(text(h))).forEach(h=>{
-            const section=h.parentElement;[...section.children].filter(c=>c!==h).forEach(c=>c.remove());const p=document.createElement('p');p.textContent='Chưa có dữ liệu xử lý AI.';section.append(p);
+            const section=h.parentElement;[...section.children].filter(c=>c!==h).forEach(c=>c.remove());const p=document.createElement('p');p.textContent='No AI processing data yet.';section.append(p);
         });
-        $$('main h3').filter(h=>['Document Information','Thông tin tài liệu'].includes(text(h))).forEach(h=>{while(h.nextSibling)h.nextSibling.remove();});
+        $$('main h3').filter(h=>['Document Information','Document Info','Thông tin tài liệu'].includes(text(h))).forEach(h=>{while(h.nextSibling)h.nextSibling.remove();});
         // Result comparison has two extraction panels; no synthetic second result.
         $$('main h2,main h3').filter(h=>text(h)==='Extracted Information'&&h!==heading).forEach(h=>{
-            while(h.nextSibling)h.nextSibling.remove();const p=document.createElement('p');p.textContent='Kết quả tác vụ được hiển thị trong vùng nhãn bên cạnh.';h.parentElement.append(p);
+            while(h.nextSibling)h.nextSibling.remove();const p=document.createElement('p');p.textContent='Task results are displayed in the annotation area.';h.parentElement.append(p);
         });
         const modelSelect=$('header select');
         const aiHeader=$$('main h2').find(h=>text(h)==='AI Extraction')?.parentElement;
@@ -1339,19 +1333,21 @@
             modelSelect.addEventListener('change',()=>{updatePrompts();if(modelSelect.value)notice(`Đã chọn model ${modelSelect.value}.`);});
         }else if(modelSelect){options(modelSelect,[],true);modelSelect.disabled=true;}
         if(!initial){
-            buttons(/Save|Submit|Nộp bài|Approve|Analyze/).forEach(b=>unavailable(b,'Chưa được phân công tác vụ.'));
-            notice(id?'Không tìm thấy tác vụ hoặc bạn không có quyền truy cập.':'Chưa có tác vụ được phân công.',Boolean(id));return;
+            buttons(/Save|Submit|Nộp bài|Approve|Analyze/).forEach(b=>unavailable(b,'No task assigned.'));
+            notice(id?'Task not found or access denied.':'No task assigned.',Boolean(id));return;
         }
         let task, fileUrl, workTimer, completionGuard;
         const title=$('#sessionTitle');
         const type=null;
-        const docHeading=$$('main h3').find(h=>['Document Information','Thông tin tài liệu'].includes(text(h)));
+        const docHeading=$$('main h3').find(h=>['Document Information','Document Info','Thông tin tài liệu'].includes(text(h)));
         let docInfo;
-        if(docHeading){while(docHeading.nextSibling)docHeading.nextSibling.remove();docInfo=document.createElement('p');docHeading.after(docInfo);docHeading.textContent='Thông tin tài liệu';}
-        if(heading)heading.textContent='Thông tin trích xuất';
+        if(docHeading){while(docHeading.nextSibling)docHeading.nextSibling.remove();docInfo=document.createElement('p');docHeading.after(docInfo);docHeading.textContent='Document Info';}
+        if(heading)heading.textContent='Extracted Information';
         const renderTask=()=>{
             editor.value=JSON.stringify(task.labels.map(l=>({labelName:l.label_name,labelValue:l.label_value,sourcePage:l.source_page,confidence:l.confidence})),null,2);
-            editor.readOnly=!labeler||['SUBMITTED','APPROVED'].includes(task.status);
+            // Manual labelers must be able to correct extracted values in their
+            // assigned fields. Other roles keep the submitted/approved lock.
+            editor.readOnly=!labeler||(!isManualLabeler&&['SUBMITTED','APPROVED'].includes(task.status));
             document.title=`${task.document_title} — ${task.status}`;
         };
         const refresh=async()=>{task=await request(`/tasks/${task.id}`);renderTask();};
@@ -1360,6 +1356,8 @@
             if(workTimer)await workTimer.stop('MANUAL');
             task=await request(`/tasks/${row.id}`);
             pdfPageCount=null;
+            const persistedDotState=readDocumentSaveState(task.id);
+            setDocumentSaveState(task.id,persistedDotState!=='none'?persistedDotState:(task.labels?.length?'saved':'none'));
             history.replaceState(null,'',`?id=${row.id}`);
             if(title)title.textContent=row.session_name||task.document_title;
             if(type)type.textContent=task.task_type;
@@ -1409,7 +1407,7 @@
             }
         }
         await loadTask(initial);
-        const submitTaskButton=buttons(/^(Submit Task|Nộp bài)$/)[0];
+        const submitTaskButton=buttons(/^(Submit Task|Nộp bài)$/)[0]; if(submitTaskButton)submitTaskButton.setAttribute('aria-label','Submit Task');
         if(window.AAIR.SessionCompletion&&submitTaskButton){
             completionGuard=AAIR.SessionCompletion.create({
                 button:submitTaskButton,
@@ -1424,23 +1422,23 @@
                     const progress=$('#sessionProgressTrack'),bar=$('#sessionProgressBar'),label=$('#sessionProgressText');
                     if(progress)progress.setAttribute('aria-valuenow',String(percent));
                     if(bar)bar.style.width=`${percent}%`;
-                    if(label)label.textContent=`${done}/${total} tài liệu · ${percent}%`;
+                    if(label)label.textContent=`${done}/${total} documents · ${percent}%`;
                 }
             });
             await completionGuard.refresh();
         }
         window.addEventListener('pagehide',()=>{if(fileUrl)URL.revokeObjectURL(fileUrl);});
         const runAiButton=buttons(/Run AI|Chạy AI/)[0];
-        if(runAiButton && ['AI_LABELER','MANUAL_LABELER'].includes(user.role)){
+        if(runAiButton && ['AI_LABELER','MANUAL_LABELER'].includes(user.role)){ runAiButton.setAttribute('aria-label','Run AI');
             const updateRunAiState=()=>{
                 const blocked=task?.task_type==='MANUAL'&&task?.assistance_mode==='NONE';
                 runAiButton.disabled=blocked||!modelSelect?.value;
                 runAiButton.style.opacity=runAiButton.disabled?'0.5':'';
-                runAiButton.title=blocked?'Task này được cấu hình không dùng AI hỗ trợ.':runAiButton.disabled?'Vui lòng chọn model trước khi chạy AI.':'';
+                runAiButton.title=blocked?'This task is configured without AI assistance.':runAiButton.disabled?'Select a model before running AI.':'';
             };
             modelSelect?.addEventListener('change',updateRunAiState);updateRunAiState();
             bind(runAiButton,async()=>{
-                if(!modelSelect?.value)throw new Error('Vui lòng chọn model trước khi chạy AI.');
+                if(!modelSelect?.value)throw new Error('Select a model before running AI.');
                 const oldMarkup=runAiButton.innerHTML;
                 runAiButton.textContent='Running AI...';
                 try{
@@ -1448,9 +1446,10 @@
                     const prompt=selectedPrompt?.content||systemPrompt;
                     const result=await request(`/tasks/${task.id}/run-ai`,{method:'POST',json:{provider:modelSelect.value,prompt:prompt||null}});
                     editor.value=JSON.stringify(result.labels||[]);editor.readOnly=false;
-                    cards.forEach(card=>{card.dirty=true;card.saveState.dataset.state='dirty';card.saveState.textContent='Chưa lưu';});
+                    setDocumentSaveState(task.id,'ai-pending');
+                    cards.forEach(card=>{card.dirty=true;card.saveState.dataset.state='dirty';card.saveState.textContent='Unsaved';});
                     queueAutoSave();
-                    notice(`Đã rút trích ${result.labels?.length||0} chỉ tiêu bằng ${result.provider}. Hãy kiểm tra rồi nhấn Save.`);
+                    notice(`Extracted ${result.labels?.length||0} fields using ${result.provider}. Review them and click Save.`);
                 }finally{runAiButton.innerHTML=oldMarkup;}
             });
         }else if(runAiButton)unavailable(runAiButton,'Chỉ AI Labeler được chạy mô hình AI.');
@@ -1466,24 +1465,25 @@
             await request(`/tasks/${task.id}/labels`,{method:'PUT',json:{labels:data}});if(refreshAfter)await refresh();
             if(completionGuard)await completionGuard.refresh();
             if(track&&workTimer)await workTimer.stop('SAVE',true);
-            if(showNotice)notice('Lưu dữ liệu thành công.');
+            if(showNotice)notice('Data saved successfully.');
         };
-        if(labeler && panel){
+        if(labeler && panel && !aiContent){
             const saveWrap=document.createElement('div');saveWrap.className='annotation-panel-save';
-            manualSaveButton=document.createElement('button');manualSaveButton.type='button';manualSaveButton.textContent='Lưu';manualSaveButton.disabled=true;manualSaveButton.className='annotation-save-button';
+            manualSaveButton=document.createElement('button');manualSaveButton.type='button';manualSaveButton.textContent='Save';manualSaveButton.disabled=true;manualSaveButton.className='annotation-save-button';manualSaveButton.setAttribute('aria-label','Save');
             saveWrap.append(manualSaveButton);panel.append(saveWrap);
-            manualSaveButton.onclick=async()=>{if(manualSaveButton.disabled)return;manualSaveButton.disabled=true;manualSaveButton.textContent='Đang lưu…';try{await save();cards.forEach(card=>{card.dirty=false;card.saved=true;card.saveState.dataset.state='saved';card.saveState.textContent='Đã lưu';});}catch(error){manualSaveButton.disabled=false;manualSaveButton.textContent='Lưu';throw error;}manualSaveButton.textContent='Lưu';};
+            manualSaveButton.onclick=async()=>{if(manualSaveButton.disabled)return;manualSaveButton.disabled=true;manualSaveButton.textContent='Saving…';try{await save();setDocumentSaveState(task.id,'saved');cards.forEach(card=>{card.dirty=false;card.saved=true;card.saveState.dataset.state='saved';card.saveState.textContent='Saved';});window.location.reload();}catch(error){manualSaveButton.disabled=false;manualSaveButton.textContent='Save';throw error;}manualSaveButton.textContent='Save';};
         }
         let autoSaveTimer=null,autoSavePromise=Promise.resolve();
         const setSaveState=(state,message)=>cards.filter(card=>card.dirty).forEach(card=>{card.saveState.dataset.state=state;card.saveState.textContent=message;});
         const performAutoSave=async()=>{
             if(readonly||!cards.some(card=>card.dirty))return false;
-            setSaveState('saving','Đang lưu…');
+            setSaveState('saving','Saving…');
             try{
                 await save(false,false,false);
-                cards.forEach(card=>{if(card.dirty){card.dirty=false;card.saved=true;card.saveState.dataset.state='saved';card.saveState.textContent='Đã lưu';}});
+                setDocumentSaveState(task.id,'saved');
+                cards.forEach(card=>{if(card.dirty){card.dirty=false;card.saved=true;card.saveState.dataset.state='saved';card.saveState.textContent='Saved';}});
                 return true;
-            }catch(error){setSaveState('error','Lỗi lưu');notice(error.message,true);throw error;}
+            }catch(error){setSaveState('error','Save failed');notice(error.message,true);throw error;}
         };
         flushAutoSave=async()=>{
             if(autoSaveTimer){clearTimeout(autoSaveTimer);autoSaveTimer=null;}
@@ -1492,10 +1492,10 @@
         queueAutoSave=()=>{
             if(autoSaveTimer)clearTimeout(autoSaveTimer);
             if(manualSaveButton){manualSaveButton.disabled=false;return;}
+            if(aiContent)return;
             autoSaveTimer=setTimeout(()=>{autoSaveTimer=null;autoSavePromise=autoSavePromise.then(performAutoSave,performAutoSave);},1000);
         };
-        buttons(/^Save$/).forEach(button=>button.remove());
-        bindText(/^(Submit Task|Nộp bài)$/,async()=>{if(!labels().length)throw new Error('Cần ít nhất một nhãn trước khi nộp.');await flushAutoSave();if(['PENDING','REJECTED'].includes(task.status))await save(false,false,false);if(completionGuard&&!await completionGuard.ensure('Chưa thể Submit Task'))return;await request(`/tasks/${task.id}/submit`,{method:'POST'});if(workTimer)await workTimer.stop('SUBMIT');await refresh();if(completionGuard)await completionGuard.refresh();notice('Submit task thành công.');});
+        bindText(/^(Submit Task|Nộp bài)$/,async()=>{if(!labels().length)throw new Error('Add at least one field before submitting.');await flushAutoSave();if(['PENDING','REJECTED'].includes(task.status))await save(false,false,false);if(completionGuard&&!await completionGuard.ensure('Unable to submit the task'))return;await request(`/tasks/${task.id}/submit`,{method:'POST'});if(workTimer)await workTimer.stop('SUBMIT');await refresh();if(completionGuard)await completionGuard.refresh();notice('Task submitted successfully.');});
         if(labeler){
             const saveDock=panel.querySelector('.annotation-panel-save');
             if(saveDock) panel.append(saveDock);
@@ -1504,14 +1504,14 @@
             const topHeader=$$('header')[1];
             buttons(/^Edit$/,topHeader).forEach(button=>button.remove());
             const saveWrap=document.createElement('div');
-            saveWrap.className='mt-6 flex justify-end border-t border-outline-variant pt-4';
+            saveWrap.className='annotation-panel-save';
             const saveButton=document.createElement('button');
             saveButton.type='button';
-            saveButton.className='ai-save-results px-4 py-2 rounded-lg text-[12px] bg-button-active text-text-active hover:opacity-85 transition-opacity flex items-center gap-2 shadow-sm';
-            saveButton.innerHTML='<span class="material-symbols-outlined text-[16px]">save</span>Save';
+            saveButton.className='annotation-save-button ai-save-results';
+            saveButton.textContent='Save'; saveButton.setAttribute('aria-label','Save');
             saveWrap.append(saveButton);
             aiContent.append(saveWrap);
-            bind(saveButton,async()=>{await save();if(user.role==='MANUAL_LABELER')exportJson(labels(),`task-${task.id}-labels.json`);});
+            bind(saveButton,async()=>{saveButton.disabled=true;try{await save();setDocumentSaveState(task.id,'saved');if(user.role==='MANUAL_LABELER')exportJson(labels(),`task-${task.id}-labels.json`);window.location.reload();}finally{saveButton.disabled=false;}});
         }
         if(reviewBodies.length){
             const firstHeader=reviewBodies[0].previousElementSibling;if(firstHeader)firstHeader.textContent=`${initial.assignee||'Annotator'} — ${task.task_type}`;
@@ -1776,7 +1776,7 @@
         $$('tbody').forEach(body=>{const el=body.closest('table');tableStyles.set(el,$$('tr:first-child td',body).map(c=>c.className));const columns=$$('thead th',el).length;body.replaceChildren();const td=body.insertRow().insertCell();td.colSpan=columns||1;td.className='p-4';td.textContent='Đang tải dữ liệu…';});
         user=await AAIR.guard();if(!user)return;window.AAIRGuidelineModal?.init();
         const profile=$('header .hidden.md\\:block');
-        if(profile){const ps=$$('p',profile);if(ps[0])ps[0].textContent=user.username;if(ps[1])ps[1].textContent=user.role==='RESULT_ANALYST'?'Analyst':user.role;
+        if(profile){const ps=$$('p',profile);const roleNames={ADMIN:'Administrator',MANAGER:'Manager',ANALYST:'Analyst',RESULT_ANALYST:'Analyst',AI_LABELER:'AI Labeler',MANUAL_LABELER:'Manual Labeler',REVIEWER:'Reviewer'};if(ps[0])ps[0].textContent=user.username;if(ps[1])ps[1].textContent=roleNames[user.role]||user.role;
             const avatar=profile.previousElementSibling;if(avatar){avatar.replaceChildren();const node=avatarNode(user,'w-full h-full');avatar.append(node);}
             const logout=document.createElement('button');
             logout.type='button';logout.setAttribute('aria-label','Log out');logout.title='Log out of the system';

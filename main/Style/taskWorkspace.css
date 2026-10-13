@@ -287,10 +287,11 @@ body.task-workspace-resizing iframe#pdfViewer {
 
 /* Compact manual-labeling workspace: optimized for reviewing six fields at 1080p. */
 .manual-task-page { --manual-header-height: 58px; --manual-toolbar-height: 58px; --pdf-pane-width: 56%; }
+.ai-task-page { --manual-header-height: 50px; --manual-toolbar-height: 58px; }
 .manual-task-page .manual-navbar { height:var(--manual-header-height); }
-.manual-task-page > .manual-session-toolbar { width:calc(100% - var(--document-sidebar-width))!important; margin-left:var(--document-sidebar-width)!important; top:var(--manual-header-height)!important; height:var(--manual-toolbar-height)!important; min-height:var(--manual-toolbar-height); margin-bottom:0!important; padding:0 24px!important; background:#fff!important; }
+.manual-task-page > .manual-session-toolbar,.ai-task-page > .manual-session-toolbar { width:calc(100% - var(--document-sidebar-width))!important; margin-left:var(--document-sidebar-width)!important; top:var(--manual-header-height)!important; height:var(--manual-toolbar-height)!important; min-height:var(--manual-toolbar-height); margin-bottom:0!important; padding:0 24px!important; background:#fff!important; }
 .manual-task-page > aside { top:var(--manual-header-height)!important; height:calc(100vh - var(--manual-header-height))!important; background:#f7fafc!important; }
-.manual-task-page > aside::after { content:"✓ Hoàn thành  ·  ◷ Đang chờ"; margin-top:auto; padding:12px 8px; color:#526477; font-size:12px; font-weight:600; white-space:nowrap; }
+.manual-task-page > aside::after,.ai-task-page > aside::after { content:none; display:none; }
 .manual-task-page > main { height:calc(100vh - var(--manual-header-height) - var(--manual-toolbar-height))!important; }
 .manual-task-page .document-sidebar-handle { top:var(--manual-header-height); }
 .manual-task-page .manual-session-toolbar #sessionProgressTrack { width:220px!important; height:8px!important; background:#dce7ed!important; }
@@ -304,12 +305,21 @@ body.task-workspace-resizing iframe#pdfViewer {
 .manual-task-page .manual-run-ai-button:hover:not(:disabled) { background:#e5f5fa!important; }
 .manual-task-page .manual-run-ai-button:disabled { border-color:#b8c8d2!important; color:#72828f!important; background:#f2f5f7!important; cursor:not-allowed; opacity:1!important; }
 .manual-task-page .document-item { position:relative; align-items:center!important; min-height:40px; padding:7px 10px!important; border-radius:5px!important; font-size:13px!important; }
-.manual-task-page .document-status { display:grid; place-items:center; width:20px; height:20px; margin-left:auto; border-radius:50%; }
-.manual-task-page .document-status .material-symbols-outlined { font-size:15px; }
-.manual-task-page .document-item[data-status="PENDING"] .document-status { color:#475569; background:#e2e8f0; }
-.manual-task-page .document-item[data-status="IN_PROGRESS"] .document-status { color:#075ea8; background:#dbeefe; }
-.manual-task-page .document-item[data-status="SUBMITTED"] .document-status,.manual-task-page .document-item[data-status="APPROVED"] .document-status { color:#137b57; background:#dcf4e7; }
-.manual-task-page .document-item[data-status="REJECTED"] .document-status { color:#b64040; background:#ffe4e4; }
+.manual-task-page .document-status-dot,.ai-task-page .document-status-dot { flex:0 0 10px; width:10px; height:10px; margin-left:8px; border:1px solid #aeb8c2; border-radius:50%; background:transparent; }
+.manual-task-page .document-status-dot[data-save-state="ai-pending"],.ai-task-page .document-status-dot[data-save-state="ai-pending"] { border-color:#d28b00; background:#f5a900; }
+.manual-task-page .document-status-dot[data-save-state="saved"],.ai-task-page .document-status-dot[data-save-state="saved"] { border-color:#15966a; background:#15966a; }
+.manual-task-page .document-item > .document-status-dot:not(:last-child),.ai-task-page .document-item > .document-status-dot:not(:last-child),.manual-task-page .document-item > .document-status,.ai-task-page .document-item > .document-status { display:none!important; }
+.manual-task-page .document-status-legend,.ai-task-page .document-status-legend { display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; justify-content:center; margin-top:auto; padding:12px 8px; color:#526477; font-size:11px; font-weight:600; white-space:nowrap; }
+.manual-task-page .document-status-legend__item,.ai-task-page .document-status-legend__item { display:inline-flex; align-items:center; gap:4px; }
+.manual-task-page .document-status-legend__item i,.ai-task-page .document-status-legend__item i { display:inline-block; width:9px; height:9px; border:1px solid #aeb8c2; border-radius:50%; background:transparent; }
+.manual-task-page .document-status-legend__item--saved i,.ai-task-page .document-status-legend__item--saved i { border-color:#15966a; background:#15966a; }
+.manual-task-page .document-status-legend__item--pending i,.ai-task-page .document-status-legend__item--pending i { border-color:#d28b00; background:#f5a900; }
+.ai-task-page > .manual-session-toolbar #sessionProgressTrack { width:220px!important; height:8px!important; background:#dce7ed!important; }
+.ai-task-page > .manual-session-toolbar #sessionProgressBar { background:#078bb8!important; }
+.ai-task-page > .manual-session-toolbar #sessionProgressText { color:#075985!important; font-size:13px!important; }
+.manual-task-page .workspace-data-pane > div:first-child { display:none!important; }
+.manual-task-page .workspace-data-pane > div:last-child { flex:1 1 auto; }
+.ai-task-page > aside { top:50px!important; height:calc(100vh - 50px)!important; }
 .manual-task-page .task-workspace-splitter { width:12px; min-width:12px; background:#eef4f7; }
 .manual-task-page .task-workspace-splitter::after { width:4px; height:54px; background:#507080; box-shadow:0 -9px #507080,0 9px #507080; }
 .manual-task-page .workspace-pdf-viewport { flex-direction:column; padding:0!important; background:#e8eef2!important; }
@@ -373,26 +383,36 @@ body.task-workspace-resizing iframe#pdfViewer {
     }
 }
 .manual-task-page .workspace-data-pane > div:last-child{padding-bottom:0!important}
-.manual-task-page .annotation-panel-save{position:static;z-index:auto;display:flex;flex:0 0 auto;justify-content:flex-end;margin:16px 0 0;padding:12px 16px;border-top:1px solid #d8e1e8;background:#fff!important}
-.manual-task-page .annotation-save-button{min-width:84px;height:38px;padding:0 18px;border:0;border-radius:7px;color:#fff;background:#078bb8;font:700 13px Inter,Arial,sans-serif;cursor:pointer}
-.manual-task-page .annotation-save-button:disabled{opacity:.6;color:#fff;background:#078bb8;cursor:not-allowed}
+.manual-task-page .annotation-panel-save,.ai-task-page .annotation-panel-save{position:static;z-index:auto;display:flex;flex:0 0 auto;justify-content:flex-end;margin:16px 0 0;padding:12px 16px;border-top:1px solid #d8e1e8;background:#fff!important}
+.ai-task-page .annotation-panel-save{position:sticky;bottom:0;z-index:10;margin:16px -20px -20px;padding:12px 20px;box-shadow:0 -3px 10px rgba(15,44,63,.08)}
+.manual-task-page .annotation-save-button,.ai-task-page .annotation-save-button{min-width:84px;height:38px;padding:0 18px;border:0;border-radius:7px;color:#fff;background:#078bb8;font:700 13px Inter,Arial,sans-serif;cursor:pointer}
+.manual-task-page .annotation-save-button:hover:not(:disabled),.ai-task-page .annotation-save-button:hover:not(:disabled){background:#066b91}
+.manual-task-page .annotation-save-button:disabled,.ai-task-page .annotation-save-button:disabled{opacity:.6;color:#fff;background:#078bb8;cursor:not-allowed}
 .annotation-field-card{position:relative}
 .annotation-field-card [data-state="edited"]{color:#9a6200;background:#fff4d6}
 
 /* Restored legacy annotation field layout. */
-.manual-task-page .annotation-field-card--legacy{height:auto;max-height:none;min-height:0;gap:7px;padding:14px 14px 12px;border-radius:8px;background:#fff}
-.manual-task-page .annotation-field-card--legacy .annotation-field-card__top{display:flex;flex-wrap:wrap;gap:5px;align-items:stretch}
-.manual-task-page .annotation-field-card--legacy .annotation-field-card__top::before{content:'Term';display:block;flex:0 0 100%;color:#53616d;font-size:12px;line-height:1}
-.manual-task-page .annotation-field-card--legacy .annotation-field-name,.manual-task-page .annotation-field-card--legacy .annotation-status,.manual-task-page .annotation-field-card--legacy .annotation-icon-button{display:none}
-.manual-task-page .annotation-field-card--legacy .annotation-term-input{display:block!important;visibility:visible;width:100%;height:48px;flex:1 1 100%;padding:8px 12px;border:1px solid #7b8791;background:#f5f7f9;color:#52606b;font-family:Inter,Arial,sans-serif;font-size:18px;font-weight:700;line-height:1.2}
-.manual-task-page .annotation-field-card--legacy .annotation-legacy-label{display:block;color:#33414c;font-size:12px;line-height:1}
-.manual-task-page .annotation-field-card--legacy .annotation-definition-input{height:132px;min-height:132px;padding:12px;border:1px solid #cbd7e0;background:#f2f6fa;font-size:17px;line-height:1.45;resize:vertical}
-.manual-task-page .annotation-field-card--legacy .annotation-field-card__meta{display:flex;align-items:center;gap:10px;padding:8px 0 0;border-top:1px solid #d9e1e7}
-.manual-task-page .annotation-field-card--legacy .annotation-field-card__meta::before{content:'Source Page';color:#26343d;font-size:16px;font-weight:500}
-.manual-task-page .annotation-field-card--legacy .annotation-field-card__meta::after{content:'Chỉ đọc';margin-left:8px;color:#56806b;font-size:13px;font-weight:600}
-.manual-task-page .annotation-field-card--legacy .annotation-page-chip,.manual-task-page .annotation-field-card--legacy .annotation-confidence,.manual-task-page .annotation-field-card--legacy .annotation-warning,.manual-task-page .annotation-field-card--legacy .annotation-source-toggle{display:none}
-.manual-task-page .annotation-field-card--legacy .annotation-page-input{display:block!important;visibility:visible;width:126px;height:38px;margin-left:auto;padding:7px 12px;border:1px solid #cbd7e0;border-radius:8px;background:#fff;font-size:16px;text-align:left}
-.manual-task-page .annotation-field-card--legacy .annotation-source-label{display:flex;flex-direction:column;gap:6px;margin:0;padding:12px 14px;border-left:3px solid #55b8c8;background:#eff9fb;color:#364752;font-size:14px;line-height:1.35;white-space:normal}
-.manual-task-page .annotation-field-card--legacy .annotation-source-label strong{font-size:12px;letter-spacing:.02em}
-.manual-task-page .annotation-field-card--legacy .annotation-source-label span{font-size:14px}
+.manual-task-page .annotation-field-card--legacy,.ai-task-page .annotation-field-card--legacy{height:auto;max-height:none;min-height:0;gap:7px;padding:14px 14px 12px;border-radius:8px;background:#fff}
+.manual-task-page .annotation-field-card--legacy .annotation-field-card__top,.ai-task-page .annotation-field-card--legacy .annotation-field-card__top{display:flex;flex-wrap:wrap;gap:5px;align-items:stretch}
+.manual-task-page .annotation-field-card--legacy .annotation-field-card__top::before,.ai-task-page .annotation-field-card--legacy .annotation-field-card__top::before{content:'Term';display:block;flex:0 0 100%;color:#53616d;font-size:12px;line-height:1}
+.manual-task-page .annotation-field-card--legacy .annotation-field-name,.manual-task-page .annotation-field-card--legacy .annotation-status,.manual-task-page .annotation-field-card--legacy .annotation-icon-button,.ai-task-page .annotation-field-card--legacy .annotation-field-name,.ai-task-page .annotation-field-card--legacy .annotation-status,.ai-task-page .annotation-field-card--legacy .annotation-icon-button{display:none}
+.manual-task-page .annotation-field-card--legacy .annotation-term-input,.ai-task-page .annotation-field-card--legacy .annotation-term-input{display:block!important;visibility:visible;width:100%;height:48px;flex:1 1 100%;padding:8px 12px;border:1px solid #7b8791;background:#f5f7f9;color:#52606b;font-family:Inter,Arial,sans-serif;font-size:18px;font-weight:700;line-height:1.2}
+.manual-task-page .annotation-field-card--legacy .annotation-legacy-label,.ai-task-page .annotation-field-card--legacy .annotation-legacy-label{display:block;color:#33414c;font-size:12px;line-height:1}
+.manual-task-page .annotation-field-card--legacy .annotation-definition-input,.ai-task-page .annotation-field-card--legacy .annotation-definition-input{height:132px;min-height:132px;padding:12px;border:1px solid #cbd7e0;background:#f2f6fa;font-size:17px;line-height:1.45;resize:vertical}
+.manual-task-page .annotation-field-card--legacy .annotation-field-card__meta,.ai-task-page .annotation-field-card--legacy .annotation-field-card__meta{display:flex;align-items:center;gap:10px;padding:8px 0 0;border-top:1px solid #d9e1e7}
+.manual-task-page .annotation-field-card--legacy .annotation-field-card__meta::before,.ai-task-page .annotation-field-card--legacy .annotation-field-card__meta::before{content:'Source Page';color:#26343d;font-size:16px;font-weight:500}
+.manual-task-page .annotation-field-card--legacy .annotation-field-card__meta::after,.ai-task-page .annotation-field-card--legacy .annotation-field-card__meta::after{content:none}
+.manual-task-page .annotation-field-card--legacy .annotation-page-chip,.manual-task-page .annotation-field-card--legacy .annotation-confidence,.manual-task-page .annotation-field-card--legacy .annotation-warning,.manual-task-page .annotation-field-card--legacy .annotation-source-toggle,.ai-task-page .annotation-field-card--legacy .annotation-page-chip,.ai-task-page .annotation-field-card--legacy .annotation-confidence,.ai-task-page .annotation-field-card--legacy .annotation-warning,.ai-task-page .annotation-field-card--legacy .annotation-source-toggle{display:none}
+.manual-task-page .annotation-field-card--legacy .annotation-page-input,.ai-task-page .annotation-field-card--legacy .annotation-page-input{display:block!important;visibility:visible;width:126px;height:38px;margin-left:auto;padding:7px 12px;border:1px solid #cbd7e0;border-radius:8px;background:#fff;font-size:16px;text-align:left}
+.manual-task-page .annotation-field-card--legacy .annotation-source-label,.ai-task-page .annotation-field-card--legacy .annotation-source-label{display:flex;flex-direction:column;gap:6px;margin:0;padding:12px 14px;border-left:3px solid #55b8c8;background:#eff9fb;color:#364752;font-size:14px;line-height:1.35;white-space:normal}
+.manual-task-page .annotation-field-card--legacy .annotation-source-label strong,.ai-task-page .annotation-field-card--legacy .annotation-source-label strong{font-size:12px;letter-spacing:.02em}
+.manual-task-page .annotation-field-card--legacy .annotation-source-label span,.ai-task-page .annotation-field-card--legacy .annotation-source-label span{font-size:14px}
+
+/* Keep AI and manual extraction cards on the same legacy review layout. */
+.ai-task-page .annotation-field-card { display:flex; min-width:0; width:100%; height:auto; max-height:none; min-height:0; flex-direction:column; gap:7px; padding:14px 14px 12px; border:1px solid #d5e0e7; border-radius:8px; background:#fff; box-shadow:0 1px 2px rgba(15,44,63,.05); }
+.ai-task-page .annotation-field-card:has(.annotation-source-label:not([hidden])) { height:auto; max-height:none; }
+.ai-task-page .annotation-field-card__top,.ai-task-page .annotation-field-card__meta { min-width:0; }
+.ai-task-page .annotation-definition-input { margin:0; }
+.ai-task-page main > .workspace-data-pane { align-self:start; height:fit-content; max-height:100%; }
+.ai-task-page .workspace-data-pane > div:last-child { flex:0 1 auto; max-height:calc(100vh - 150px); }
 

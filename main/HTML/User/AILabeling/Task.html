@@ -111,7 +111,7 @@
                     NV. E
                 </p>
                 <p class="text-[8px] text-on-surface-variant uppercase tracking-wider">
-                    AI Labeling
+                    AI Labeler
                 </p>
             </div>
 
@@ -120,30 +120,18 @@
     </header>
 
     <!-- TopNavBar -->
-    <header class="mt-[50px] ml-[157px] w-[calc(100%-157px)] h-12
+    <header class="manual-session-toolbar mt-[50px] ml-[157px] w-[calc(100%-157px)] h-12
            flex items-center gap-2 px-lg
            bg-text-active border-b border-outline-variant
            shadow-sm sticky top-[50px] z-30 gap-4">
 
-        <div class="flex flex-col min-w-0 leading-tight">
+        <h2 id="sessionTitle" class="text-lg font-bold text-on-surface whitespace-nowrap">Q4 Performance Audit</h2>
 
-            <span class="text-[10px] font-bold uppercase text-on-surface-variant">
-                Session
-            </span>
-            <span class="truncate font-title-md font-bold text-primary">
-                Q4 Performance Audit
-            </span>
+        <div id="sessionProgressTrack" class="w-48 bg-surface-container-highest h-2 rounded-full overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div id="sessionProgressBar" class="h-full aair-gradient rounded-full transition-all duration-500 ease-out" style="width:0%"></div>
         </div>
 
-        <div class="flex flex-col min-w-0 leading-tight">
-
-            <span class="text-[10px] font-bold uppercase text-on-surface-variant">
-                Type
-            </span>
-            <span class="truncate font-title-md font-bold">
-                Financial Statements
-            </span>
-        </div>
+        <span id="sessionProgressText" class="text-label-sm font-bold text-primary whitespace-nowrap">0/0 documents · 0%</span>
 
 
         <!-- Buttons -->
@@ -163,7 +151,7 @@
 
             <div class="w-px h-6 bg-outline-variant mx-2"></div>
 
-            <button type="button" class="px-4 py-2
+            <button type="button" class="ai-submit-button px-4 py-2
                        rounded-lg
                        text-[12px]
                        bg-button-active
