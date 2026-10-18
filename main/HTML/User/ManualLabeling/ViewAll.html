@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>View ALL</title>
+    <title>My Tasks</title>
     <link rel="icon" type="image/png" href="/resource/icon/logo_remove_BG.png">
 
     <!-- Google Fonts: Inter & JetBrains Mono -->
@@ -24,6 +24,53 @@
     <link href="../../../Style/basic.css" rel="stylesheet" />
     <link href="../../../Style/manualNavbar.css" rel="stylesheet" />
 
+    <style>
+        :root { --gap-section:24px; --row-h:52px; }
+        .task-page { padding:24px; }
+        .task-page__heading { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:var(--gap-section); }
+        .task-page__heading h1 { margin:0; color:#101828; font-size:22px; line-height:28px; font-weight:600; }
+        .task-page__heading p { margin:4px 0 0; color:#667085; font-size:13px; }
+        .task-toolbar { height:48px; margin-bottom:0!important; padding:0 24px!important; }
+        .task-search { width:500px!important; min-width:280px; height:36px!important; font-size:13px!important; }
+        .task-filter-group { display:flex; align-items:center; gap:8px; }
+        .task-filter-group label { color:#344054; font-size:13px; font-weight:500; }
+        .filter-select { min-width:120px!important; height:36px!important; padding:0 28px 0 10px!important; font-size:13px!important; font-weight:500!important; }
+        .task-table-card { border-radius:12px; }
+        .task-table { table-layout:fixed; min-width:960px; }
+        .task-table th:last-child,.task-table td:last-child { width:112px; text-align:right!important; }
+        .task-table th,.task-table td { padding:10px 16px!important; vertical-align:middle; }
+        .task-table th:nth-child(1),.task-table td:nth-child(1) { width:27%; }
+        .task-table th:nth-child(2),.task-table td:nth-child(2) { width:13%; }
+        .task-table th:nth-child(3),.task-table td:nth-child(3) { width:16%; color:#475467; }
+        .task-table th:nth-child(4),.task-table td:nth-child(4) { width:12%; color:#475467; }
+        .task-table th:nth-child(5),.task-table td:nth-child(5) { width:13%; }
+        .task-table th:nth-child(6),.task-table td:nth-child(6) { width:13%; color:#475467; }
+        .task-table th:nth-child(7),.task-table td:nth-child(7) { width:10%; }
+        .task-table th,.task-table td { height:var(--row-h); padding:10px 16px!important; vertical-align:middle; }
+        .task-table th { color:#667085; font-size:12px; font-weight:600; letter-spacing:.04em; text-align:left; text-transform:uppercase; }
+        .task-table td { color:#667085; font-size:13px; }
+        .task-table td:first-child { color:#101828; }
+        .cell-primary { color:#101828!important; font-size:14px!important; font-weight:500!important; text-decoration:none; }
+        .cell-primary:hover { color:#175cd3!important; text-decoration:underline; }
+        .task-status,.task-type { display:inline-flex; align-items:center; min-height:24px; padding:3px 9px; border-radius:999px; font-size:12px; font-weight:600; }
+        .task-status--pending { color:#475467; background:#f2f4f7; }
+        .task-status--progress { color:#175cd3; background:#dbeafe; }
+        .task-status--submitted { color:#6941c6; background:#f4ebff; }
+        .task-status--approved { color:#067647; background:#dff3e9; }
+        .task-status--rejected { color:#b42318; background:#fee4e2; }
+        .task-type { color:#475467; background:#eef2f6; font-weight:500; }
+        .task-conflicts { display:inline-flex; align-items:center; min-height:24px; padding:3px 8px; border-radius:999px; color:#667085; background:#f2f4f7; font-size:12px; font-weight:600; white-space:nowrap; }
+        .task-conflicts--active { color:#b54708; background:#fef0c7; }
+        .task-due { font-size:13px; }
+        .task-due--overdue { color:#b42318!important; font-weight:600; }
+        .task-due--soon { color:#b54708!important; font-weight:500; }
+        .task-action { display:inline-flex; align-items:center; justify-content:center; width:78px; min-height:32px; padding:0 10px; border:1px solid #cbd5e1; border-radius:7px; color:#344054!important; background:#fff; font-size:13px; font-weight:600; text-decoration:none; }
+        .task-action:hover { border-color:#175cd3; color:#175cd3!important; background:#f8fbff; }
+        .task-pagination { min-height:52px; }
+        .task-pagination[hidden] { display:none; }
+        @media(max-width:800px) { .task-page { padding:16px; } .task-search { width:100%!important; } .task-toolbar { height:auto; min-height:48px; flex-wrap:wrap; padding:8px 16px!important; } .task-table { min-width:760px; } }
+    </style>
+
 </head>
 
 <body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
@@ -31,7 +78,7 @@
     <div data-manual-navbar-mount></div>
 
     <!-- TopNavBar -->
-    <header class="w-full h-12
+    <header class="task-toolbar w-full h-12
            flex items-center gap-2 px-lg
            bg-text-active border-b border-outline-variant
            shadow-sm sticky top-[50px] z-30 mb-6">
@@ -46,7 +93,7 @@
                 search
             </span>
 
-            <input id="taskSearch" type="search" placeholder="Search ..." class="w-full h-8
+            <input id="taskSearch" type="search" placeholder="Search tasks…" class="task-search w-full h-8
                    pl-10 pr-4
                    rounded-lg
                    border border-slate-300
@@ -64,7 +111,7 @@
             <div class="flex items-center gap-2">
                 <label for="taskSessionFilter" class="text-label-md text-on-surface-variant">Session:</label>
                 <select id="taskSessionFilter"
-                    class="bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
+                    class="filter-select bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
                     <option value="">All</option>
                 </select>
             </div>
@@ -72,7 +119,7 @@
             <div class="flex items-center gap-2">
                 <label for="taskStatusFilter" class="text-label-md text-on-surface-variant">Status:</label>
                 <select id="taskStatusFilter"
-                    class="bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
+                    class="filter-select bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
                     <option value="">All</option>
                 </select>
             </div>
@@ -81,20 +128,21 @@
 
     </header>
 
-    <main class="w-full min-h-[calc(100vh-98px)] bg-surface pt-4">
+    <main class="w-full min-h-[calc(100vh-98px)] bg-surface pt-0">
 
 
         <!-- ===================================================== -->
         <!-- PAGE CONTENT -->
         <!-- ===================================================== -->
 
-        <section class="p-8">
+        <section class="task-page">
+            <div class="task-page__heading"><div><h1>My Tasks</h1><p data-task-count>Tasks assigned to you</p></div></div>
 
             <!-- ================================================= -->
             <!-- SESSION TABLE -->
             <!-- ================================================= -->
 
-            <div class="bg-white
+            <div class="task-table-card bg-white
                         border border-slate-200
                         rounded-xl
                         overflow-hidden">
@@ -102,7 +150,7 @@
                 <!-- Table -->
                 <div class="overflow-x-auto">
 
-                    <table id="taskTable" class="w-full text-sm">
+                    <table id="taskTable" class="task-table w-full text-sm">
 
                         <!-- Table Header -->
                         <thead class="bg-text-active
@@ -179,7 +227,7 @@
                 <!-- PAGINATION -->
                 <!-- ================================================= -->
 
-                <div class="px-6 py-4
+                <div class="task-pagination px-6 py-4
                         bg-text-active
                         border-t border-slate-200
                         flex items-center
@@ -287,6 +335,7 @@
                         </button>
 
                     </div>
+                    <span class="text-[13px] text-slate-500" data-task-summary>Showing 0-0 of 0</span>
 
                 </div>
 

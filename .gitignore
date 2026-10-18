@@ -24,3 +24,5 @@ Thumbs.db
 *.log
 target/
 .build/
+
+preview-ui/

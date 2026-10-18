@@ -27,9 +27,43 @@
 
     <link href="../../../Style/basic.css" rel="stylesheet" />
 
+    <style>
+        :root { --gap-section:24px; }
+        .ai-dashboard-page { font-family:Inter,Arial,sans-serif; }
+        .ai-dashboard-page :where(button,input,select,textarea,label,th,td){font-family:inherit;}
+        .ai-dashboard-page .ai-toolbar{height:48px;margin-top:50px!important;margin-bottom:0;}
+        .ai-dashboard-page main{padding-top:24px!important;}
+        .ai-dashboard-page .ai-main-content{padding:0 24px 24px;margin:0;}
+        .ai-kpi-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--gap-section)!important;margin-bottom:var(--gap-section)!important;}
+        .ai-kpi-card{min-height:170px;padding:20px 24px!important;border:1px solid #d5dee4!important;border-radius:12px!important;box-shadow:0 2px 8px rgba(16,24,40,.06)!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:flex-start!important;}
+        .ai-kpi-card__icon{width:40px;height:40px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;border-radius:10px;background:#e5f7fa;color:#00849a;}
+        .ai-kpi-card__label{margin:0;color:#475467;font-size:14px;line-height:20px;font-weight:500;}
+        .ai-kpi-card__value{margin:2px 0 0;color:#101828;font-size:32px;line-height:38px;font-weight:700;}
+        .ai-kpi-card__sub{margin:7px 0 0;color:#667085;font-size:13px;line-height:18px;}
+        .ai-session-list{display:grid;gap:16px;}
+        .ai-session-card{padding:20px 24px;border:1px solid #d5dee4;border-radius:12px;background:#fff;box-shadow:0 2px 8px rgba(16,24,40,.06);}
+        .ai-session-card__top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}
+        .ai-session-card h3{margin:0;color:#101828;font-size:16px;line-height:22px;font-weight:600;}
+        .ai-session-card__meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:16px;}
+        .ai-session-card__meta span{display:block;color:#667085;font-size:12px;font-weight:500;}
+        .ai-session-card__meta strong{display:block;margin-top:4px;color:#101828;font-size:14px;font-weight:500;}
+        .ai-badge{display:inline-flex;align-items:center;min-height:24px;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600;}
+        .ai-badge--progress{color:#175cd3;background:#dbeafe;}.ai-badge--submitted{color:#6941c6;background:#f4ebff;}.ai-badge--approved{color:#067647;background:#dff3e9;}.ai-badge--pending{color:#475467;background:#f2f4f7;}
+        .ai-session-card__progress{min-width:220px;margin-top:16px;}.ai-session-card__progress-head{display:flex;justify-content:space-between;margin-bottom:7px;color:#667085;font-size:12px;}.ai-session-card__bar{height:6px;overflow:hidden;border-radius:999px;background:#e2e8f0;}.ai-session-card__bar span{display:block;height:100%;border-radius:inherit;background:#087fa8;}
+        .ai-session-card__action{display:inline-flex;align-items:center;min-height:34px;margin-top:16px;padding:0 14px;border-radius:7px;color:#fff;background:#087fa8;font-size:13px;font-weight:600;}
+        .ai-session-card__action:hover{background:#06718f;}
+        .ai-empty{padding:24px;color:#667085;font-size:13px;}
+        .ai-recent-list{display:grid;gap:12px;padding:4px 0;}
+        .ai-recent-item{display:flex;align-items:center;gap:10px;min-height:36px;padding:8px 0;border-bottom:1px solid #edf1f3;font-size:14px;}
+        .ai-recent-document{color:#101828;font-size:14px;font-weight:500;}
+        .ai-recent-item time{margin-left:auto;color:#667085;font-size:13px;}
+        @media(max-width:900px){.ai-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.ai-session-card__meta{grid-template-columns:1fr;gap:10px;}.ai-session-card__progress{min-width:0;}.ai-dashboard-page .ai-main-content{padding:16px;}}
+        @media(max-width:560px){.ai-kpi-grid{grid-template-columns:1fr;}}
+    </style>
+
 </head>
 
-<body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+<body class="ai-dashboard-page bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
 
 
     <!-- Fixed Header -->
@@ -65,7 +99,7 @@
                    hover:bg-button-hover
                    transition-colors duration-200" href="../../User/AILabeling/ViewAll.html">
                 <span class="material-symbols-outlined">list_alt </span>
-                <span class="font-body-md text-[12px]">View ALL</span>
+                <span class="font-body-md text-[12px]">View All</span>
             </a>
 
             <div class="h-12 w-[1px] bg-outline-variant"></div>
@@ -108,8 +142,8 @@
                 <p class="text-[12px] font-bold text-on-surface">
                     NV. E
                 </p>
-                <p class="text-[8px] text-on-surface-variant uppercase tracking-wider">
-                    AI Labeling
+                <p class="text-[11px] text-on-surface-variant uppercase tracking-wider">
+                    AI LABELER
                 </p>
             </div>
 
@@ -118,7 +152,7 @@
     </header>
 
     <!-- TopNavBar -->
-    <header class="w-full h-12
+    <header class="ai-toolbar w-full h-12
            flex items-center px-lg
            bg-text-active border-b border-outline-variant
            shadow-sm sticky top-[50px] z-30 mb-6">
@@ -129,21 +163,9 @@
         <!-- Buttons -->
         <div class="ml-auto flex items-center gap-2">
 
-            <button class="px-4 py-2
-                       rounded-lg
-                       text-[12px]
-                       bg-button-active
-                       text-text-active
-                       hover:opacity-85
-                       transition-opacity
-                       flex items-center gap-2 shadow-sm">
-
-                <span class="material-symbols-outlined text-[12px]">
-                    calendar_today
-                </span>
-
-                Last 30 Days
-            </button>
+            <select id="aiTimeFilter" aria-label="Time range" class="min-w-[136px] h-9 rounded-lg border border-outline-variant bg-white px-3 text-[13px] font-medium text-on-surface focus:outline-none focus:ring-1 focus:ring-primary">
+                <option value="today">Today</option><option value="7d">Last 7 days</option><option value="30d" selected>Last 30 days</option><option value="all">All time</option>
+            </select>
 
             <button type="butotn"
                     class="px-4 py-2
@@ -168,10 +190,10 @@
     </header>
 
     <!-- Main Content Area -->
-    <main class="w-full min-h-[calc(100vh-98px)] bg-surface pt-6">
+    <main class="w-full min-h-[calc(100vh-98px)] bg-surface pt-0">
 
         <!-- Header & KPI Section -->
-        <div class="p-lg space-y-xl">
+        <div class="ai-main-content space-y-xl">
 
             <!-- KPI Cards -->
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-gutter mb-6">
@@ -198,7 +220,7 @@
                     </div>
                     <div>
                         <h3 class="text-on-surface-variant font-label-caps text-label-caps">Completed Sessions</h3>
-                        <p class="text-3xl font-extrabold text-on-surface mt-1">1,482</p>
+                        <p class="text-3xl font-extrabold text-on-surface mt-1">—</p>
                     </div>
                 </div>
                 <div
@@ -214,7 +236,7 @@
                     </div>
                     <div>
                         <h3 class="text-on-surface-variant font-label-caps text-label-caps">AI Extraction Accuracy</h3>
-                        <p class="text-3xl font-extrabold text-on-surface mt-1">94.8%</p>
+                        <p class="text-3xl font-extrabold text-on-surface mt-1">—</p>
                     </div>
                 </div>
                 <div
@@ -247,7 +269,7 @@
                     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div class="flex-1">
                             <div class="flex items-center gap-3 mb-2">
-                                <h3 class="font-body-lg text-body-lg font-bold text-on-surface">Financial Statements Q1
+                                <h3 class="font-body-lg text-body-lg font-bold text-on-surface">—
                                 </h3>
                                 <span
                                     class="bg-secondary-fixed/30 text-secondary px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider">In
@@ -271,10 +293,10 @@
                         <div class="w-full md:w-48">
                             <div class="flex justify-between items-center mb-2">
                                 <span class="text-xs font-bold text-on-surface-variant">Progress</span>
-                                <span class="text-xs font-bold text-primary">82%</span>
+                                <span class="text-xs font-bold text-primary">—</span>
                             </div>
                             <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-                                <div class="h-full primary-gradient rounded-full" style="width: 82%"></div>
+                                <div class="h-full primary-gradient rounded-full" style="width: 0%"></div>
                             </div>
                         </div>
                         <div class="flex md:flex-col justify-end">
@@ -292,7 +314,7 @@
                     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div class="flex-1">
                             <div class="flex items-center gap-3 mb-2">
-                                <h3 class="font-body-lg text-body-lg font-bold text-on-surface">Global ESG Analysis 2024
+                                <h3 class="font-body-lg text-body-lg font-bold text-on-surface">—
                                 </h3>
                                 <span
                                     class="bg-tertiary-fixed/30 text-tertiary px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider">Review
@@ -316,10 +338,10 @@
                         <div class="w-full md:w-48">
                             <div class="flex justify-between items-center mb-2">
                                 <span class="text-xs font-bold text-on-surface-variant">Progress</span>
-                                <span class="text-xs font-bold text-primary">45%</span>
+                                <span class="text-xs font-bold text-primary">—</span>
                             </div>
                             <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-                                <div class="h-full primary-gradient rounded-full opacity-60" style="width: 45%"></div>
+                                <div class="h-full primary-gradient rounded-full opacity-60" style="width: 0%"></div>
                             </div>
                         </div>
                         <div class="flex md:flex-col justify-end">
@@ -361,10 +383,10 @@
                         <div class="w-full md:w-48">
                             <div class="flex justify-between items-center mb-2">
                                 <span class="text-xs font-bold text-on-surface-variant">Progress</span>
-                                <span class="text-xs font-bold text-primary">12%</span>
+                                <span class="text-xs font-bold text-primary">—</span>
                             </div>
                             <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-                                <div class="h-full primary-gradient rounded-full opacity-30" style="width: 12%"></div>
+                                <div class="h-full primary-gradient rounded-full opacity-30" style="width: 0%"></div>
                             </div>
                         </div>
                         <div class="flex md:flex-col justify-end">

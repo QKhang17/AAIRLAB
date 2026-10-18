@@ -318,7 +318,7 @@ public class WorkspaceService {
             // Analysts compare AI runs only. This is enforced at the data boundary,
             // so opening a manually labelled task directly cannot bypass the UI.
             case "RESULT_ANALYST" -> "t.task_type='AI'";
-            case "REVIEWER" -> "(EXISTS (SELECT 1 FROM session_members m WHERE m.session_id=t.session_id AND m.user_id="+a.id()+") " +
+            case "REVIEWER" -> "t.task_type='MANUAL' AND (EXISTS (SELECT 1 FROM session_members m WHERE m.session_id=t.session_id AND m.user_id="+a.id()+") " +
                     "OR EXISTS (SELECT 1 FROM review_cases rc WHERE rc.assigned_to="+a.id()+" AND t.id IN (rc.left_task_id,rc.right_task_id)))";
             default -> "t.assigned_to="+a.id();
         };
@@ -471,10 +471,8 @@ public class WorkspaceService {
 
     private void validateSessionAssignment(String sessionType, Session r) {
         if ("MANUAL".equalsIgnoreCase(sessionType)) {
-            valid(r.manualLabelerIds() != null && !r.manualLabelerIds().isEmpty(),
-                    "Manual session requires 1 to 2 manual labelers.");
-            valid(r.manualLabelerIds().size() <= 2,
-                    "Manual session requires 1 to 2 manual labelers.");
+            valid(r.manualLabelerIds() != null && r.manualLabelerIds().size() == 2,
+                    "Manual session requires exactly 2 manual labelers.");
             valid(r.manualLabelerIds().stream().allMatch(Objects::nonNull),
                     "Manual labeler ID không được để trống");
             valid(r.aiLabelerId() == null,
@@ -776,6 +774,10 @@ public class WorkspaceService {
                 LEFT JOIN users ru ON ru.id=rt.assigned_to
                 JOIN users reviewer ON reviewer.id=rc.assigned_to
                 WHERE rc.id=?
+                  AND lt.task_type='MANUAL' AND rt.task_type='MANUAL'
+                  AND lt.session_id IS NOT NULL AND lt.session_id=rt.session_id
+                  AND lu.role='MANUAL_LABELER' AND ru.role='MANUAL_LABELER'
+                  AND EXISTS (SELECT 1 FROM session_members sm WHERE sm.session_id=lt.session_id AND sm.user_id=rc.assigned_to)
                 """+suffix,reviewCaseId);
         boolean allowed=(a.role().equals("REVIEWER")&&Objects.equals(a.id(),nullableId(row,"assigned_to")))
                 ||(a.role().equals("MANAGER")&&Objects.equals(a.id(),nullableId(row,"created_by")));
@@ -833,6 +835,7 @@ public class WorkspaceService {
         return db.queryForList("""
                 SELECT rc.*,d.title AS document_title,d.original_name,
                        lu.username AS left_assignee,ru.username AS right_assignee,
+                       lt.task_type AS left_task_type,rt.task_type AS right_task_type,
                        reviewer.username AS reviewer,
                        (SELECT count(*) FROM review_field_decisions fd WHERE fd.review_case_id=rc.id AND fd.final_value IS NOT NULL) AS resolved_fields
                 FROM review_cases rc
@@ -842,7 +845,12 @@ public class WorkspaceService {
                 LEFT JOIN users lu ON lu.id=lt.assigned_to
                 LEFT JOIN users ru ON ru.id=rt.assigned_to
                 JOIN users reviewer ON reviewer.id=rc.assigned_to
-                """+" WHERE "+owner+filter+" ORDER BY rc.due_at NULLS LAST,rc.id DESC",args.toArray());
+                """+" WHERE "+owner+filter+
+                " AND lt.task_type='MANUAL' AND rt.task_type='MANUAL'"+
+                " AND lt.session_id IS NOT NULL AND lt.session_id=rt.session_id"+
+                " AND lu.role='MANUAL_LABELER' AND ru.role='MANUAL_LABELER'"+
+                " AND EXISTS (SELECT 1 FROM session_members sm WHERE sm.session_id=lt.session_id AND sm.user_id=rc.assigned_to)"+
+                " ORDER BY rc.due_at NULLS LAST,rc.id DESC",args.toArray());
     }
 
     public Map<String,Object> createReviewCase(ReviewCaseCreate r) {
@@ -852,6 +860,16 @@ public class WorkspaceService {
         var right=one("SELECT * FROM annotation_tasks WHERE id=? FOR SHARE",r.rightTaskId());
         owns(a,left,"assigned_by");owns(a,right,"assigned_by");
         valid(Objects.equals(nullableId(left,"document_id"),nullableId(right,"document_id")),"Hai task phải thuộc cùng tài liệu");
+        valid("MANUAL".equals(left.get("task_type")) && "MANUAL".equals(right.get("task_type")),"Review case chỉ được tạo từ task Manual");
+        Long leftSession=nullableId(left,"session_id"), rightSession=nullableId(right,"session_id");
+        valid(leftSession!=null && Objects.equals(leftSession,rightSession),"Hai task phải thuộc cùng một phiên Manual");
+        valid(!Objects.equals(nullableId(left,"assigned_to"),nullableId(right,"assigned_to")),"Hai nguồn review phải do hai Manual Labeler khác nhau nộp");
+        valid(count("SELECT count(*) FROM session_members sm JOIN users u ON u.id=sm.user_id WHERE sm.session_id=? AND u.role='MANUAL_LABELER'",leftSession)==2,
+                "Phiên Manual phải có đúng 2 manual labeler");
+        valid(count("SELECT count(*) FROM session_members sm JOIN users u ON u.id=sm.user_id WHERE sm.session_id=? AND u.role='REVIEWER' AND sm.user_id=?",leftSession,r.assignedTo())==1,
+                "Reviewer phải được giao trong cùng phiên Manual");
+        valid(count("SELECT count(*) FROM session_members WHERE session_id=? AND user_id IN (?,?)",leftSession,nullableId(left,"assigned_to"),nullableId(right,"assigned_to"))==2,
+                "Hai nguồn review phải là hai manual labeler của phiên");
         state(Set.of("SUBMITTED","APPROVED").contains(String.valueOf(left.get("status")))&&Set.of("SUBMITTED","APPROVED").contains(String.valueOf(right.get("status"))),"Hai task phải được nộp trước khi tạo review case");
         var reviewer=one("SELECT role,is_active FROM users WHERE id=?",r.assignedTo());
         valid("REVIEWER".equals(reviewer.get("role"))&&Boolean.TRUE.equals(reviewer.get("is_active")),"Người nhận phải là Reviewer đang hoạt động");
@@ -876,7 +894,15 @@ public class WorkspaceService {
 
     private Map<String,Map<String,Object>> annotationMap(long taskId) {
         var result=new LinkedHashMap<String,Map<String,Object>>();
-        for(var row:db.queryForList("SELECT id,label_name,label_value,source_page,confidence,source_bbox::text AS source_bbox FROM annotations WHERE task_id=? ORDER BY id",taskId)) result.put(fieldKey(String.valueOf(row.get("label_name"))),row);
+        for(var row:db.queryForList("""
+                SELECT n.id,n.label_name,n.label_value,n.source_page,n.confidence,n.source_bbox::text AS source_bbox
+                FROM annotations n
+                JOIN annotation_tasks t ON t.id=n.task_id
+                JOIN users u ON u.id=t.assigned_to
+                WHERE n.task_id=? AND t.task_type='MANUAL'
+                  AND u.role='MANUAL_LABELER' AND n.created_by=t.assigned_to
+                ORDER BY n.id
+                """,taskId)) result.put(fieldKey(String.valueOf(row.get("label_name"))),row);
         return result;
     }
     private Map<String,Object> comparisonField(String key,Map<String,Object> left,Map<String,Object> right,Map<String,Object> decision) {

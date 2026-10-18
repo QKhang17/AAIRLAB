@@ -1,22 +1,21 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Brand from '../components/Brand'
 import { useAuth } from '../context/AuthContext'
 import { getRoleConfig } from '../config/roles'
 import { api } from '../services/api'
+import { useFetchData } from '../hooks/useFetchData'
 
 export default function DashboardPage() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const config = useMemo(() => getRoleConfig(user.role), [user.role])
-  const [stats, setStats] = useState(null)
-
-  useEffect(() => {
-    let alive = true
-    api('/dashboard').then((response) => alive && setStats(response.data)).catch(() => {})
-    return () => { alive = false }
+  const fetchStats = useCallback(async () => {
+    const response = await api('/dashboard')
+    return response.data && Object.keys(response.data).length ? response.data : {}
   }, [])
+  const { data: stats, isLoading: loading, error, refetch: loadStats } = useFetchData(fetchStats)
 
   function handleLogout() {
     logout()
@@ -89,13 +88,12 @@ export default function DashboardPage() {
           </section>
 
           <section className="stats-grid" aria-label="Thống kê nhanh">
-            {(stats ? Object.entries(stats).map(([label, value]) => [String(value), label]) : config.stats).map(([value, label]) => (
-              <article key={label}>
-                <span>{label}</span>
-                <strong>{value}</strong>
-                <small><i /> Cập nhật vừa xong</small>
-              </article>
+            {loading && <p className="workspace-data-state">Loading data...</p>}
+            {!loading && error && <div className="workspace-data-state workspace-data-state--error"><p>{error.message}</p><button onClick={() => loadStats().catch(() => {})} type="button">Retry</button></div>}
+            {!loading && !error && stats && Object.entries(stats).length > 0 && Object.entries(stats).map(([label, value]) => (
+              <article key={label}><span>{label}</span><strong>{String(value)}</strong><small><i /> From database</small></article>
             ))}
+            {!loading && !error && stats && Object.entries(stats).length === 0 && <p className="workspace-data-state">No data available.</p>}
           </section>
 
           <section className="workspace-section">

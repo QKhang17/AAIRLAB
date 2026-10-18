@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="light" lang="vi">
+<html class="light" lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,33 +13,35 @@
     <script src="../../../JavaScript/tailwind.js"></script>
     <link href="../../../Style/basic.css" rel="stylesheet">
     <link href="../../../Style/navbar.css" rel="stylesheet">
+    <link href="../../../Style/analystDashboard.css?v=20261018" rel="stylesheet">
 </head>
 <body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
     <div data-aair-navbar-mount></div>
-    <header class="flex h-12 items-center border-b border-outline-variant bg-text-active px-6 shadow-sm">
-        <h1 class="text-lg font-bold text-on-surface">Dashboard Analyst</h1>
+    <header class="analyst-page-header flex items-center border-b border-outline-variant bg-text-active px-6 shadow-sm">
+        <h1 id="analystTitle" class="analyst-page-title">Good Evening, Analyst</h1>
         <div class="ml-auto flex items-center gap-2">
-            <span id="analystRange" class="text-xs text-on-surface-variant">30 ngày gần nhất</span>
-            <button id="analystRefresh" type="button" class="aair-dashboard-button flex items-center gap-2 rounded-lg px-4 py-2 text-xs shadow-sm"><span class="material-symbols-outlined text-sm">refresh</span>Làm mới</button>
+            <label class="analyst-date-filter"><span>Time range</span><select id="analystRangeSelect" aria-label="Time range"><option value="today">Today</option><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="all">All time</option></select></label>
+            <span id="analystRange" class="analyst-range-label">Last 30 days</span>
+            <button id="analystRefresh" type="button" class="aair-dashboard-button flex items-center gap-2 rounded-lg px-4 py-2 text-xs shadow-sm"><span class="material-symbols-outlined text-sm">refresh</span>Refresh</button>
         </div>
     </header>
     <main class="min-h-[calc(100vh-106px)] bg-surface p-6" aria-live="polite">
-        <div id="analystDashboardState" class="mb-4 text-sm text-on-surface-variant">Đang tải dữ liệu...</div>
-        <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6" aria-label="Chỉ số công việc">
-            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">Tổng tác vụ</p><strong id="metricTotalTasks" class="mt-2 block text-2xl">—</strong></article>
-            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">Đang xử lý</p><strong id="metricInProgress" class="mt-2 block text-2xl">—</strong></article>
-            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">Đã nộp</p><strong id="metricSubmitted" class="mt-2 block text-2xl">—</strong></article>
-            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">Đã duyệt</p><strong id="metricApproved" class="mt-2 block text-2xl text-secondary">—</strong></article>
-            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">Quá hạn</p><strong id="metricOverdue" class="mt-2 block text-2xl text-error">—</strong></article>
-            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">Nhãn đã trích xuất</p><strong id="metricLabels" class="mt-2 block text-2xl">—</strong></article>
+        <div id="analystDashboardState" class="analyst-dashboard-state">Loading data…</div>
+        <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6" aria-label="Work metrics">
+            <article class="analyst-kpi"><span class="analyst-kpi-icon material-symbols-outlined">assignment</span><div><p>Total tasks</p><strong id="metricTotalTasks">—</strong><small>All assigned tasks</small></div></article>
+            <article class="analyst-kpi"><span class="analyst-kpi-icon material-symbols-outlined">pending_actions</span><div><p>In progress</p><strong id="metricInProgress">—</strong><small>Currently being handled</small></div></article>
+            <article class="analyst-kpi"><span class="analyst-kpi-icon material-symbols-outlined">upload_file</span><div><p>Submitted</p><strong id="metricSubmitted">—</strong><small>Awaiting review</small></div></article>
+            <article class="analyst-kpi"><span class="analyst-kpi-icon material-symbols-outlined">task_alt</span><div><p>Approved</p><strong id="metricApproved">—</strong><small>Completed review</small></div></article>
+            <article class="analyst-kpi" id="overdueMetric"><span class="analyst-kpi-icon material-symbols-outlined">warning</span><div><p>Overdue</p><strong id="metricOverdue">—</strong><small>Needs attention</small></div></article>
+            <article class="analyst-kpi"><span class="analyst-kpi-icon material-symbols-outlined">label</span><div><p>Extracted labels</p><strong id="metricLabels">—</strong><small>Across assigned tasks</small></div></article>
         </section>
         <section class="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-2">
-            <article class="rounded-xl border border-outline-variant bg-white p-5"><h2 class="text-base font-bold">Phân bố trạng thái tác vụ</h2><div id="statusDistribution" class="mt-5 space-y-3"></div></article>
-            <article class="rounded-xl border border-outline-variant bg-white p-5"><h2 class="text-base font-bold">Phân bố nhãn trích xuất</h2><div id="labelDistribution" class="mt-5 space-y-3"></div></article>
+            <article class="analyst-panel"><h2>Task status distribution</h2><div id="statusDistribution" class="analyst-bars"></div></article>
+            <article class="analyst-panel"><h2>Extracted label distribution</h2><div id="labelDistribution" class="analyst-bars"></div></article>
         </section>
         <section class="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-5">
-            <article class="overflow-hidden rounded-xl border border-outline-variant bg-white xl:col-span-3"><header class="border-b border-outline-variant px-5 py-4"><h2 class="text-base font-bold">Tác vụ gần đây</h2><p class="mt-1 text-xs text-on-surface-variant">Dữ liệu theo phạm vi 30 ngày gần nhất</p></header><div class="overflow-auto"><table class="w-full text-left text-sm"><thead class="bg-surface-container-low text-xs text-on-surface-variant"><tr><th class="px-5 py-3">Tài liệu</th><th class="px-5 py-3">Người xử lý</th><th class="px-5 py-3">Trạng thái</th><th class="px-5 py-3">Cập nhật</th></tr></thead><tbody id="recentTasks"></tbody></table></div></article>
-            <article class="overflow-hidden rounded-xl border border-outline-variant bg-white xl:col-span-2"><header class="border-b border-outline-variant px-5 py-4"><h2 class="text-base font-bold">Năng suất người dùng</h2><p class="mt-1 text-xs text-on-surface-variant">Theo các tác vụ được phân công</p></header><div class="overflow-auto"><table class="w-full text-left text-sm"><thead class="bg-surface-container-low text-xs text-on-surface-variant"><tr><th class="px-5 py-3">Người dùng</th><th class="px-5 py-3">Hoàn thành</th><th class="px-5 py-3">Quá hạn</th></tr></thead><tbody id="userProductivity"></tbody></table></div></article>
+            <article class="analyst-table-panel xl:col-span-3"><header><h2>Recent tasks</h2><p>Tasks in the selected time range</p></header><div class="overflow-auto"><table><thead><tr><th>Document</th><th>Assignee</th><th>Status</th><th>Updated</th></tr></thead><tbody id="recentTasks"></tbody></table></div></article>
+            <article class="analyst-table-panel xl:col-span-2"><header><h2>User productivity</h2><p>Based on assigned tasks</p></header><div class="overflow-auto"><table><thead><tr><th>User</th><th>Completed</th><th>Overdue</th></tr></thead><tbody id="userProductivity"></tbody></table></div></article>
         </section>
     </main>
     <script src="../../../JavaScript/api.js"></script>

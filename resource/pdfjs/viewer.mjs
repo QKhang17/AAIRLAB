@@ -37,6 +37,15 @@ const pdfViewer = new PDFViewer({
 });
 linkService.setViewer(pdfViewer);
 
+// Expose the active viewer to the parent task workspace so Source Page
+// controls can navigate this iframe without reloading the PDF document.
+globalThis.PDFViewerApplication = {
+    pdfViewer,
+    get pdfDocument() {
+        return pdfViewer.pdfDocument;
+    },
+};
+
 const clampScale = scale => Math.min(4, Math.max(0.25, scale));
 const setScale = scale => {
     pdfViewer.currentScale = clampScale(scale);

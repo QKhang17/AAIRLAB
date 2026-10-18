@@ -26,10 +26,11 @@
 
     <link href="../../../Style/basic.css" rel="stylesheet" />
     <link href="../../../Style/navbar.css" rel="stylesheet" />
+    <link href="../../../Style/terminologyDashboard.css" rel="stylesheet" />
 
 </head>
 
-<body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+<body class="terminology-dashboard bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
 
     <div data-aair-navbar-mount></div>
 
@@ -40,26 +41,20 @@
            shadow-sm sticky top-[58px] z-30 mb-6">
 
         <div class="flex items-center">
-            <h2 class="text-lg font-bold text-on-surface" data-greeting>Good Morning,</h2>
+            <h2 class="text-lg font-bold text-on-surface" data-greeting>Good Morning</h2>
         </div>
         <!-- Buttons -->
         <div class="ml-auto flex items-center gap-2">
 
-            <button id="dashboardRange" type="button" class="px-4 py-2
-                       rounded-lg
-                       text-[12px]
-                       bg-button-active
-                       text-text-active
-                       hover:opacity-85
-                       transition-opacity
-                       flex items-center gap-2 shadow-sm">
-
-                <span class="material-symbols-outlined text-[12px]">
-                    calendar_today
-                </span>
-
-                Last 30 Days
-            </button>
+            <label class="terminology-range-label">
+                <span class="sr-only">Time range</span>
+                <select id="dashboardRange" aria-label="Time range">
+                    <option value="today">Today</option>
+                    <option value="7d">Last 7 days</option>
+                    <option value="30d">Last 30 days</option>
+                    <option value="all" selected>All time</option>
+                </select>
+            </label>
 
             <button
                     id="dashboardRefresh"
@@ -94,7 +89,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-gutter mb-6">
                 
                 <!-- Card 1: Total Terms -->
-                <div class="bg-white p-6 rounded-[16px] card-shadow border border-outline-variant flex flex-col gap-4">
+                <div class="terminology-kpi-card bg-white p-6 rounded-[16px] card-shadow border border-outline-variant flex flex-col gap-4">
                     <div class="flex justify-between items-start">
                         <div class="p-2 bg-surface-container rounded-lg text-primary">
                             <span class="material-symbols-outlined">menu_book</span>
@@ -103,39 +98,40 @@
                     <div>
                         <p class="font-label-md text-label-md text-on-surface-variant font-medium">Total Terms</p>
                         <p id="terminologyTotalTerms" class="font-headline-md text-headline-md mt-1">—</p>
+                        <p class="terminology-kpi-subtitle">All terminology entries</p>
                     </div>
                 </div>
 
                 <!-- Card 2: Categories -->
-                <div class="bg-white p-6 rounded-[16px] card-shadow border border-outline-variant flex flex-col gap-4">
+                <div class="terminology-kpi-card bg-white p-6 rounded-[16px] card-shadow border border-outline-variant flex flex-col gap-4">
                     <div class="flex justify-between items-start mb-4">
                         <div class="p-2 bg-surface-container text-on-secondary-container rounded-xl">
                             <span class="material-symbols-outlined">folder_special</span>
                         </div>
                     </div>
                     <div>
-                        <p class="font-label-md text-label-md text-on-surface-variant font-medium">Financial Categories
-                        </p>
+                        <p class="font-label-md text-label-md text-on-surface-variant font-medium">Categories</p>
                         <p id="terminologyCategoryCount" class="font-headline-md text-headline-md mt-1">—</p>
+                        <p class="terminology-kpi-subtitle">Financial categories</p>
                     </div>
                 </div>
                 
                 <!-- Card 3: Recently Updated -->
-                <div class="bg-white p-6 rounded-[16px] card-shadow border border-outline-variant flex flex-col gap-4">
+                <div class="terminology-kpi-card bg-white p-6 rounded-[16px] card-shadow border border-outline-variant flex flex-col gap-4">
                     <div class="flex justify-between items-start mb-4">
                         <div class="p-2 bg-surface-container-highest text-on-surface-variant rounded-xl">
                             <span class="material-symbols-outlined">history</span>
                         </div>
-                        <p class="font-label-md text-label-md text-on-surface-variant">Last 7 Days</p>
                     </div>
                     <div>
                         <p class="font-label-md text-label-md text-on-surface-variant font-medium">Recently Updated</p>
                         <p id="terminologyUpdatedCount" class="font-headline-md text-headline-md mt-1">—</p>
+                        <p class="terminology-kpi-subtitle">Last 7 days</p>
                     </div>
                 </div>
                 
                 <!-- Card 4: Inactive Terms -->
-                <div class="bg-white p-6 rounded-[16px] card-shadow border border-outline-variant flex flex-col gap-4">
+                <div class="terminology-kpi-card bg-white p-6 rounded-[16px] card-shadow border border-outline-variant flex flex-col gap-4">
                     <div class="flex justify-between items-start mb-4">
                         <div class="p-2 bg-surface-container text-on-warning-container rounded-xl">
                             <span class="material-symbols-outlined">block</span>
@@ -144,12 +140,13 @@
                     <div>
                         <p class="font-label-md text-label-md text-on-surface-variant font-medium">Inactive Terms</p>
                         <p id="terminologyInactiveCount" class="font-headline-md text-headline-md mt-1 text-warning">—</p>
+                        <p class="terminology-kpi-subtitle">Currently inactive</p>
                     </div>
                 </div>
             </div>
 
             <!-- Main Content Grid -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+            <div class="term-dashboard-panels grid grid-cols-1 lg:grid-cols-3 gap-gutter">
                 <!-- Left Column (Wide): Recent Table -->
                 <div class="lg:col-span-2 flex flex-col gap-gutter">
                     <div
@@ -171,7 +168,7 @@
                                         <th class="px-lg py-4 font-semibold uppercase tracking-wider">Category</th>
                                         <th class="px-lg py-4 font-semibold uppercase tracking-wider">Date</th>
                                         <th class="px-lg py-4 font-semibold uppercase tracking-wider">Status</th>
-                                        <th class="px-lg py-4 font-semibold"></th>
+                                        <th class="px-lg py-4 font-semibold uppercase tracking-wider text-right">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="terminologyRecentRows" class="font-body-sm text-body-sm divide-y divide-outline-variant/10"></tbody>
@@ -189,7 +186,7 @@
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="font-title-lg text-title-lg text-on-surface">Category Distribution</h3>
                             <button id="viewTerminologyCategories" type="button"
-                                class="text-primary font-label-md text-label-md hover:underline font-semibold">Details</button>
+                                class="text-primary font-label-md text-label-md hover:underline font-semibold">View all categories</button>
                         </div>
                         <div id="terminologyCategoryDistribution" class="space-y-5" aria-live="polite"></div>
 
@@ -213,6 +210,7 @@
         };
     </script>
     <script src="../../../JavaScript/api.js"></script>
+    <script src="../../../JavaScript/navbar.js"></script>
     <script src="../../../JavaScript/terminologyDashboard.js"></script>
     <script src="../../../JavaScript/workspace.js"></script>
 </body>

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>View ALL</title>
+    <title>Review Queue</title>
     <link rel="icon" type="image/png" href="/resource/icon/logo_remove_BG.png">
 
     <!-- Tailwind CSS -->
@@ -25,6 +25,13 @@
     <script src="../../../JavaScript/tailwind.js"></script>
 
     <link href="../../../Style/basic.css" rel="stylesheet" />
+    <style>
+      :root{--gap-section:24px;--row-h:52px}
+      .task-list-page{padding:24px!important}
+      .task-list-page h1{margin:0;font-size:22px;font-weight:600;color:#101828}.task-list-page p{margin:4px 0 0;font-size:13px;color:#667085}
+      .filter-select{min-width:120px!important;height:40px!important;font-size:13px!important;font-weight:500!important}
+      #taskTable{table-layout:fixed;min-width:960px}#taskTable th,#taskTable td{padding:10px 16px!important;height:var(--row-h);vertical-align:middle;text-align:left!important}#taskTable th{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#667085}#taskTable td{font-size:13px;color:#475467}#taskTable td:first-child a{font-size:14px;font-weight:500;color:#101828;text-decoration:none}#taskTable td:first-child a:hover{color:#175cd3;text-decoration:underline}#taskTable th:last-child,#taskTable td:last-child{text-align:right!important;width:112px}.task-action{display:inline-flex;align-items:center;justify-content:center;width:78px;min-height:32px;padding:0 10px;border:1px solid #cbd5e1;border-radius:7px;color:#344054!important;background:#fff;font-size:13px;font-weight:600}.task-action:hover{border-color:#175cd3;color:#175cd3!important;background:#f8fbff}.task-type,.task-status,.task-conflicts{display:inline-flex;align-items:center;min-height:24px;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600}.task-type{color:#475467;background:#eef2f6;font-weight:500}.task-status--pending{color:#475467;background:#f2f4f7}.task-status--progress{color:#175cd3;background:#dbeafe}.task-status--submitted{color:#6941c6;background:#f4ebff}.task-status--approved{color:#067647;background:#dff3e9}.task-status--rejected{color:#b42318;background:#fee4e2}.task-conflicts{color:#667085;background:#f2f4f7}.task-conflicts--active{color:#b54708;background:#fef0c7}.task-pagination[hidden]{display:none}
+    </style>
 
 </head>
 
@@ -64,7 +71,7 @@
                    bg-button-active
                    transition-colors duration-200" href="../../User/ManualReview/ViewAll.html">
                 <span class="material-symbols-outlined">list_alt </span>
-                <span class="font-body-md text-[12px]">View ALL</span>
+                <span class="font-body-md text-[12px]">Review Queue</span>
             </a>
 
             <div class="h-12 w-[1px] bg-outline-variant"></div>
@@ -96,7 +103,7 @@
                 <p class="text-[12px] font-bold text-on-surface">
                     NV. C
                 </p>
-                <p class="text-[8px] text-on-surface-variant uppercase tracking-wider">
+                <p class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">
                     Manual Review
                 </p>
             </div>
@@ -121,7 +128,7 @@
                 search
             </span>
 
-            <input type="text" placeholder="Search ..." class="w-full h-8
+            <input type="text" placeholder="Search tasks…" class="w-full h-8
                    pl-10 pr-4
                    rounded-lg
                    border border-slate-300
@@ -139,7 +146,7 @@
             <div class="flex items-center gap-2">
                 <label class="text-label-md text-on-surface-variant">Session:</label>
                 <select
-                    class="w-[80px] bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
+                    class="filter-select min-w-[120px] h-10 bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
                     <option>All</option>
                     <option>001</option>
                     <option>002</option>
@@ -149,7 +156,7 @@
             <div class="flex items-center gap-2">
                 <label class="text-label-md text-on-surface-variant">Status:</label>
                 <select
-                    class="bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
+                    class="filter-select min-w-[120px] h-10 bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
                     <option>All</option>
                     <option>Active</option>
                     <option>Disabled</option>
@@ -170,7 +177,8 @@
         <!-- PAGE CONTENT -->
         <!-- ===================================================== -->
 
-        <section class="p-8">
+        <section class="task-list-page p-6">
+            <div class="mb-6"><h1 class="text-[22px] font-semibold text-slate-900">Review Queue</h1><p class="mt-1 text-[13px] text-slate-500">Tasks assigned for review</p></div>
 
             <!-- ================================================= -->
             <!-- DOCUMENT TABLE -->
@@ -184,7 +192,7 @@
                 <!-- Table -->
                 <div class="overflow-x-auto">
 
-                    <table class="w-full text-sm">
+                    <table id="taskTable" class="task-list-table w-full text-sm">
 
                         <!-- ================================================= -->
                         <!-- TABLE HEADER -->
@@ -253,7 +261,7 @@
                         <!-- TABLE BODY -->
                         <!-- ================================================= -->
 
-                        <tbody class="divide-y divide-slate-100">
+                        <tbody id="taskRows" class="divide-y divide-slate-100">
 
 
                             <!-- ============================================= -->
@@ -762,7 +770,7 @@
                 <!-- PAGINATION -->
                 <!-- ================================================= -->
 
-                <div class="px-6 py-4
+                <div class="task-pagination px-6 py-4
                         bg-text-active
                         border-t border-slate-200
                         flex items-center
@@ -770,7 +778,7 @@
 
 
                     <!-- Pagination -->
-                    <div class="flex items-center gap-6">
+                    <div id="taskPagination" class="flex items-center gap-6">
 
                         <!-- Previous -->
                         <button class="w-9 h-9

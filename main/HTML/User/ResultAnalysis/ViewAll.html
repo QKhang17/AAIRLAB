@@ -27,6 +27,7 @@
     <link href="../../../Style/basic.css" rel="stylesheet" />
     <link href="../../../Style/shared.css" rel="stylesheet" />
     <link href="../../../Style/navbar.css" rel="stylesheet" />
+    <link href="../../../Style/analystTaskList.css?v=20261018" rel="stylesheet" />
 
 </head>
 
@@ -35,7 +36,7 @@
     <div data-aair-navbar-mount></div>
 
     <!-- TopNavBar -->
-    <header class="w-full h-12
+    <header class="aa-task-list-toolbar w-full h-12
            flex items-center gap-2 px-lg
            bg-text-active border-b border-outline-variant
            shadow-sm sticky top-0 z-30 mb-6">
@@ -50,7 +51,7 @@
                 search
             </span>
 
-                <input id="taskSearch" type="text" placeholder="Tìm kiếm..." class="w-full h-8
+                <input id="taskSearch" type="text" placeholder="Search tasks..." class="w-full h-8
                    pl-10 pr-4
                    rounded-lg
                    border border-slate-300
@@ -66,20 +67,20 @@
         <div class="ml-auto flex items-center gap-2">
 
             <div class="flex items-center gap-2">
-                <label class="text-label-md text-on-surface-variant">Phiên:</label>
+                <label class="text-label-md text-on-surface-variant">Session:</label>
                     <select id="sessionFilter"
-                    class="w-[80px] bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
-                    <option value="">Tất cả</option>
+                    class="filter-select bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
+                    <option value="">All</option>
                     <option>001</option>
                     <option>002</option>
                 </select>
             </div>
 
             <div class="flex items-center gap-2">
-                <label class="text-label-md text-on-surface-variant">Trạng thái:</label>
+                <label class="text-label-md text-on-surface-variant">Status:</label>
                     <select id="statusFilter"
-                    class="bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
-                    <option value="">Tất cả</option>
+                    class="filter-select bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
+                    <option value="">All</option>
                     <option>Active</option>
                     <option>Disabled</option>
                 </select>
@@ -93,13 +94,14 @@
      MAIN CONTENT — VIEW ALL DOCUMENTS
 ========================================================= -->
 
-    <main class="w-full min-h-[calc(100vh-98px)] overflow-y-auto overflow-x-hidden pt-4">
+    <main class="aa-task-list-page w-full min-h-[calc(100vh-98px)] overflow-y-auto overflow-x-hidden">
 
         <!-- ===================================================== -->
         <!-- PAGE CONTENT -->
         <!-- ===================================================== -->
 
-        <section class="p-8">
+        <section class="aa-task-list-content">
+            <div class="aa-page-heading"><h1>Task List</h1><p>Review and analyze assigned AI tasks.</p></div>
 
             <!-- ================================================= -->
             <!-- DOCUMENT TABLE -->
@@ -691,7 +693,7 @@
                 <!-- PAGINATION -->
                 <!-- ================================================= -->
 
-                <div class="px-6 py-4
+                <div id="staticPagination" class="px-6 py-4
                         bg-text-active
                         border-t border-slate-200
                         flex items-center
@@ -810,7 +812,7 @@
     <script src="../../../JavaScript/api.js"></script>
     <script src="../../../JavaScript/guidelineModal.js"></script>
     <script src="../../../JavaScript/navbar.js"></script>
-    <script src="../../../JavaScript/resultAnalysisViewAll.js"></script>
+    <script src="../../../JavaScript/resultAnalysisViewAll.js?v=20261018"></script>
 </body>
 
 </html>

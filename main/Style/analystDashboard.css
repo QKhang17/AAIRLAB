@@ -1,0 +1,48 @@
+.analyst-page-header{height:64px!important;min-height:64px;gap:20px}
+.analyst-page-title{margin:0;color:#172031;font-size:22px;font-weight:600}
+.analyst-date-filter{display:flex;align-items:center;gap:8px;color:#667589;font-size:12px}
+.analyst-date-filter span{font-weight:500}
+.analyst-date-filter select{height:34px;padding:0 28px 0 10px;border:1px solid #bdcad7;border-radius:7px;color:#243449;background:#fff;font:500 12px Inter,Arial,sans-serif}
+.analyst-range-label{color:#68778a;font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.analyst-dashboard-state{display:flex;align-items:center;min-height:28px;margin-bottom:10px;color:#718094;font-size:13px}
+.analyst-kpi{display:flex;align-items:flex-start;gap:12px;min-height:126px;padding:19px 18px;border:1px solid #c6d1df;border-radius:11px;background:#fff}
+.analyst-kpi-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:8px;color:#087da7;background:#e8f4f8;font-size:20px}
+.analyst-kpi p{margin:0;color:#536277;font-size:14px;font-weight:500}
+.analyst-kpi strong{display:block;margin-top:5px;color:#172031;font-size:32px;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
+.analyst-kpi small{display:block;margin-top:7px;color:#7b8797;font-size:13px}
+.analyst-kpi#overdueMetric.is-alert .analyst-kpi-icon{color:#b42318;background:#fef0ef}
+.analyst-kpi#overdueMetric.is-alert strong{color:#b42318}
+.analyst-panel{padding:20px;border:1px solid #c6d1df;border-radius:11px;background:#fff}
+.analyst-panel h2,.analyst-table-panel h2{margin:0;color:#172031;font-size:18px;font-weight:600}
+.analyst-bars{display:grid;gap:15px;margin-top:22px}
+.analyst-bar-row{display:grid;gap:6px}
+.analyst-bar-head{display:flex;justify-content:space-between;color:#344054;font-size:14px}
+.analyst-bar-head strong{font-weight:600;font-variant-numeric:tabular-nums}
+.analyst-bar-track{height:6px;overflow:hidden;border-radius:999px;background:#e8edf2}
+.analyst-bar-fill{height:100%;border-radius:inherit}
+.analyst-bar-fill--submitted{background:#8a66d5}
+.analyst-bar-fill--approved{background:#16825f}
+.analyst-bar-fill--overdue{background:#c2413b}
+.analyst-bar-fill--other{background:#087da7}
+.analyst-bar-fill--labels{background:#087da7}
+.analyst-table-panel{overflow:hidden;border:1px solid #c6d1df;border-radius:11px;background:#fff}
+.analyst-table-panel header{padding:18px 20px;border-bottom:1px solid #c6d1df}
+.analyst-table-panel header p{margin:4px 0 0;color:#778498;font-size:13px}
+.analyst-table-panel table{width:100%;border-collapse:collapse;text-align:left}
+.analyst-table-panel th{padding:12px 20px;color:#68778a;background:#f3f6f9;font-size:12px;font-weight:600;letter-spacing:.02em}
+.analyst-table-panel td{padding:13px 20px;border-top:1px solid #e5eaf0;color:#283548;font-size:14px;font-weight:400}
+.analyst-table-panel tbody tr{cursor:pointer}
+.analyst-table-panel tbody tr:hover{background:#f7fafc}
+.analyst-table-panel td:first-child{color:#172031;font-weight:500}
+.analyst-table-panel tbody tr:hover td:first-child{text-decoration:underline}
+.analyst-table-panel td:last-child{color:#738093;font-size:13px;font-variant-numeric:tabular-nums}
+.analyst-empty-cell{padding:22px 20px!important;color:#778498!important;text-align:center}
+.analyst-status-badge{display:inline-flex;align-items:center;padding:4px 9px;border-radius:999px;font-size:12px;font-weight:600;line-height:1}
+.analyst-status-badge--submitted{color:#6847a7;background:#eee8fb}
+.analyst-status-badge--approved{color:#146c50;background:#e4f4ec}
+.analyst-status-badge--overdue{color:#b42318;background:#fef0ef}
+.analyst-status-badge--default{color:#526174;background:#eef1f4}
+.analyst-overdue-count{display:inline-flex;min-width:24px;justify-content:center;padding:3px 7px;border-radius:999px;color:#b42318;background:#fef0ef;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.aair-navbar__identity small{text-transform:uppercase;letter-spacing:.05em;font-size:11px;font-weight:600}
+.aair-navbar__account .guideline-icon-button{order:-1}
+@media(max-width:900px){.analyst-page-header{height:auto!important;min-height:72px;align-items:flex-start;flex-direction:column;padding:12px 18px}.analyst-page-header>div{width:100%;flex-wrap:wrap}.analyst-range-label{display:none}}

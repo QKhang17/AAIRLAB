@@ -107,7 +107,14 @@ body {
     position: absolute;
     inset: 48px 0 0;
     overflow: auto;
+    scrollbar-width: none;
     background: #f3f6f8;
+}
+
+.pdf-viewport::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
 }
 
 .pdfViewer {

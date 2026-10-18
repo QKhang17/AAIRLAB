@@ -40,6 +40,37 @@
   font-size: 9px;
 }
 
+/* Review readability and semantic state styling. */
+.review-page .session-meta > span:first-child { color: #687686; font-size: 12px; font-weight: 600; }
+.review-page .session-meta b { margin-right: 20px; color: #32404d; font-family: Inter, Arial, sans-serif; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.review-page .progress-copy { font-size: 12px; }
+.review-page .approve-button:disabled { opacity: 1; color: #dce8ed; background: #6f8995; }
+.review-page .panel-head > span { font-family: Inter, Arial, sans-serif; font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.review-page .diff-toggle { padding-right: 16px; color: #526473; font-size: 13px; font-weight: 500; }
+.review-page .comparison-row--header small { gap: 0; margin-left: 8px; color: #687686; font-size: 12px; font-weight: 400; white-space: nowrap; }
+.review-page .comparison-row--header strong { font-size: 12px; }
+.review-page .comparison-row--header > div { gap: 8px; }
+.review-page .field-name em { font-size: 9px; }
+.review-page .comparison-status--format,
+.review-page .comparison-status--value,
+.review-page .comparison-status--missing,
+.review-page .comparison-status--exact { background: #fff; }
+.review-page .comparison-status--format.is-selected,
+.review-page .comparison-status--value.is-selected,
+.review-page .comparison-status--missing.is-selected,
+.review-page .comparison-status--exact.is-selected { background: #f0f9fc; }
+.review-page .comparison-status--format .field-name em { color: #92400E; background: #FEF3C7; }
+.review-page .comparison-status--missing .field-name em { color: #5b347c; background: #eadff5; }
+.review-page .value-cell button { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.review-page .resolved-value { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.review-page .resolved-cell:not(.is-resolved) .resolved-value { font-size: 12px; font-weight: 400; }
+.review-page .value-cell small { margin-left: auto; font-size: 12px; white-space: nowrap; }
+.review-page .table-footer { min-width: 0; font-size: 12px; }
+.review-page .table-help { min-width: 0; gap: 7px; white-space: nowrap; }
+.review-page .keyboard-help { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.review-page kbd { min-width: 18px; padding: 1px 5px; border: 1px solid #c8d3da; border-bottom-width: 2px; border-radius: 4px; color: #405461; background: #fff; font: 600 11px/1.2 Inter, Arial, sans-serif; text-align: center; }
+.review-page #rowCount { flex: 0 0 auto; padding-left: 12px; white-space: nowrap; }
+
 @media (max-width: 1250px) {
   .review-workspace {
     grid-template-columns: minmax(360px, .95fr) minmax(600px, 1.55fr);

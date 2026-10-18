@@ -1,0 +1,163 @@
+/* Result Analysis task screen: shared analyst header, controls, and empty states. */
+.result-analysis-page {
+    --ra-header-h: 58px;
+    --ra-border: #c8d4df;
+    --ra-muted: #637287;
+    --ra-blue: #087da7;
+}
+
+.result-analysis-page .ra-topbar {
+    height: var(--ra-header-h);
+    background: #079bc5;
+}
+.result-analysis-page .ra-brand {
+    color: #fff;
+    text-decoration: none;
+}
+.result-analysis-page .ra-brand strong { font-size: 14px; }
+.result-analysis-page .ra-topbar nav a {
+    gap: 0;
+    min-width: 108px;
+    justify-content: center;
+    color: #e8f8fd;
+    font-size: 12px;
+    font-weight: 500;
+}
+.result-analysis-page .ra-topbar nav a.active { background: #087da7; }
+.result-analysis-page .ra-account small {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .05em;
+}
+.result-analysis-page .ra-account button {
+    min-height: 36px;
+    font-size: 12px;
+}
+
+.result-analysis-page .ra-sessionbar {
+    height: 48px;
+    padding-left: 16px;
+}
+.result-analysis-page .ra-sessionbar small {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+}
+.result-analysis-page .ra-sessionbar b {
+    color: #172031;
+    font-size: 14px;
+    font-weight: 500;
+}
+.result-analysis-page .ra-sessionbar label {
+    font-size: 13px;
+    font-weight: 500;
+}
+.result-analysis-page .ra-sessionbar select,
+.result-analysis-page .ra-panel-header select {
+    min-height: 36px;
+    height: 36px;
+    border-color: var(--ra-border);
+    font-size: 13px;
+    font-weight: 500;
+}
+.result-analysis-page .ra-button {
+    min-height: 36px;
+    font-size: 13px;
+    font-weight: 600;
+}
+.result-analysis-page .ra-button:disabled {
+    opacity: .6;
+    background: #b7c7d2;
+    color: #435b6b;
+}
+
+.result-analysis-page .ra-layout {
+    height: calc(100vh - 134px);
+}
+.result-analysis-page .ra-documents__header,
+.result-analysis-page .ra-panel-header {
+    height: 46px;
+}
+.result-analysis-page .ra-panel-header strong {
+    font-size: 15px;
+    font-weight: 600;
+    color: #172031;
+}
+.result-analysis-page .ra-panel-header strong > .material-symbols-outlined {
+    color: var(--ra-blue);
+}
+.result-analysis-page .ra-panel-header > span {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.result-analysis-page .ra-panel-header label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ra-muted);
+}
+.result-analysis-page .ra-panel-header label select {
+    min-width: 190px;
+    font-size: 13px;
+    font-weight: 500;
+}
+.result-analysis-page .ra-document-list button {
+    min-height: 48px;
+    font-size: 13px;
+}
+.result-analysis-page .ra-document-list small {
+    margin-top: 2px;
+    color: #5f6d7d;
+    font-size: 12px;
+}
+.result-analysis-page .ra-pdf-panel iframe { height: calc(100% - 46px); }
+.result-analysis-page .ra-empty b,
+.result-analysis-page .ra-empty-results b {
+    color: #52667d;
+    font-size: 14px;
+    font-weight: 600;
+}
+.result-analysis-page .ra-empty > span:not(.material-symbols-outlined),
+.result-analysis-page .ra-empty-results > span {
+    color: #718095;
+    font-size: 13px;
+    font-weight: 400;
+    text-align: center;
+}
+.result-analysis-page .ra-empty-results {
+    display: flex;
+    min-height: 180px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-direction: column;
+    margin: 0;
+    padding: 30px 14px;
+    border: 1px dashed #c8d4df;
+    border-radius: 8px;
+    background: #fbfdff;
+}
+.result-analysis-page .ra-empty-results .material-symbols-outlined {
+    color: #abc0d0;
+    font-size: 34px;
+}
+.result-analysis-page .ra-footer {
+    height: 28px;
+    padding: 0 14px;
+    justify-content: flex-end;
+    font-size: 12px;
+}
+.result-analysis-page .ra-footer b {
+    color: #65758a;
+    font-variant-numeric: tabular-nums;
+}
+.result-analysis-page .ra-footer.has-differences b { color: #b42318; }
+.result-analysis-page .ra-note { top: var(--ra-header-h); }
+.result-analysis-page .document-sidebar-handle--analysis { display: none !important; }
+.result-analysis-page .ra-documents__header button { display: grid; }
+.result-analysis-page .ra-documents__header button span { font-size: 18px; }
+
+@media (max-width: 1250px) {
+    .result-analysis-page .ra-sessionbar { padding-left: 16px; gap: 14px; }
+    .result-analysis-page .ra-panel-header label select { min-width: 155px; }
+}

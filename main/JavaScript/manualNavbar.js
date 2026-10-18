@@ -1,7 +1,7 @@
 window.AAIRManualNavbar = (() => {
   function roleLabel(role) {
     return String(role || 'MANUAL_LABELER').toLowerCase().split(/[_\s-]+/).filter(Boolean)
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ').toUpperCase();
   }
   async function init() {
     const mount = document.querySelector('[data-manual-navbar-mount]');

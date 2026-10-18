@@ -36,7 +36,7 @@ public final class WorkspaceRequests {
             @JsonAlias("documentIds")
             List<@NotNull @Positive Long> documents,
 
-            @Size(max=2, message="Manual session tối đa 2 Manual Labeler")
+            @Size(min=2, max=2, message="Manual session phải có đúng 2 Manual Labeler")
             List<@NotNull @Positive Long> manualLabelerIds,
 
             @Positive(message="aiLabelerId phải là số dương")

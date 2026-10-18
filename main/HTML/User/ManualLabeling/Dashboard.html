@@ -24,6 +24,41 @@
     <link href="../../../Style/basic.css" rel="stylesheet" />
     <link href="../../../Style/manualNavbar.css" rel="stylesheet" />
 
+    <style>
+        :root { --gap-section: 24px; }
+        .manual-labeling-dashboard { font-family: Inter, Arial, sans-serif; }
+        .manual-labeling-dashboard :where(button, input, select, textarea, label, th, td) { font-family: inherit; }
+        .manual-labeling-dashboard main { padding: 8px 24px 32px; }
+        .manual-stat-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:var(--gap-section); margin-bottom:var(--gap-section); }
+        .manual-stat-card { min-height:170px; padding:20px 24px; border:1px solid #cbd5e1; border-radius:12px; background:#fff; box-shadow:0 2px 8px rgba(16,24,40,.06); }
+        .manual-stat-icon { width:40px; height:40px; display:flex; align-items:center; justify-content:center; margin-bottom:16px; border-radius:10px; background:#f1f5f9; color:#005bd4; }
+        .manual-stat-icon .material-symbols-outlined { font-size:22px; }
+        .manual-stat-label { margin:0; color:#475467; font-size:14px; line-height:20px; font-weight:500; }
+        .manual-stat-value { margin:2px 0 0; color:#101828; font-size:32px; line-height:38px; font-weight:700; }
+        .manual-stat-sub { margin:7px 0 0; color:#667085; font-size:13px; line-height:18px; font-style:normal; }
+        .manual-progress { height:6px; margin-top:10px; overflow:hidden; border-radius:999px; background:#e2e8f0; }
+        .manual-progress span { display:block; width:0; height:100%; border-radius:inherit; background:#087fa8; transition:width .2s ease; }
+        .my-tasks { border:1px solid #d5dee4; border-radius:12px; background:#fff; box-shadow:0 2px 8px rgba(16,24,40,.06); overflow:hidden; }
+        .my-tasks__head { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid #e1e7eb; }
+        .my-tasks__head h2 { margin:0; color:#101828; font-size:18px; line-height:24px; font-weight:600; }
+        .my-tasks__head p { margin:3px 0 0; color:#667085; font-size:13px; }
+        .my-tasks table { width:100%; border-collapse:collapse; table-layout:fixed; }
+        .my-tasks th,.my-tasks td { height:52px; padding:10px 16px; border-bottom:1px solid #edf1f3; text-align:left; }
+        .my-tasks th { color:#667085; background:#f7f9fa; font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; }
+        .my-tasks td { color:#667085; font-size:13px; }
+        .my-tasks td:first-child { color:#101828; font-size:14px; font-weight:500; }
+        .my-task-row { cursor:pointer; transition:background .15s ease; }
+        .my-task-row:hover { background:#f7fbfc; }
+        .my-task-status { display:inline-flex; align-items:center; min-height:24px; padding:3px 9px; border-radius:999px; font-size:12px; font-weight:600; }
+        .my-task-status--pending { color:#475467; background:#f2f4f7; }
+        .my-task-status--progress { color:#175cd3; background:#dbeafe; }
+        .my-task-status--submitted { color:#6941c6; background:#f4ebff; }
+        .my-task-status--approved { color:#067647; background:#dff3e9; }
+        .manual-secondary-button { border:1px solid #cbd5e1!important; color:#344054!important; background:#fff!important; }
+        @media (max-width:900px) { .manual-stat-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .my-tasks { overflow-x:auto; } .my-tasks table { min-width:720px; } }
+        @media (max-width:560px) { .manual-stat-grid { grid-template-columns:1fr; } }
+    </style>
+
 </head>
 
 <body class="manual-labeling-dashboard bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
@@ -41,106 +76,49 @@
         </div>
         <!-- Buttons -->
         <div class="ml-auto flex items-center gap-2">
-            <button id="continueLastSession" type="button" class="px-4 py-2
+            <button id="continueLastSession" type="button" class="px-4 py-2 text-[13px] font-semibold
                        rounded-lg
-                       text-[12px]
                        bg-button-active
                        text-text-active
                        hover:opacity-85
                        transition-opacity
                        flex items-center gap-2 shadow-sm">
 
-                Continue Last Session
+                <span class="material-symbols-outlined text-[16px]">play_arrow</span>Continue Last Session
             </button>
 
             <button id="refreshDashboard" type="button"
-                    class="px-4 py-2
+                    class="manual-secondary-button px-4 py-2 text-[13px] font-semibold
                        rounded-lg
-                       text-[12px]
-                       bg-button-active
-                       text-text-active
                        hover:opacity-85
                        transition-opacity
                        flex items-center gap-2 shadow-sm">
 
-                Refresh
+                <span class="material-symbols-outlined text-[16px]">refresh</span>Refresh
             </button>
         </div>
 
     </header>
 
     <!-- Main Content Wrapper -->
-    <div class="w-full min-h-[calc(100vh-98px)] bg-surface pt-6">
+    <div class="w-full min-h-[calc(100vh-98px)] bg-surface pt-0">
 
         <!-- Main Dashboard Area -->
-        <main class="p-lg space-y-xl">
-            <!-- Section 1: KPI Overview -->
-            <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-lg">
-                <!-- Assigned Sessions -->
-                <div
-                    class="bg-white p-lg rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-all duration-200 cursor-default group">
-                    <div class="flex justify-between items-start mb-md">
-                        <div
-                            class="p-sm bg-surface-container-low rounded-lg text-primary group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined">folder</span>
-                        </div>
-                    </div>
-                    <div class="space-y-xs">
-                        <h3 id="assignedSessionsValue" class="text-3xl font-bold">—</h3>
-                        <p class="text-on-surface-variant font-label-sm text-label-sm">Assigned Sessions</p>
-                        <p class="text-xs text-outline italic">Current active sessions</p>
-                    </div>
-                </div>
-                <!-- Pending Tasks -->
-                <div
-                    class="bg-white p-lg rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-all duration-200 cursor-default group">
-                    <div class="flex justify-between items-start mb-md">
-                        <div
-                            class="p-sm bg-surface-container-low rounded-lg text-primary group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined">schedule</span>
-                        </div>
-                    </div>
-                    <div class="space-y-xs">
-                        <h3 id="pendingTasksValue" class="text-3xl font-bold">—</h3>
-                        <p class="text-on-surface-variant font-label-sm text-label-sm">Pending Tasks</p>
-                        <p class="text-xs text-outline italic">Tasks requiring labeling</p>
-                    </div>
-                </div>
-                <!-- Completed Tasks -->
-                <div
-                    class="bg-white p-lg rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-all duration-200 cursor-default group">
-                    <div class="flex justify-between items-start mb-md">
-                        <div
-                            class="p-sm bg-surface-container-low rounded-lg text-primary group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined">check_circle</span>
-                        </div>
-                    </div>
-                    <div class="space-y-xs">
-                        <h3 id="completedTasksValue" class="text-3xl font-bold">—</h3>
-                        <p class="text-on-surface-variant font-label-sm text-label-sm">Completed Tasks</p>
-                        <p class="text-xs text-outline italic">Total tasks finished</p>
-                    </div>
-                </div>
-                <!-- Overall Progress -->
-                <div
-                    class="bg-white p-lg rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-all duration-200 cursor-default group">
-                    <div class="flex items-center gap-lg">
-                        <div class="relative w-20 h-20 flex items-center justify-center">
-                            <div id="overallProgressRing" class="dashboard-progress-ring w-full h-full rounded-full flex items-center justify-center">
-                                <span id="overallProgressValue" class="text-lg font-bold text-on-surface">—</span>
-                            </div>
-                        </div>
-                        <div class="space-y-xs">
-                            <p class="text-on-surface-variant font-label-sm text-label-sm">Overall Progress</p>
-                            <p class="text-xs text-outline italic leading-tight">Current weekly progress tracking</p>
-                        </div>
-                    </div>
-                </div>
+        <main>
+            <section class="manual-stat-grid" aria-label="Task summary">
+                <article class="manual-stat-card"><div class="manual-stat-icon"><span class="material-symbols-outlined">folder</span></div><p class="manual-stat-label">Assigned Sessions</p><h3 id="assignedSessionsValue" class="manual-stat-value">—</h3><p class="manual-stat-sub">Current active sessions</p></article>
+                <article class="manual-stat-card"><div class="manual-stat-icon"><span class="material-symbols-outlined">schedule</span></div><p class="manual-stat-label">Pending Tasks</p><h3 id="pendingTasksValue" class="manual-stat-value">—</h3><p class="manual-stat-sub">Tasks requiring labeling</p></article>
+                <article class="manual-stat-card"><div class="manual-stat-icon"><span class="material-symbols-outlined">check_circle</span></div><p class="manual-stat-label">Completed Tasks</p><h3 id="completedTasksValue" class="manual-stat-value">—</h3><p class="manual-stat-sub">Total tasks finished</p></article>
+                <article class="manual-stat-card"><div class="manual-stat-icon"><span class="material-symbols-outlined">trending_up</span></div><p class="manual-stat-label">Overall Progress</p><h3 id="overallProgressValue" class="manual-stat-value">—</h3><p class="manual-stat-sub">Completed tasks out of all assigned</p><div class="manual-progress" aria-hidden="true"><span id="overallProgressBar"></span></div></article>
+            </section>
+            <section class="my-tasks" aria-labelledby="myTasksTitle">
+                <div class="my-tasks__head"><div><h2 id="myTasksTitle">My Tasks</h2><p>Continue your five most recent labeling tasks.</p></div><a href="ViewAll.html" class="text-primary text-[13px] font-semibold hover:underline">View All</a></div>
+                <div class="overflow-x-auto"><table><thead><tr><th>Document</th><th>Session</th><th>Status</th><th>Updated</th><th>Action</th></tr></thead><tbody id="myTasksBody"><tr><td colspan="5">Loading tasks…</td></tr></tbody></table></div>
             </section>
         </main>
     </div>
     <!-- Background Decoration -->
-    <div class="fixed inset-0 pointer-events-none z-[-1] opacity-50 overflow-hidden">
+    <div class="hidden fixed inset-0 pointer-events-none z-[-1] opacity-50 overflow-hidden">
         <div class="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] bg-primary-container blur-[150px] opacity-10"></div>
         <div class="absolute bottom-[-10%] left-[-5%] w-[40%] h-[40%] bg-secondary-container blur-[150px] opacity-10">
         </div>

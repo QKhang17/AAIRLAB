@@ -1,4 +1,4 @@
-window.AAIRTerminologyDashboardPage = async function ({ request }) {
+window.AAIRTerminologyDashboardPage = async function ({ request, user }) {
     const numberFormat = new Intl.NumberFormat();
     const [summary, terms] = await Promise.all([
         request('/dashboard'),
@@ -17,10 +17,18 @@ window.AAIRTerminologyDashboardPage = async function ({ request }) {
         return Number.isFinite(updatedAt) && updatedAt >= Date.now() - 7 * 24 * 60 * 60 * 1000;
     }).length;
 
-    setText('#terminologyTotalTerms', `${numberFormat.format(totalTerms)} Terms`);
-    setText('#terminologyCategoryCount', `${numberFormat.format(categoryCount)} Categories`);
-    setText('#terminologyUpdatedCount', `${numberFormat.format(recentlyUpdated)} Terms Updated`);
-    setText('#terminologyInactiveCount', `${numberFormat.format(Math.max(0, totalTerms - activeTerms))} Inactive`);
+    const greeting = document.querySelector('[data-greeting]');
+    if (greeting) {
+        const hour = new Date().getHours();
+        const prefix = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
+        const username = String(user?.username || user?.email || '').trim();
+        greeting.textContent = username ? `${prefix}, ${username}` : prefix;
+    }
+
+    setText('#terminologyTotalTerms', numberFormat.format(totalTerms));
+    setText('#terminologyCategoryCount', numberFormat.format(categoryCount));
+    setText('#terminologyUpdatedCount', numberFormat.format(recentlyUpdated));
+    setText('#terminologyInactiveCount', numberFormat.format(Math.max(0, totalTerms - activeTerms)));
 
     renderRecentTerms(terms);
     renderCategoryDistribution(terms);
@@ -67,8 +75,9 @@ window.AAIRTerminologyDashboardPage = async function ({ request }) {
             row.className = 'hover:bg-surface-container-low/50 transition-colors';
 
             const nameCell = document.createElement('td');
-            nameCell.className = 'px-6 py-4 font-semibold text-primary';
+            nameCell.className = 'px-6 py-4';
             nameCell.textContent = term.term || '—';
+            nameCell.classList.add('term-dashboard-name');
 
             const categoryCell = document.createElement('td');
             categoryCell.className = 'px-6 py-4 text-on-surface-variant';
@@ -82,8 +91,8 @@ window.AAIRTerminologyDashboardPage = async function ({ request }) {
             statusCell.className = 'px-6 py-4';
             const status = document.createElement('span');
             status.className = term.status === 'ACTIVE'
-                ? 'px-3 py-1 bg-secondary-container text-on-secondary-container rounded-full text-[11px] font-bold'
-                : 'px-3 py-1 bg-surface-container-high text-on-surface-variant rounded-full text-[11px] font-bold';
+                ? 'term-dashboard-status'
+                : 'term-dashboard-status';
             status.textContent = term.status === 'ACTIVE' ? 'Active' : 'Inactive';
             statusCell.append(status);
 
@@ -91,7 +100,7 @@ window.AAIRTerminologyDashboardPage = async function ({ request }) {
             actionCell.className = 'px-6 py-4 text-right';
             const editButton = document.createElement('button');
             editButton.type = 'button';
-            editButton.className = 'text-primary hover:underline';
+            editButton.className = 'term-dashboard-action';
             editButton.textContent = 'Manage';
             editButton.setAttribute('aria-label', `Manage ${term.term || 'term'}`);
             editButton.addEventListener('click', openTermManagement);
@@ -132,11 +141,12 @@ window.AAIRTerminologyDashboardPage = async function ({ request }) {
             const labels = document.createElement('div');
             labels.className = 'flex justify-between items-end gap-3';
             const categoryName = document.createElement('span');
-            categoryName.className = 'font-body-sm font-semibold';
+            categoryName.className = 'term-category-name';
             categoryName.textContent = name;
             const categoryCount = document.createElement('span');
-            categoryCount.className = 'text-[11px] font-bold text-on-surface-variant';
-            categoryCount.textContent = `${numberFormat.format(count)} Terms (${Math.round(count / rows.length * 100)}%)`;
+            categoryCount.className = 'term-category-count';
+            const noun = count === 1 ? 'term' : 'terms';
+            categoryCount.textContent = `${numberFormat.format(count)} ${noun} · ${Math.round(count / rows.length * 100)}%`;
             labels.append(categoryName, categoryCount);
 
             const track = document.createElement('div');
@@ -156,7 +166,10 @@ window.AAIRTerminologyDashboardPage = async function ({ request }) {
         const date = new Date(value);
         return Number.isNaN(date.getTime())
             ? '—'
-            : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date);
+            : new Intl.DateTimeFormat('en-GB', {
+                day: '2-digit', month: 'short', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', hour12: false
+            }).format(date).replace('Sept', 'Sep');
     }
 
     function openTermManagement() {

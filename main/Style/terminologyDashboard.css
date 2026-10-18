@@ -1,0 +1,101 @@
+.terminology-dashboard {
+    --term-text: #172031;
+    --term-secondary: #5f6d7d;
+    --term-border: #c8d4df;
+}
+.terminology-dashboard > header:not(.aair-navbar) {
+    height: 64px;
+    margin-top: 0;
+    margin-bottom: 24px;
+}
+.terminology-dashboard [data-greeting] {
+    font-size: 22px !important;
+    line-height: 28px !important;
+    font-weight: 600 !important;
+}
+.terminology-range-label select {
+    height: 40px;
+    min-width: 136px;
+    padding: 0 34px 0 12px;
+    border: 1px solid var(--term-border);
+    border-radius: 7px;
+    background: #fff;
+    color: var(--term-text);
+    font: 600 13px Inter, Arial, sans-serif;
+}
+.terminology-dashboard #dashboardRefresh {
+    min-height: 40px;
+    font-size: 13px;
+    font-weight: 600;
+}
+.terminology-kpi-card {
+    min-height: 180px;
+    display: grid !important;
+    grid-template-rows: 42px 20px 40px 20px;
+    align-content: start;
+    gap: 0 !important;
+}
+.terminology-kpi-card > div:first-child { margin: 0 0 16px !important; }
+.terminology-kpi-card > div:last-child { display: contents; }
+.terminology-kpi-card p { margin: 0 !important; }
+.terminology-kpi-card p.font-label-md {
+    color: var(--term-secondary) !important;
+    font-size: 14px !important;
+    line-height: 20px !important;
+    font-weight: 500 !important;
+}
+.terminology-kpi-card p[id] {
+    color: var(--term-text) !important;
+    font-size: 32px !important;
+    line-height: 40px !important;
+    font-weight: 700 !important;
+    font-variant-numeric: tabular-nums;
+}
+.terminology-kpi-subtitle {
+    color: var(--term-secondary);
+    font-size: 13px;
+    line-height: 20px;
+}
+.terminology-dashboard table th {
+    font-size: 12px !important;
+    letter-spacing: .02em !important;
+}
+.terminology-dashboard table td { height: 52px; }
+.terminology-dashboard .term-dashboard-name {
+    color: var(--term-text);
+    font-size: 14px;
+    font-weight: 500;
+}
+.terminology-dashboard .term-dashboard-name:hover { color: #087da7; text-decoration: underline; }
+.terminology-dashboard .term-dashboard-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    color: #596c78;
+    background: #e9eef1;
+    font-size: 12px;
+    font-weight: 600;
+}
+.terminology-dashboard .term-dashboard-action {
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--term-border);
+    border-radius: 6px;
+    background: #fff;
+    color: #2c5878;
+    font-size: 13px;
+    font-weight: 600;
+}
+.terminology-dashboard .term-dashboard-action:hover { background: #f4f8fa; }
+.terminology-dashboard .term-category-name { font-size: 14px; font-weight: 500; }
+.terminology-dashboard .term-category-count {
+    color: var(--term-secondary);
+    font-size: 13px;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.terminology-dashboard .term-dashboard-panels { align-items: stretch; }
+.terminology-dashboard .term-dashboard-panels > div { height: 100%; }

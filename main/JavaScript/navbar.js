@@ -5,8 +5,8 @@ window.AAIRNavbar = (() => {
     brandHref: 'Dashboard.html',
     tabs: [
       { label: 'Dashboard', icon: 'dashboard', href: 'Dashboard.html' },
-      { label: 'View ALL', icon: 'list_alt', href: 'ViewAll.html' },
-      { label: 'Analyst', icon: 'analytics', href: 'Task.html' },
+      { label: 'Task List', icon: 'list_alt', href: 'ViewAll.html' },
+      { label: 'Analysis', icon: 'analytics', href: 'Task.html' },
     ],
   };
 
@@ -15,7 +15,7 @@ window.AAIRNavbar = (() => {
     return { ...defaultConfig, ...config, tabs: config.tabs || defaultConfig.tabs };
   }
 
-  const roleLabel = role => role === 'RESULT_ANALYST' ? 'Analyst' : String(role || '')
+  const roleLabel = role => role === 'RESULT_ANALYST' ? 'ANALYST' : role === 'TERMINOLOGY' ? 'TERMINOLOGY' : String(role || '')
     .toLowerCase()
     .split(/[_\s-]+/)
     .filter(Boolean)

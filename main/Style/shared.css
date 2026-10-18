@@ -59,3 +59,142 @@ body.aa-shared-page { margin: 0; min-width: 980px; color: var(--aa-text); backgr
 .aa-pagination button:hover:not(:disabled) { background: #d9eaf2; }
 .aa-pagination button:disabled { cursor: not-allowed; opacity: .4; }
 @media (max-width: 1100px) { .aa-table-shell { margin: 20px; } .aa-toolbar { padding-inline: 20px; } }
+/* AAIR global typography system */
+:root {
+    --aair-font-greeting: 24px;
+    --aair-font-label: 14px;
+    --aair-font-value: 32px;
+    --aair-font-subtext: 13px;
+    --aair-font-section: 18px;
+    --aair-font-table-head: 12px;
+    --aair-font-table-body: 14px;
+    --aair-font-secondary: 13px;
+    --aair-font-badge: 12px;
+    --aair-black: #171b1f;
+    --aair-dark-gray: #46515d;
+    --aair-gray: #718096;
+    --aair-blue: #1263c9;
+}
+
+/* Shared semantic typography classes */
+.aair-greeting,
+main [data-greeting] {
+    font-size: var(--aair-font-greeting) !important;
+    line-height: 1.25 !important;
+    font-weight: 600 !important;
+    color: var(--aair-black) !important;
+}
+.aair-card-label,
+.admin-kpi-label {
+    font-size: var(--aair-font-label) !important;
+    line-height: 1.35 !important;
+    font-weight: 500 !important;
+    color: var(--aair-dark-gray) !important;
+}
+.aair-card-value,
+.admin-kpi-value {
+    font-size: var(--aair-font-value) !important;
+    line-height: 1.1 !important;
+    font-weight: 700 !important;
+    color: var(--aair-black) !important;
+}
+.aair-card-subtext,
+.admin-kpi-subtext {
+    font-size: var(--aair-font-subtext) !important;
+    line-height: 1.35 !important;
+    font-weight: 400 !important;
+    color: var(--aair-gray) !important;
+}
+.aair-section-title {
+    font-size: var(--aair-font-section) !important;
+    line-height: 1.3 !important;
+    font-weight: 600 !important;
+    color: var(--aair-black) !important;
+}
+.aair-table-secondary,
+.aair-table-time,
+.aair-table-details {
+    font-size: var(--aair-font-secondary) !important;
+    line-height: 1.35 !important;
+    font-weight: 400 !important;
+    color: var(--aair-gray) !important;
+}
+.aair-badge,
+.aa-status,
+.admin-action-badge {
+    font-size: var(--aair-font-badge) !important;
+    line-height: 1.25 !important;
+    font-weight: 600 !important;
+}
+.aair-resource,
+.aair-id,
+.admin-resource-link {
+    font-family: "JetBrains Mono", "Cascadia Mono", Consolas, monospace !important;
+    font-size: 13px !important;
+    color: var(--aair-blue) !important;
+}
+
+/* Apply the same hierarchy to existing static pages. */
+main h1 {
+    font-size: var(--aair-font-greeting) !important;
+    line-height: 1.25 !important;
+    font-weight: 600 !important;
+    color: var(--aair-black) !important;
+}
+main h2,
+main h3,
+main h4 {
+    font-size: var(--aair-font-section) !important;
+    line-height: 1.3 !important;
+    font-weight: 600 !important;
+    color: var(--aair-black) !important;
+}
+main table thead th,
+main .aa-table th {
+    font-size: var(--aair-font-table-head) !important;
+    line-height: 1.25 !important;
+    font-weight: 600 !important;
+    letter-spacing: .04em !important;
+    text-transform: uppercase !important;
+    color: var(--aair-gray) !important;
+}
+main table tbody td,
+main .aa-table td {
+    font-size: var(--aair-font-table-body) !important;
+    line-height: 1.4 !important;
+    font-weight: 400 !important;
+    color: var(--aair-black) !important;
+}
+main table tbody td:first-child,
+main table tbody td:last-child {
+    font-size: var(--aair-font-secondary) !important;
+    font-weight: 400 !important;
+    color: var(--aair-gray) !important;
+}
+main table .font-code,
+main table code,
+main table td a[href*="REVIEW_"],
+main table td a[href*="CASE"],
+main table td a[href*="TASK"] {
+    font-family: "JetBrains Mono", "Cascadia Mono", Consolas, monospace !important;
+    font-size: 13px !important;
+    color: var(--aair-blue) !important;
+}
+
+/* Preserve the requested large KPI hierarchy after heading normalization. */
+main h3[class*="text-[32px]"],
+main h3[class*="text-3xl"],
+main .aair-card-value,
+main .admin-kpi-value {
+    font-size: var(--aair-font-value) !important;
+    line-height: 1.1 !important;
+    font-weight: 700 !important;
+    color: var(--aair-black) !important;
+}
+
+/* Existing Tailwind pages use these text classes for card content. */
+main .admin-kpi-label,
+main .admin-kpi-subtext,
+main .admin-kpi-value {
+    letter-spacing: normal !important;
+}
