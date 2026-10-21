@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="light" lang="vi">
+<html class="light" lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,29 +17,29 @@
 <body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
     <div data-aair-navbar-mount></div>
     <header class="flex h-12 items-center border-b border-outline-variant bg-text-active px-6 shadow-sm">
-        <h1 class="text-lg font-bold text-on-surface">Dashboard Analyst</h1>
+        <h1 class="text-lg font-bold text-on-surface">Analyst Dashboard</h1>
         <div class="ml-auto flex items-center gap-2">
-            <span id="analystRange" class="text-xs text-on-surface-variant">30 ngày gần nhất</span>
-            <button id="analystRefresh" type="button" class="aair-dashboard-button flex items-center gap-2 rounded-lg px-4 py-2 text-xs shadow-sm"><span class="material-symbols-outlined text-sm">refresh</span>Làm mới</button>
+            <span id="analystRange" class="text-xs text-on-surface-variant">Last 30 days</span>
+            <button id="analystRefresh" type="button" class="aair-dashboard-button flex items-center gap-2 rounded-lg px-4 py-2 text-xs shadow-sm"><span class="material-symbols-outlined text-sm">refresh</span>Refresh</button>
         </div>
     </header>
     <main class="min-h-[calc(100vh-106px)] bg-surface p-6" aria-live="polite">
-        <div id="analystDashboardState" class="mb-4 text-sm text-on-surface-variant">Đang tải dữ liệu...</div>
-        <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6" aria-label="Chỉ số công việc">
-            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">Tổng tác vụ</p><strong id="metricTotalTasks" class="mt-2 block text-2xl">—</strong></article>
-            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">Đang xử lý</p><strong id="metricInProgress" class="mt-2 block text-2xl">—</strong></article>
-            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">Đã nộp</p><strong id="metricSubmitted" class="mt-2 block text-2xl">—</strong></article>
-            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">Đã duyệt</p><strong id="metricApproved" class="mt-2 block text-2xl text-secondary">—</strong></article>
-            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">Quá hạn</p><strong id="metricOverdue" class="mt-2 block text-2xl text-error">—</strong></article>
-            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">Nhãn đã trích xuất</p><strong id="metricLabels" class="mt-2 block text-2xl">—</strong></article>
+        <div id="analystDashboardState" class="mb-4 text-sm text-on-surface-variant">Loading data...</div>
+        <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6" aria-label="Work metrics">
+            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">Total Tasks</p><strong id="metricTotalTasks" class="mt-2 block text-2xl">—</strong></article>
+            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">In Progress</p><strong id="metricInProgress" class="mt-2 block text-2xl">—</strong></article>
+            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">Submitted</p><strong id="metricSubmitted" class="mt-2 block text-2xl">—</strong></article>
+            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">Approved</p><strong id="metricApproved" class="mt-2 block text-2xl text-secondary">—</strong></article>
+            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">Overdue</p><strong id="metricOverdue" class="mt-2 block text-2xl text-error">—</strong></article>
+            <article class="rounded-xl border border-outline-variant bg-white p-5"><p class="text-sm text-on-surface-variant">Extracted Labels</p><strong id="metricLabels" class="mt-2 block text-2xl">—</strong></article>
         </section>
         <section class="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-2">
-            <article class="rounded-xl border border-outline-variant bg-white p-5"><h2 class="text-base font-bold">Phân bố trạng thái tác vụ</h2><div id="statusDistribution" class="mt-5 space-y-3"></div></article>
-            <article class="rounded-xl border border-outline-variant bg-white p-5"><h2 class="text-base font-bold">Phân bố nhãn trích xuất</h2><div id="labelDistribution" class="mt-5 space-y-3"></div></article>
+            <article class="rounded-xl border border-outline-variant bg-white p-5"><h2 class="text-base font-bold">Task Status Distribution</h2><div id="statusDistribution" class="mt-5 space-y-3"></div></article>
+            <article class="rounded-xl border border-outline-variant bg-white p-5"><h2 class="text-base font-bold">Extracted Label Distribution</h2><div id="labelDistribution" class="mt-5 space-y-3"></div></article>
         </section>
         <section class="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-5">
-            <article class="overflow-hidden rounded-xl border border-outline-variant bg-white xl:col-span-3"><header class="border-b border-outline-variant px-5 py-4"><h2 class="text-base font-bold">Tác vụ gần đây</h2><p class="mt-1 text-xs text-on-surface-variant">Dữ liệu theo phạm vi 30 ngày gần nhất</p></header><div class="overflow-auto"><table class="w-full text-left text-sm"><thead class="bg-surface-container-low text-xs text-on-surface-variant"><tr><th class="px-5 py-3">Tài liệu</th><th class="px-5 py-3">Người xử lý</th><th class="px-5 py-3">Trạng thái</th><th class="px-5 py-3">Cập nhật</th></tr></thead><tbody id="recentTasks"></tbody></table></div></article>
-            <article class="overflow-hidden rounded-xl border border-outline-variant bg-white xl:col-span-2"><header class="border-b border-outline-variant px-5 py-4"><h2 class="text-base font-bold">Năng suất người dùng</h2><p class="mt-1 text-xs text-on-surface-variant">Theo các tác vụ được phân công</p></header><div class="overflow-auto"><table class="w-full text-left text-sm"><thead class="bg-surface-container-low text-xs text-on-surface-variant"><tr><th class="px-5 py-3">Người dùng</th><th class="px-5 py-3">Hoàn thành</th><th class="px-5 py-3">Quá hạn</th></tr></thead><tbody id="userProductivity"></tbody></table></div></article>
+            <article class="overflow-hidden rounded-xl border border-outline-variant bg-white xl:col-span-3"><header class="border-b border-outline-variant px-5 py-4"><h2 class="text-base font-bold">Recent Tasks</h2><p class="mt-1 text-xs text-on-surface-variant">Data for the last 30 days</p></header><div class="overflow-auto"><table class="w-full text-left text-sm"><thead class="bg-surface-container-low text-xs text-on-surface-variant"><tr><th class="px-5 py-3">Document</th><th class="px-5 py-3">Assignee</th><th class="px-5 py-3">Status</th><th class="px-5 py-3">Updated</th></tr></thead><tbody id="recentTasks"></tbody></table></div></article>
+            <article class="overflow-hidden rounded-xl border border-outline-variant bg-white xl:col-span-2"><header class="border-b border-outline-variant px-5 py-4"><h2 class="text-base font-bold">User Productivity</h2><p class="mt-1 text-xs text-on-surface-variant">By assigned tasks</p></header><div class="overflow-auto"><table class="w-full text-left text-sm"><thead class="bg-surface-container-low text-xs text-on-surface-variant"><tr><th class="px-5 py-3">User</th><th class="px-5 py-3">Completed</th><th class="px-5 py-3">Overdue</th></tr></thead><tbody id="userProductivity"></tbody></table></div></article>
         </section>
     </main>
     <script src="../../../JavaScript/api.js"></script>

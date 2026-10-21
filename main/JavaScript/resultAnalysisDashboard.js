@@ -1,11 +1,11 @@
 window.AAIRResultAnalysisDashboard = async function ({ request, notice, go }) {
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0);
-    const displayNumber = value => new Intl.NumberFormat('vi-VN').format(number(value));
+    const displayNumber = value => new Intl.NumberFormat('en-US').format(number(value));
     const localIso = value => value.toISOString().slice(0, 19);
     const statusLabels = {
-        PENDING: 'Chờ xử lý', IN_PROGRESS: 'Đang xử lý', SUBMITTED: 'Đã nộp',
-        APPROVED: 'Đã duyệt', REJECTED: 'Bị từ chối'
+        PENDING: 'Pending', IN_PROGRESS: 'In Progress', SUBMITTED: 'Submitted',
+        APPROVED: 'Approved', REJECTED: 'Rejected'
     };
 
     function textCell(value) {
@@ -26,7 +26,7 @@ window.AAIRResultAnalysisDashboard = async function ({ request, notice, go }) {
     function metric(id, value) { $(id).textContent = displayNumber(value); }
     function bars(host, values, label, value) {
         host.replaceChildren(); const max = Math.max(1, ...values.map(value));
-        if (!values.length) { host.textContent = 'Chưa có dữ liệu trong khoảng thời gian này.'; host.className += ' text-sm text-on-surface-variant'; return; }
+        if (!values.length) { host.textContent = 'No data available for this period.'; host.className += ' text-sm text-on-surface-variant'; return; }
         values.forEach((item, index) => {
             const row = document.createElement('div'); row.className = 'space-y-1';
             const head = document.createElement('div'); head.className = 'flex items-center justify-between gap-3 text-sm';
@@ -39,12 +39,12 @@ window.AAIRResultAnalysisDashboard = async function ({ request, notice, go }) {
     }
     function formatDate(value) {
         if (!value) return '—'; const date = new Date(value);
-        return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('vi-VN');
+        return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('en-US');
     }
     async function load() {
         const now = new Date(); const from = new Date(now); from.setDate(now.getDate() - 30);
-        $('analystRange').textContent = `30 ngày gần nhất · ${from.toLocaleDateString('vi-VN')} – ${now.toLocaleDateString('vi-VN')}`;
-        $('analystDashboardState').textContent = 'Đang tải dữ liệu...';
+        $('analystRange').textContent = `Last 30 days · ${from.toLocaleDateString('en-US')} – ${now.toLocaleDateString('en-US')}`;
+        $('analystDashboardState').textContent = 'Loading data...';
         try {
             const query = `?from=${encodeURIComponent(localIso(from))}&to=${encodeURIComponent(localIso(now))}`;
             const [statistics, tasks] = await Promise.all([request(`/statistics${query}`), request('/tasks')]);
@@ -55,11 +55,11 @@ window.AAIRResultAnalysisDashboard = async function ({ request, notice, go }) {
             const overdue = productivity.reduce((sum, item) => sum + number(item.overdue_tasks), 0);
             metric('metricTotalTasks', totalTasks); metric('metricInProgress', inProgress); metric('metricSubmitted', totals.SUBMITTED); metric('metricApproved', totals.APPROVED); metric('metricOverdue', overdue); metric('metricLabels', labels.reduce((sum, item) => sum + number(item.total), 0));
             bars($('statusDistribution'), statuses, item => statusLabels[item.status] || item.status, item => number(item.total));
-            bars($('labelDistribution'), labels.slice(0, 8), item => item.label_name || 'Không xác định', item => number(item.total));
+            bars($('labelDistribution'), labels.slice(0, 8), item => item.label_name || 'Unspecified', item => number(item.total));
 
             const recent = tasks.filter(task => !task.created_at || new Date(task.created_at) >= from).sort((left, right) => new Date(right.updated_at || right.created_at || 0) - new Date(left.updated_at || left.created_at || 0)).slice(0, 10);
             const taskBody = $('recentTasks'); taskBody.replaceChildren();
-            if (!recent.length) emptyRow(taskBody, 4, 'Chưa có tác vụ trong 30 ngày gần nhất.');
+            if (!recent.length) emptyRow(taskBody, 4, 'No tasks in the last 30 days.');
             recent.forEach(task => {
                 const row = document.createElement('tr'); row.className = 'cursor-pointer hover:bg-surface-container-low/40';
                 row.addEventListener('click', () => go(`Task.html?id=${task.id}`));
@@ -68,14 +68,14 @@ window.AAIRResultAnalysisDashboard = async function ({ request, notice, go }) {
             });
 
             const productivityBody = $('userProductivity'); productivityBody.replaceChildren();
-            if (!productivity.length) emptyRow(productivityBody, 3, 'Chưa có dữ liệu năng suất.');
-            productivity.slice(0, 10).forEach(item => { const row = document.createElement('tr'); row.append(textCell(item.username || 'Chưa phân công'), textCell(item.completed_tasks), textCell(item.overdue_tasks)); productivityBody.append(row); });
-            $('analystDashboardState').textContent = totalTasks ? `Cập nhật từ cơ sở dữ liệu lúc ${new Date().toLocaleTimeString('vi-VN')}.` : 'Chưa có dữ liệu trong 30 ngày gần nhất.';
+            if (!productivity.length) emptyRow(productivityBody, 3, 'No productivity data available.');
+            productivity.slice(0, 10).forEach(item => { const row = document.createElement('tr'); row.append(textCell(item.username || 'Unassigned'), textCell(item.completed_tasks), textCell(item.overdue_tasks)); productivityBody.append(row); });
+            $('analystDashboardState').textContent = totalTasks ? `Updated from database at ${new Date().toLocaleTimeString('en-US')}.` : 'No data in the last 30 days.';
         } catch (error) {
-            $('analystDashboardState').textContent = `Không tải được dữ liệu: ${error.message}`;
+            $('analystDashboardState').textContent = `Failed to load data: ${error.message}`;
             ['metricTotalTasks', 'metricInProgress', 'metricSubmitted', 'metricApproved', 'metricOverdue', 'metricLabels'].forEach(id => { $(id).textContent = '—'; });
-            emptyRow($('recentTasks'), 4, 'Không thể tải tác vụ. Hãy thử làm mới.'); emptyRow($('userProductivity'), 3, 'Không thể tải năng suất. Hãy thử làm mới.');
-            $('statusDistribution').textContent = 'Không thể tải dữ liệu.'; $('labelDistribution').textContent = 'Không thể tải dữ liệu.';
+            emptyRow($('recentTasks'), 4, 'Unable to load tasks. Please try refreshing.'); emptyRow($('userProductivity'), 3, 'Unable to load productivity. Please try refreshing.');
+            $('statusDistribution').textContent = 'Unable to load data.'; $('labelDistribution').textContent = 'Unable to load data.';
             notice(error.message, true);
         }
     }

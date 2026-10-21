@@ -47,12 +47,12 @@
     }
     function buttons(pattern, root = document) { return $$('button', root).filter(b => pattern.test(text(b))); }
     function bindText(pattern, fn, root) { buttons(pattern, root).forEach(b => bind(b, () => fn(b))); }
-    function unavailable(el, message = 'Chức năng này chưa có API hỗ trợ.') {
+    function unavailable(el, message = 'This feature is not yet supported by the API.') {
         if (!el) return;
         el.removeAttribute('onclick'); el.disabled = true; el.title = message;
         el.setAttribute('aria-label', `${text(el)} — ${message}`); el.style.opacity = '0.5';
     }
-    const date = value => value ? new Date(value).toLocaleString('vi-VN') : '—';
+    const date = value => value ? new Date(value).toLocaleString('en-US') : '—';
     function formattedLabelValue(labelName, value) {
         const input = String(value ?? '');
         if (/year|năm/i.test(labelName || '')) return input;
@@ -62,17 +62,17 @@
         let formatted;
         if (/^-?\d+$/.test(token)) {
             if (token.replace('-', '').length < 5) return input;
-            formatted = BigInt(token).toLocaleString('vi-VN');
+            formatted = BigInt(token).toLocaleString('en-US');
         } else {
             const number = Number(token);
             if (!Number.isFinite(number) || Math.abs(number) < 10000) return input;
-            formatted = number.toLocaleString('vi-VN', { maximumFractionDigits: 4 });
+            formatted = number.toLocaleString('en-US', { maximumFractionDigits: 4 });
         }
         return formatted + input.slice(token.length);
     }
     function splitLabelValue(value, explicitSourceLabel) {
         const input = String(value ?? '');
-        const marker = input.match(/\n\s*Nhãn nguồn:\s*/i);
+        const marker = input.match(/\n\s*(?:Nhãn nguồn|Source label):\s*/i);
         const sourceLabel = String(explicitSourceLabel ?? (marker ? input.slice(marker.index + marker[0].length) : '')).trim();
         return {
             editableValue: (marker ? input.slice(0, marker.index).trimEnd() : input).replace(/\s+text$/i, '').trim(),
@@ -81,11 +81,11 @@
     }
     function viDateToIso(value) {
         const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim());
-        if (!match) throw new Error('Ngày hết hạn phải theo định dạng dd/mm/yyyy.');
+        if (!match) throw new Error('Expiration date must be in dd/mm/yyyy format.');
         const [, day, month, year] = match;
         const parsed = new Date(Number(year), Number(month) - 1, Number(day), 23, 59, 0);
         if (parsed.getFullYear() !== Number(year) || parsed.getMonth() !== Number(month) - 1 || parsed.getDate() !== Number(day))
-            throw new Error('Ngày hết hạn không hợp lệ.');
+            throw new Error('Invalid expiration date.');
         return { parsed, iso: `${year}-${month}-${day}T23:59:00` };
     }
     const status = row => (row.is_active === false ? 'INACTIVE' : (row.status ?? (row.is_active ? 'ACTIVE' : '—')));
@@ -152,9 +152,9 @@
         const splitter=document.createElement('button');
         splitter.type='button';
         splitter.className='task-workspace-splitter';
-        splitter.title='Kéo để thay đổi chiều rộng vùng PDF';
+        splitter.title='Drag to change PDF pane width';
         splitter.setAttribute('role','separator');
-        splitter.setAttribute('aria-label','Thay đổi chiều rộng vùng PDF');
+        splitter.setAttribute('aria-label','Change PDF pane width');
         splitter.setAttribute('aria-orientation','vertical');
         splitter.setAttribute('aria-valuemin','30');
         splitter.setAttribute('aria-valuemax','80');
@@ -229,7 +229,7 @@
         handle.type='button';
         handle.className=`document-sidebar-handle${options.handleClass?` ${options.handleClass}`:''}`;
         handle.setAttribute('role','separator');
-        handle.setAttribute('aria-label','Thay đổi chiều rộng danh sách tài liệu');
+        handle.setAttribute('aria-label','Change document list width');
         handle.setAttribute('aria-orientation','vertical');
         handle.setAttribute('aria-valuemin','0');
         handle.setAttribute('aria-valuemax','320');
@@ -247,12 +247,12 @@
                 document.body.classList.toggle('document-sidebar-collapsed',width===0);
                 handle.setAttribute('aria-valuenow',String(Math.round(width)));
                 handle.setAttribute('aria-expanded',String(width>0));
-                handle.title=width>0?'Kéo để đổi chiều rộng; bấm để thu gọn':'Bấm để mở danh sách tài liệu';
+                handle.title=width>0?'Drag to change width; click to collapse':'Click to expand document list';
                 icon.textContent=width>0?'chevron_left':'chevron_right';
                 if(options.toggleButton){
                     options.toggleButton.setAttribute('aria-expanded',String(width>0));
-                    options.toggleButton.setAttribute('aria-label',width>0?'Thu gọn danh sách tài liệu':'Mở danh sách tài liệu');
-                    options.toggleButton.title=width>0?'Thu gọn danh sách tài liệu':'Mở danh sách tài liệu';
+                    options.toggleButton.setAttribute('aria-label',width>0?'Collapse document list':'Expand document list');
+                    options.toggleButton.title=width>0?'Collapse document list':'Expand document list';
                     const toggleIcon=$('.material-symbols-outlined',options.toggleButton);
                     if(toggleIcon)toggleIcon.textContent=width>0?'chevron_left':'chevron_right';
                 }
@@ -324,7 +324,7 @@
         }
         if (!rows.length) {
             const tr = body.insertRow(), td = tr.insertCell(); td.colSpan = columns.length;
-            td.className = 'px-4 py-6 text-center text-on-surface-variant'; td.textContent = 'Chưa có dữ liệu.';
+            td.className = 'px-4 py-6 text-center text-on-surface-variant'; td.textContent = 'No data available.';
         }
     }
     function listTable(rows, columns, actions, filterFields = [], config = {}) {
@@ -371,7 +371,7 @@
                 const key=config.sortKeys?.[sortIndex] ?? columns[sortIndex]?.[1];
                 filtered=[...filtered].sort((left,right)=>{
                     const a=typeof key==='function'?key(left):left[key],b=typeof key==='function'?key(right):right[key];
-                    return String(a??'').localeCompare(String(b??''),'vi',{numeric:true,sensitivity:'base'})*sortDirection;
+                    return String(a??'').localeCompare(String(b??''),'en',{numeric:true,sensitivity:'base'})*sortDirection;
                 });
             }
             const pages = Math.max(1, Math.ceil(filtered.length / 10)); current = Math.min(current, pages - 1);
@@ -379,7 +379,7 @@
             table(el, columns, visible, actions, config.body);
             if(config.sortable)$$('thead th',el).forEach((th,index)=>{
                 if(!config.sortKeys?.[index])return;
-                th.style.cursor='pointer';th.title='Sắp xếp cột này';th.setAttribute('aria-sort',sortIndex===index?(sortDirection===1?'ascending':'descending'):'none');
+                th.style.cursor='pointer';th.title='Sort this column';th.setAttribute('aria-sort',sortIndex===index?(sortDirection===1?'ascending':'descending'):'none');
                 th.onclick=()=>{sortDirection=sortIndex===index?-sortDirection:1;sortIndex=index;current=0;render();};
             });
             pagers.forEach(b => {
@@ -407,7 +407,7 @@
         field.setAttribute('aria-label', label);
     }
     function required(field, label) {
-        if (!field.value.trim()) throw new Error(`Vui lòng nhập ${label}.`);
+        if (!field.value.trim()) throw new Error(`Please enter ${label}.`);
         return field.value.trim();
     }
     async function termsPage() {
@@ -423,27 +423,27 @@
             category.value = row.category || category.options[0].value; term.focus(); };
         const refresh = async () => { rows = await request('/terms'); list.reload(rows); };
         const list = listTable(rows, [['Financial Term','term'], ['Definition','definition'], ['Category','category'], ['Status','status'], ['Last Updated', r => date(r.updated_at)], ['Actions','$actions']], row => [
-            action('edit_note', () => edit(row)), action('delete', async () => { if (confirm(`Xóa thuật ngữ “${row.term}”?`)) { await request(`/terms/${row.id}`, {method:'DELETE'}); if (editing === row.id) reset(); await refresh(); } }),
+            action('edit_note', () => edit(row)), action('delete', async () => { if (confirm(`Delete term “${row.term}”?`)) { await request(`/terms/${row.id}`, {method:'DELETE'}); if (editing === row.id) reset(); await refresh(); } }),
         ], ['category','status']);
         bindText(/^Save Term$/, async () => {
-            const json = { term: required(term, 'thuật ngữ'), definition: required(definition, 'định nghĩa'), category: category.selectedIndex ? category.value : '', status: state.value };
-            if (!['ACTIVE','INACTIVE'].includes(json.status)) throw new Error('Status phải là ACTIVE hoặc INACTIVE.');
+            const json = { term: required(term, 'term'), definition: required(definition, 'definition'), category: category.selectedIndex ? category.value : '', status: state.value };
+            if (!['ACTIVE','INACTIVE'].includes(json.status)) throw new Error('Status must be ACTIVE or INACTIVE.');
             await request(editing ? `/terms/${editing}` : '/terms', { method: editing ? 'PUT' : 'POST', json });
-            reset(); await refresh(); notice('Đã lưu thuật ngữ.');
+            reset(); await refresh(); notice('Term saved.');
         });
         bindText(/^Cancel$/, reset);
         $('#csvFileInput').addEventListener('change', e => run(e.target, async () => {
             const file = e.target.files[0]; if (!file) return;
             const records = parseCsv(await file.text());
             const header = records.shift()?.map(h => h.replace(/^\uFEFF/, '').trim().toLowerCase());
-            if (!header?.includes('term') || !header.includes('definition')) throw new Error('CSV cần cột term, definition; có thể thêm category, status.');
+            if (!header?.includes('term') || !header.includes('definition')) throw new Error('CSV requires term, definition columns; category, status are optional.');
             const imports = records.filter(r => r.some(Boolean)).map(r => Object.fromEntries(header.map((h,i) => [h, r[i] || ''])));
-            if (imports.some(r => !r.term.trim() || !r.definition.trim() || !['ACTIVE','INACTIVE'].includes(r.status || 'ACTIVE'))) throw new Error('CSV có dòng thiếu term/definition hoặc status không hợp lệ.');
+            if (imports.some(r => !r.term.trim() || !r.definition.trim() || !['ACTIVE','INACTIVE'].includes(r.status || 'ACTIVE'))) throw new Error('CSV has rows missing term/definition or invalid status.');
             let saved = 0;
             try { for (const row of imports) { await request('/terms', {method:'POST', json:{...row, status: row.status || 'ACTIVE'}}); saved++; } }
-            catch (error) { throw new Error(`Đã nhập ${saved}/${imports.length} dòng; dừng ở dòng ${saved + 2}: ${error.message}`); }
+            catch (error) { throw new Error(`Imported ${saved}/${imports.length} rows; stopped at row ${saved + 2}: ${error.message}`); }
             finally { await refresh(); e.target.value = ''; }
-            notice(`Đã nhập ${saved} thuật ngữ.`);
+            notice(`Imported ${saved} terms.`);
         }));
     }
     function parseCsv(source) {
@@ -455,7 +455,7 @@
             else if ((c === '\n' || c === '\r') && !quoted) { if (c === '\r' && source[i+1] === '\n') i++; row.push(value); rows.push(row); row=[]; value=''; }
             else value += c;
         }
-        if (quoted) throw new Error('CSV có dấu ngoặc kép chưa đóng.');
+        if (quoted) throw new Error('Unclosed quotes in CSV.');
         if (value || row.length) { row.push(value); rows.push(row); } return rows;
     }
     async function promptsPage() {
@@ -474,12 +474,12 @@
         const refresh = async () => list.reload(await request('/prompts'));
         const list = listTable(await request('/prompts'), [['Prompt','name'],['Purpose','description'],['Model','model'],['Status',status],['Updated',r=>date(r.updated_at)],['Action','$actions']], row => [
             action('edit',()=>edit(row)), action(row.is_active ? 'Disable' : 'Enable', async()=>{ await request(`/prompts/${row.id}`,{method:'PUT',json:{name:row.name,description:row.description,content:row.content,model:row.model,active:!row.is_active}}); await refresh(); }),
-            action('delete',async()=>{if(confirm(`Xóa prompt “${row.name}”?`)){await request(`/prompts/${row.id}`,{method:'DELETE'});await refresh();}}),
+            action('delete',async()=>{if(confirm(`Delete prompt “${row.name}”?`)){await request(`/prompts/${row.id}`,{method:'DELETE'});await refresh();}}),
         ], [status]);
         bindText(/New Prompt/, () => { reset(); modalOpen(); });
         bind(save, async () => {
-            await request(editing ? `/prompts/${editing}` : '/prompts', {method: editing ? 'PUT':'POST', json:{name:required(name,'tên prompt'),description:description.value,content:required(content,'nội dung prompt'),model:model.selectedIndex ? model.value : '',active:active.value==='true'}});
-            modalClose(); reset(); await refresh(); notice('Đã lưu prompt.');
+            await request(editing ? `/prompts/${editing}` : '/prompts', {method: editing ? 'PUT':'POST', json:{name:required(name,'prompt name'),description:description.value,content:required(content,'prompt content'),model:model.selectedIndex ? model.value : '',active:active.value==='true'}});
+            modalClose(); reset(); await refresh(); notice('Prompt saved.');
         });
     }
     async function usersPage() {
@@ -489,7 +489,7 @@
         const roles = canManageUsers ? await request('/roles') : [];
         const list = listTable(await request(endpoint), [['No.',r=>r.__rowNumber],['Username',userIdentity],['Gmail','email'],['Role','role'],['Status',r=>canManageUsers?status(r):'ACTIVE'],['Created',r=>date(r.created_at)],['Actions','$actions']], row => canManageUsers ? [
             action('edit',()=>edit(row)), action(row.is_active?'block':'check_circle',async()=>{
-                if (!confirm(`${row.is_active?'Khóa':'Mở khóa'} tài khoản ${row.username}?`)) return;
+                if (!confirm(`${row.is_active?'Lock':'Unlock'} account ${row.username}?`)) return;
                 await request(`/users/${row.id}`,{method:'PUT',json:{role:row.role,active:!row.is_active}}); await refresh();
             }),
         ] : [], canManageUsers ? [[r=>r.role, roles], r=>status(r)] : ['role', r=>'ACTIVE'], {numbered:true,sortable:true,sortKeys:[null,'username','email','role',r=>status(r),'created_at',null]});
@@ -499,34 +499,34 @@
         unused.parentElement.hidden=true;
         fieldLabel(email,'Gmail'); email.placeholder='username@gmail.com'; email.type='email';
         fieldLabel(role,'Role'); options(role,roles);
-        role.insertBefore(new Option('— Không chọn —',''), role.firstChild);
+        role.insertBefore(new Option('— Select —',''), role.firstChild);
         const save=buttons(/^Create$/,modal)[0];
         const reset=()=>{editing=null;username.value='';username.disabled=false;email.value='';email.disabled=false;role.value='MANAGER';save.textContent='Create';$('h3',modal).textContent='Create User';};
         function edit(row){reset();editing=row;username.value=row.username;username.disabled=true;email.value=row.email||'';email.disabled=true;if(![...role.options].some(o=>o.value===row.role))role.add(new Option(row.role,row.role));role.value=row.role;save.textContent='Save';$('h3',modal).textContent='Edit User';modalOpen();}
         bindText(/^New$|New Manager|New User/,()=>{reset();modalOpen();});
         bind(save,async()=>{
             const isEditing=Boolean(editing);
-            const json=editing?{role:role.value,active:editing.is_active}:{username:required(username,'tên tài khoản'),email:required(email,'Gmail'),role:role.value};
+            const json=editing?{role:role.value,active:editing.is_active}:{username:required(username,'username'),email:required(email,'Gmail'),role:role.value};
             await request(editing?`/users/${editing.id}`:'/users',{method:editing?'PUT':'POST',json});
             modalClose();reset();await refresh();
-            notice(isEditing?'Đã cập nhật tài khoản.':'Đã tạo tài khoản, gửi email và làm mới bảng.');
+            notice(isEditing?'Account updated.':'Account created, email sent and table refreshed.');
         });
     }
     async function documentsPage() {
         let pendingFiles=[];
-        const refresh = async()=>list.reload([...pendingFiles.map((file,index)=>({id:-(index+1),title:file.name,original_name:file.name,document_type:'PDF',uploaded_by_username:user.username,created_at:new Date().toISOString(),status:'CHỜ LƯU',pending:true})),...await request('/documents')]);
+        const refresh = async()=>list.reload([...pendingFiles.map((file,index)=>({id:-(index+1),title:file.name,original_name:file.name,document_type:'PDF',uploaded_by_username:user.username,created_at:new Date().toISOString(),status:'PENDING_SAVE',pending:true})),...await request('/documents')]);
         const list=listTable(await request('/documents'),[['No.','id'],['File Name','title'],['Original File','original_name'],['Type','document_type'],['Uploaded By',r=>r.uploaded_by_username||'—'],['Upload Date',r=>date(r.created_at)],['Status','status'],['Actions','$actions']],row=>row.pending?[]:[
             action('visibility',()=>documentFile(row)),action('edit',async()=>{
-                const title=prompt('Tên tài liệu',row.title);if(title===null)return;if(!title.trim())throw new Error('Tên tài liệu không được trống.');
+                const title=prompt('Document name',row.title);if(title===null)return;if(!title.trim())throw new Error('Document name cannot be empty.');
                 await request(`/documents/${row.id}`,{method:'PUT',json:{title:title.trim(),documentType:row.document_type}});await refresh();
-            }),action('delete',async()=>{if(confirm(`Xóa tài liệu “${row.title}”?`)){await request(`/documents/${row.id}`,{method:'DELETE'});await refresh();}}),
+            }),action('delete',async()=>{if(confirm(`Delete document “${row.title}”?`)){await request(`/documents/${row.id}`,{method:'DELETE'});await refresh();}}),
         ],['document_type']);
         const input=$('#documentInput');input.accept='.pdf,application/pdf';input.multiple=true;
         input.addEventListener('change',()=>run(input,async()=>{
             const files=[...input.files];if(!files.length)return;
             try {
                 const invalid=files.find(file=>!/\.pdf$/i.test(file.name)||file.size===0||file.size>50*1024*1024);
-                if(invalid)throw new Error(`File “${invalid.name}” không hợp lệ. Chỉ chọn PDF có nội dung, tối đa 50 MB mỗi file.`);
+                if(invalid)throw new Error(`File “${invalid.name}” is invalid. Please select only non-empty PDFs up to 50 MB each.`);
                 pendingFiles.push(...files); await refresh();
             } finally {input.value='';}
         }));
@@ -535,9 +535,9 @@
             if(!pendingFiles.length)return;
             const files=[...pendingFiles];let uploaded=0;
             for(const file of files){const data=new FormData();data.append('file',file);data.append('metadata',new Blob([JSON.stringify({title:file.name,documentType:'PDF'})],{type:'application/json'}));await request('/documents',{method:'POST',body:data});uploaded++;}
-            pendingFiles=[];await refresh();notice(`Đã lưu ${uploaded} tài liệu vào cơ sở dữ liệu.`);
+            pendingFiles=[];await refresh();notice(`Saved ${uploaded} document(s) to the database.`);
         });
-        window.addEventListener('beforeunload',event=>{if(!pendingFiles.length)return;event.preventDefault();event.returnValue='Xác nhận lưu thay đổi?';});
+        window.addEventListener('beforeunload',event=>{if(!pendingFiles.length)return;event.preventDefault();event.returnValue='Confirm saving changes?';});
     }
     async function sessionsPage() {
         const [documents, assignees] = await Promise.all([request('/documents'),request('/assignees')]);
@@ -559,7 +559,7 @@
         $('input',typeList).checked=true;
         const modelSection=typeList.parentElement;
         $('p',modelSection).textContent='Session Type';
-        $$('p',modelSection)[1].textContent='Chọn gán nhãn AI, thủ công hoặc cả hai.';
+        $$('p',modelSection)[1].textContent='Choose AI labeling, manual labeling, or both.';
         const modelSearch=$('input[placeholder="Search AI models..."]',modal);modelSearch.parentElement.hidden=true;
         checkList(memberList,assignees.map(u=>({id:u.id,name:`${u.username} — ${u.role}`})),'members');
         const userSection=memberList.parentElement;
@@ -855,9 +855,9 @@
         const list=listTable(await request('/sessions'),[['No.','id'],['Session','name'],['Type','session_type'],['Assigned Users',r=>r.members.map(m=>m.username).join(', ')],['Due Date',r=>date(r.due_at)],['Status','status'],['Created',r=>date(r.created_at)],['Actions','$actions']],row=>[
             action('edit',()=>edit(row)),action('Tasks',async()=>{
                 const tasks=(await request('/tasks')).filter(t=>t.session_id===row.id);
-                exportJson(tasks,`session-${row.id}-tasks.json`);notice(`${tasks.length} tác vụ đã được xuất cùng thông tin phân công.`);
+                exportJson(tasks,`session-${row.id}-tasks.json`);notice(`${tasks.length} task(s) exported with assignment details.`);
             }),...(row.status==='CLOSED'?[]:[action(row.status==='DRAFT'?'Start':'Close',async()=>{
-                if(!confirm(`${row.status==='DRAFT'?'Bắt đầu':'Đóng'} phiên “${row.name}”?`))return;
+                if(!confirm(`${row.status==='DRAFT'?'Start':'Close'} session “${row.name}”?`))return;
                 await request(`/sessions/${row.id}/status`,{method:'PATCH',json:{status:row.status==='DRAFT'?'ACTIVE':'CLOSED'}});await refresh();
             })]),
         ],['status']);
@@ -866,33 +866,33 @@
         bindText(/New Session|Create First Session/,async()=>{reset();modalOpen();await reloadAssignees();});
         bind(save,async()=>{
             const userIds=selected(memberList).map(Number);
-            if(editing){await request(`/sessions/${editing.id}/members`,{method:'PUT',json:{userIds}});modalClose();await refresh();notice('Đã cập nhật thành viên.');return;}
+            if(editing){await request(`/sessions/${editing.id}/members`,{method:'PUT',json:{userIds}});modalClose();await refresh();notice('Members updated.');return;}
             const type=selected(typeList)[0]||'MANUAL', docIds=selected(documentList).map(Number);
 
             if(type==='MANUAL'){
-                required(name,'tên phiên');
-                required(dueDate,'ngày hết hạn');
+                required(name,'session name');
+                required(dueDate,'due date');
                 const sessionDue=viDateToIso(dueDate.value);
-                if(sessionDue.parsed<=new Date())throw new Error('Ngày hết hạn phải ở tương lai.');
-                if(!docIds.length)throw new Error('Vui lòng chọn ít nhất một tài liệu PDF.');
+                if(sessionDue.parsed<=new Date())throw new Error('Due date must be in the future.');
+                if(!docIds.length)throw new Error('Please select at least one PDF document.');
 
-                if(!m1Select.value)throw new Error('Vui lòng chọn Manual Labeler 1.');
-                if(!reviewerSelect.value)throw new Error('Vui lòng chọn Reviewer.');
+                if(!m1Select.value)throw new Error('Please select Manual Labeler 1.');
+                if(!reviewerSelect.value)throw new Error('Please select a Reviewer.');
 
                 const m1Id=Number(m1Select.value);
                 const m2Id=m2Select.value?Number(m2Select.value):null;
                 const revId=Number(reviewerSelect.value);
 
                 const chosenIds=[m1Id,m2Id,revId].filter(Boolean);
-                if(new Set(chosenIds).size!==chosenIds.length)throw new Error('Không được chọn trùng người dùng giữa các vai trò.');
+                if(new Set(chosenIds).size!==chosenIds.length)throw new Error('Cannot select the same user across different roles.');
 
                 const m1User=currentAssignees.find(u=>u.id===m1Id);
                 const m2User=m2Id?currentAssignees.find(u=>u.id===m2Id):null;
                 const revUser=currentAssignees.find(u=>u.id===revId);
 
-                if(!m1User || m1User.role!=='MANUAL_LABELER')throw new Error('Manual Labeler 1 phải có vai trò MANUAL_LABELER.');
-                if(m2User && m2User.role!=='MANUAL_LABELER')throw new Error('Manual Labeler 2 phải có vai trò MANUAL_LABELER.');
-                if(!revUser || revUser.role!=='REVIEWER')throw new Error('Reviewer phải có vai trò REVIEWER.');
+                if(!m1User || m1User.role!=='MANUAL_LABELER')throw new Error('Manual Labeler 1 must have role MANUAL_LABELER.');
+                if(m2User && m2User.role!=='MANUAL_LABELER')throw new Error('Manual Labeler 2 must have role MANUAL_LABELER.');
+                if(!revUser || revUser.role!=='REVIEWER')throw new Error('Reviewer must have role REVIEWER.');
 
                 const manualLabelerIds=[m1Id];
                 if(m2Id)manualLabelerIds.push(m2Id);
@@ -910,30 +910,30 @@
                 };
 
                 await request('/sessions',{method:'POST',json:payload});
-                modalClose();reset();await refresh();notice('Đã tạo session thành công');
+                modalClose();reset();await refresh();notice('Session created successfully.');
                 return;
             }
 
             if(type==='AI'){
-                required(name,'tên phiên');
-                required(dueDate,'ngày hết hạn');
+                required(name,'session name');
+                required(dueDate,'due date');
                 const sessionDue=viDateToIso(dueDate.value);
-                if(sessionDue.parsed<=new Date())throw new Error('Ngày hết hạn phải ở tương lai.');
-                if(!docIds.length)throw new Error('Vui lòng chọn ít nhất một tài liệu PDF.');
+                if(sessionDue.parsed<=new Date())throw new Error('Due date must be in the future.');
+                if(!docIds.length)throw new Error('Please select at least one PDF document.');
 
-                if(!aiLabelerSelect.value)throw new Error('Vui lòng chọn AI Labeler.');
-                if(!aiReviewerSelect.value)throw new Error('Vui lòng chọn Reviewer.');
+                if(!aiLabelerSelect.value)throw new Error('Please select an AI Labeler.');
+                if(!aiReviewerSelect.value)throw new Error('Please select a Reviewer.');
 
                 const aiId=Number(aiLabelerSelect.value);
                 const revId=Number(aiReviewerSelect.value);
 
-                if(aiId===revId)throw new Error('Không được chọn trùng người dùng giữa các vai trò.');
+                if(aiId===revId)throw new Error('Cannot select the same user across different roles.');
 
                 const aiUser=currentAssignees.find(u=>u.id===aiId);
                 const revUser=currentAssignees.find(u=>u.id===revId);
 
-                if(!aiUser || aiUser.role!=='AI_LABELER')throw new Error('AI Labeler phải có vai trò AI_LABELER.');
-                if(!revUser || revUser.role!=='REVIEWER')throw new Error('Reviewer phải có vai trò REVIEWER.');
+                if(!aiUser || aiUser.role!=='AI_LABELER')throw new Error('AI Labeler must have role AI_LABELER.');
+                if(!revUser || revUser.role!=='REVIEWER')throw new Error('Reviewer must have role REVIEWER.');
 
                 const payload={
                     name:name.value.trim(),
@@ -948,7 +948,7 @@
                 };
 
                 await request('/sessions',{method:'POST',json:payload});
-                modalClose();reset();await refresh();notice('Đã tạo session thành công');
+                modalClose();reset();await refresh();notice('Session created successfully.');
                 return;
             }
         });
@@ -998,10 +998,10 @@
             currentTimerSessionId=sessionId;
             if(sessionTimerInterval){clearInterval(sessionTimerInterval);sessionTimerInterval=null;}
             if(!durationEl)return;
-            if(!startedAt){durationEl.textContent='—:—:—';durationEl.title='Phiên chưa bắt đầu';return;}
+            if(!startedAt){durationEl.textContent='—:—:—';durationEl.title='Session not started';return;}
             const startMs=new Date(startedAt).getTime();
             if(isNaN(startMs)){durationEl.textContent='—:—:—';return;}
-            durationEl.title=`Bắt đầu: ${startedAt}`;
+            durationEl.title=`Started: ${startedAt}`;
             const tick=()=>{
                 const elapsedSec=Math.max(0,Math.floor((Date.now()-startMs)/1000));
                 durationEl.textContent=formatSessionDuration(elapsedSec);
@@ -1085,7 +1085,7 @@
         const renderResults=()=>{
             const a=rowsFor(state.modelA),b=rowsFor(state.modelB);
             const selectedA=state.models.find(model=>model.key===state.modelA),selectedB=state.models.find(model=>model.key===state.modelB);
-            $('#raModelAMeta').textContent=selectedA?`${selectedA.provider} · ${selectedA.model}`:'';$('#raModelBMeta').textContent=selectedB?`${selectedB.provider} · ${selectedB.model}`:'';
+            const metaA=$('#raModelAMeta'),metaB=$('#raModelBMeta');if(metaA)metaA.textContent=selectedA?`${selectedA.provider} · ${selectedA.model}`:'';if(metaB)metaB.textContent=selectedB?`${selectedB.provider} · ${selectedB.model}`:'';
             draw(resultsA,a,b,'A');draw(resultsB,b,a,'B');
             const all=[...new Set([...a,...b].map(key).filter(Boolean))];
             const differences=state.analyzed?all.filter(indicator=>{const left=rowFor(a,indicator),right=rowFor(b,indicator);return !left||!right||String(value(left))!==String(value(right));}):[];
@@ -1229,7 +1229,7 @@
         let panel=$('[data-annotation-panel]')||heading?.parentElement;
         const reviewBodies=$$('main .overflow-y-auto').filter(el=>$('input[type="checkbox"]',el));
         if(!panel)panel=reviewBodies[0];
-        if(!panel)throw new Error('Không tìm thấy vùng nhãn của tác vụ.');
+        if(!panel)throw new Error('Task label panel not found.');
         const normalizedRole=String(user?.role||'').trim().toUpperCase().replace(/[\s-]+/g,'_');
         const isManualLabeler=normalizedRole==='MANUAL_LABELER';
         const labeler=['AI_LABELER','MANUAL_LABELER'].includes(normalizedRole);
@@ -1245,24 +1245,24 @@
             const card=document.createElement('article');card.className='annotation-field-card annotation-field-card--legacy';
             const parts=splitLabelValue(row.labelValue,row.sourceLabel);
             const top=document.createElement('div');top.className='annotation-field-card__top';
-            const friendlyLabels={company_name:'Tên công ty',industry:'Ngành nghề',report_period:'Kỳ báo cáo',report_year:'Năm báo cáo',revenue:'Doanh thu',total_assets:'Tổng tài sản',equity:'Vốn chủ sở hữu',cfo:'Dòng tiền từ HĐKD',cfi:'Dòng tiền từ HĐĐT',cff:'Dòng tiền từ HĐTC',net_cash_flow:'Dòng tiền thuần'};
+            const friendlyLabels={company_name:'Company Name',industry:'Industry',report_period:'Report Period',report_year:'Report Year',revenue:'Revenue',total_assets:'Total Assets',equity:'Equity',cfo:'Operating Cash Flow (CFO)',cfi:'Investing Cash Flow (CFI)',cff:'Financing Cash Flow (CFF)',net_cash_flow:'Net Cash Flow'};
             const key=String(row.labelName||'').trim().toLowerCase();
             const labelBlock=document.createElement('span');labelBlock.className='annotation-field-name';
-            const friendly=document.createElement('strong');friendly.textContent=friendlyLabels[key]||row.labelName||'Field mới';
+            const friendly=document.createElement('strong');friendly.textContent=friendlyLabels[key]||row.labelName||'New field';
             const technical=document.createElement('small');technical.textContent=row.labelName||'field_key';labelBlock.append(friendly,technical);
-            const termInput=document.createElement('input');termInput.type='text';termInput.value=row.labelName||'';termInput.maxLength=150;termInput.setAttribute('aria-label','Tên field');termInput.className='annotation-term-input';termInput.disabled=readonly;termInput.hidden=true;
+            const termInput=document.createElement('input');termInput.type='text';termInput.value=row.labelName||'';termInput.maxLength=150;termInput.setAttribute('aria-label','Field name');termInput.className='annotation-term-input';termInput.disabled=readonly;termInput.hidden=true;
             const stateBadge=document.createElement('span');stateBadge.className='annotation-status';
-            const editButton=document.createElement('button');editButton.type='button';editButton.className='annotation-icon-button';editButton.title=readonly?'Bấm Mở khóa để chỉnh sửa':'Sửa field';editButton.disabled=readonly;editButton.innerHTML='<span class="material-symbols-outlined">edit</span>';
-            const confirmButton=document.createElement('button');confirmButton.type='button';confirmButton.className='annotation-icon-button annotation-icon-button--confirm';confirmButton.title='Xác nhận (Enter)';confirmButton.innerHTML='<span class="material-symbols-outlined">check</span>';
+            const editButton=document.createElement('button');editButton.type='button';editButton.className='annotation-icon-button';editButton.title=readonly?'Click Unlock to edit':'Edit field';editButton.disabled=readonly;editButton.innerHTML='<span class="material-symbols-outlined">edit</span>';
+            const confirmButton=document.createElement('button');confirmButton.type='button';confirmButton.className='annotation-icon-button annotation-icon-button--confirm';confirmButton.title='Confirm (Enter)';confirmButton.innerHTML='<span class="material-symbols-outlined">check</span>';
             top.append(labelBlock,termInput,stateBadge,editButton,confirmButton);
             const valueInput=document.createElement('textarea');valueInput.value=parts.editableValue;valueInput.placeholder='Enter value...';valueInput.maxLength=20000;valueInput.rows=4;valueInput.setAttribute('aria-label','Field value');valueInput.className='annotation-definition-input';valueInput.disabled=readonly;
             const meta=document.createElement('div');meta.className='annotation-field-card__meta';
-            const pageInput=document.createElement('input');pageInput.type='number';pageInput.min='1';pageInput.max=String(pdfPageCount||9999);pageInput.step='1';pageInput.required=true;pageInput.value=row.sourcePage==null?'':String(row.sourcePage);pageInput.setAttribute('aria-label','Trang nguồn');pageInput.className='annotation-page-input';pageInput.disabled=readonly;pageInput.hidden=true;
-            const pageButton=document.createElement('button');pageButton.type='button';pageButton.className='annotation-page-chip';pageButton.title='Đến trang nguồn trong PDF';
+            const pageInput=document.createElement('input');pageInput.type='number';pageInput.min='1';pageInput.max=String(pdfPageCount||9999);pageInput.step='1';pageInput.required=true;pageInput.value=row.sourcePage==null?'':String(row.sourcePage);pageInput.setAttribute('aria-label','Source page');pageInput.className='annotation-page-input';pageInput.disabled=readonly;pageInput.hidden=true;
+            const pageButton=document.createElement('button');pageButton.type='button';pageButton.className='annotation-page-chip';pageButton.title='Go to source page in PDF';
             const confidence=document.createElement('span');confidence.className='annotation-confidence';const confidencePct=row.confidence==null?null:Math.round(row.confidence*100);confidence.textContent=`AI ${confidencePct==null?'—':`${confidencePct}%`}`;confidence.dataset.level=confidencePct==null?'unknown':confidencePct>=90?'high':confidencePct>=70?'medium':'low';
             const currentValue=parts.editableValue.trim();const suspicious=(key==='report_period'&&currentValue&&/^fy$/i.test(currentValue))||(key==='report_year'&&currentValue&&!/^\d{4}$/.test(currentValue))||(key==='revenue'&&currentValue&&!/[\d]/.test(currentValue));
-            const warning=document.createElement('span');warning.className='annotation-warning';warning.hidden=!suspicious;warning.title='Giá trị cần kiểm tra lại với tài liệu nguồn.';warning.innerHTML='<span class="material-symbols-outlined">warning</span>';
-            const sourceToggle=document.createElement('button');sourceToggle.type='button';sourceToggle.className='annotation-source-toggle';sourceToggle.textContent='Xem nguồn';sourceToggle.disabled=!pageInput.value;sourceToggle.title=pageInput.value?'Xem nhãn nguồn':'Chưa có trang nguồn';
+            const warning=document.createElement('span');warning.className='annotation-warning';warning.hidden=!suspicious;warning.title='Value needs verification against source document.';warning.innerHTML='<span class="material-symbols-outlined">warning</span>';
+            const sourceToggle=document.createElement('button');sourceToggle.type='button';sourceToggle.className='annotation-source-toggle';sourceToggle.textContent='View source';sourceToggle.disabled=!pageInput.value;sourceToggle.title=pageInput.value?'View source label':'No source page';
             meta.append(pageButton,pageInput,confidence,warning,sourceToggle);
             const hasSavedValue=Boolean(row.labelName||row.labelValue||row.sourcePage);
             const saveState=document.createElement('span');saveState.className='annotation-save-state';
@@ -1278,13 +1278,13 @@
             const sourceTitle=document.createElement('strong');sourceTitle.textContent='SOURCE LABEL';
             const sourceValue=document.createElement('span');sourceValue.textContent=parts.sourceLabel||'NO AI SOURCE LABEL YET';
             source.append(sourceTitle,sourceValue);
-            sourceToggle.onclick=()=>{if(sourceToggle.disabled)return;source.hidden=!source.hidden;sourceToggle.textContent=source.hidden?'Xem nguồn':'Ẩn nguồn';};pageButton.onclick=jumpToSource;
+            sourceToggle.onclick=()=>{if(sourceToggle.disabled)return;source.hidden=!source.hidden;sourceToggle.textContent=source.hidden?'View source':'Hide source';};pageButton.onclick=jumpToSource;
             termInput.addEventListener('input',changed);valueInput.addEventListener('input',changed);pageInput.addEventListener('input',changed);
             valueInput.addEventListener('keydown',event=>{if(event.key==='Escape'&&card.classList.contains('is-editing')){editButton.click();return;}if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();confirmButton.click();}if(event.key==='Tab'&&!event.shiftKey){const index=cards.indexOf(cardState);const next=cards[index+1];if(next){event.preventDefault();next.valueInput.focus();}}});
             card.append(top,definitionLabel,valueInput,meta,source);paintState();cards.push(cardState);panel.append(card);return valueInput;
         }
         const editor={
-            get value(){return JSON.stringify(cards.map(c=>{const editableValue=c.valueInput.value;return {labelName:c.termInput.value.trim(),labelValue:c.sourceLabel?`${editableValue}\nNhãn nguồn: ${c.sourceLabel}`:editableValue,sourcePage:c.pageInput.value?Number(c.pageInput.value):null,confidence:c.confidence};}).filter(c=>c.labelName||c.labelValue));},
+            get value(){return JSON.stringify(cards.map(c=>{const editableValue=c.valueInput.value;return {labelName:c.termInput.value.trim(),labelValue:c.sourceLabel?`${editableValue}\nSource label: ${c.sourceLabel}`:editableValue,sourcePage:c.pageInput.value?Number(c.pageInput.value):null,confidence:c.confidence};}).filter(c=>c.labelName||c.labelValue));},
             set value(value){clearCards();const rows=JSON.parse(value);rows.forEach(addLabel);if(!rows.length&&labeler)addLabel();const saveDock=panel.querySelector('.annotation-panel-save');if(saveDock)panel.append(saveDock);},
             get readOnly(){return readonly;},
             set readOnly(value){readonly=value;cards.forEach(c=>{c.termInput.disabled=readonly;c.valueInput.readOnly=readonly;c.pageInput.disabled=readonly;c.saveState.textContent=readonly?'Read-only':c.dirty?'Unsaved':c.saved?'Saved':'Empty';});},
@@ -1330,7 +1330,7 @@
                     runButton.title='';
                 }
             });
-            modelSelect.addEventListener('change',()=>{updatePrompts();if(modelSelect.value)notice(`Đã chọn model ${modelSelect.value}.`);});
+            modelSelect.addEventListener('change',()=>{updatePrompts();if(modelSelect.value)notice(`Selected model ${modelSelect.value}.`);});
         }else if(modelSelect){options(modelSelect,[],true);modelSelect.disabled=true;}
         if(!initial){
             buttons(/Save|Submit|Nộp bài|Approve|Analyze/).forEach(b=>unavailable(b,'No task assigned.'));
@@ -1369,7 +1369,7 @@
                 button.setAttribute('aria-current',selected?'true':'false');
             });
             const iframe=$('#pdfViewer');
-            if(iframe){iframe.removeAttribute('src');iframe.srcdoc='<p style="font-family:sans-serif;padding:24px">Đang tải tài liệu PDF…</p>';}
+            if(iframe){iframe.removeAttribute('src');iframe.srcdoc='<p style="font-family:sans-serif;padding:24px">Loading PDF document…</p>';}
             try {
                 const blob=await request(`/documents/${task.document_id}/file`,{blob:true});
                 if(fileUrl)URL.revokeObjectURL(fileUrl);
@@ -1382,7 +1382,7 @@
                             const documentInFrame=iframe.contentDocument;
                             const toolbar=documentInFrame?.querySelector('#toolbarViewerRight');
                             if(!toolbar||documentInFrame.querySelector('[data-aair-pdf-control]'))return;
-                            [['fit-width','↔','Vừa chiều rộng'],['fit-page','□','Vừa toàn trang'],['rotate','↻','Xoay trang']].forEach(([action,icon,title])=>{
+                            [['fit-width','↔','Fit width'],['fit-page','□','Fit page'],['rotate','↻','Rotate page']].forEach(([action,icon,title])=>{
                                 const button=documentInFrame.createElement('button');button.type='button';button.dataset.aairPdfControl=action;button.title=title;button.className='toolbarButton';button.textContent=icon;
                                 button.onclick=()=>{const viewer=iframe.contentWindow?.PDFViewerApplication?.pdfViewer;if(!viewer)return;if(action==='fit-width')viewer.currentScaleValue='page-width';if(action==='fit-page')viewer.currentScaleValue='page-fit';if(action==='rotate')viewer.pagesRotation=(viewer.pagesRotation+90)%360;};toolbar.append(button);
                             });
@@ -1391,7 +1391,7 @@
                         const syncPageCount=()=>{
                             if(task.id!==openedTaskId)return;
                             const count=Number(iframe.contentWindow?.PDFViewerApplication?.pdfDocument?.numPages||0);
-                            if(count>0){pdfPageCount=count;cards.forEach(card=>{card.pageInput.max=String(count);card.pageInput.title=`Trang hợp lệ: 1-${count}`;});addPdfControls();return;}
+                            if(count>0){pdfPageCount=count;cards.forEach(card=>{card.pageInput.max=String(count);card.pageInput.title=`Valid page: 1-${count}`;});addPdfControls();return;}
                             if(++attempts<30)setTimeout(syncPageCount,200);
                         };
                         syncPageCount();
@@ -1399,10 +1399,10 @@
                     iframe.removeAttribute('srcdoc');iframe.src=viewerUrl;iframe.title=task.document_title;
                 }
                 if(labeler && !['SUBMITTED','APPROVED'].includes(task.status) && AAIR.createWorkTimer) workTimer=AAIR.createWorkTimer({taskId:task.id});
-                notice(`Đã mở tài liệu ${task.document_title}.`);
+                notice(`Opened document ${task.document_title}.`);
                 if(completionGuard)await completionGuard.refresh();
             } catch(error) {
-                if(iframe)iframe.srcdoc=`<p style="font-family:sans-serif;padding:24px;color:#b91c1c">Không tải được tài liệu PDF.</p>`;
+                if(iframe)iframe.srcdoc=`<p style="font-family:sans-serif;padding:24px;color:#b91c1c">Failed to load PDF document.</p>`;
                 throw error;
             }
         }
@@ -1413,7 +1413,7 @@
                 button:submitTaskButton,
                 loadStatus:()=>request(`/session-completion${task?.session_id?`?sessionId=${task.session_id}`:''}`),
                 findItem:documentStatus=>documentButtons.get(Number(documentStatus.id)),
-                blockedTitle:status=>`Còn ${(status.missingItems||[]).length} tài liệu chưa hoàn tất`,
+                blockedTitle:status=>`${(status.missingItems||[]).length} document(s) remaining incomplete`,
                 onStatus:status=>{
                     const reported=status.documents||[];
                     const sessionTasks=reported.length?reported:tasks.filter(item=>String(item.session_id)===String(task?.session_id));
@@ -1452,10 +1452,10 @@
                     notice(`Extracted ${result.labels?.length||0} fields using ${result.provider}. Review them and click Save.`);
                 }finally{runAiButton.innerHTML=oldMarkup;}
             });
-        }else if(runAiButton)unavailable(runAiButton,'Chỉ AI Labeler được chạy mô hình AI.');
+        }else if(runAiButton)unavailable(runAiButton,'Only AI Labeler can run AI models.');
         function labels(){
-            let data;try{data=JSON.parse(editor.value);}catch{throw new Error('Nhãn phải là JSON hợp lệ.');}
-            if(!Array.isArray(data)||data.length>500||data.some(l=>!l||typeof l.labelName!=='string'||!l.labelName.trim()||l.labelName.length>150||!(l.labelValue==null||typeof l.labelValue==='string')||(l.labelValue?.length||0)>20000||!Number.isInteger(l.sourcePage)||l.sourcePage<1||(pdfPageCount&&l.sourcePage>pdfPageCount)||!(l.confidence==null||typeof l.confidence==='number'&&l.confidence>=0&&l.confidence<=1)))throw new Error(`Mỗi chỉ tiêu cần tên, giá trị, trang nguồn từ 1${pdfPageCount?`-${pdfPageCount}`:''} và confidence từ 0 đến 1 (hoặc null); tối đa 500 chỉ tiêu.`);
+            let data;try{data=JSON.parse(editor.value);}catch{throw new Error('Labels must be valid JSON.');}
+            if(!Array.isArray(data)||data.length>500||data.some(l=>!l||typeof l.labelName!=='string'||!l.labelName.trim()||l.labelName.length>150||!(l.labelValue==null||typeof l.labelValue==='string')||(l.labelValue?.length||0)>20000||!Number.isInteger(l.sourcePage)||l.sourcePage<1||(pdfPageCount&&l.sourcePage>pdfPageCount)||!(l.confidence==null||typeof l.confidence==='number'&&l.confidence>=0&&l.confidence<=1)))throw new Error(`Each field requires a name, value, source page from 1${pdfPageCount?`-${pdfPageCount}`:''} and confidence from 0 to 1 (or null); maximum 500 fields.`);
             return data;
         }
         let manualSaveButton=null;
@@ -1522,12 +1522,12 @@
             }
         }
         bindText(/Approve Review/,async()=>{
-            const answer=prompt('Nhập APPROVED để duyệt hoặc REJECTED để yêu cầu sửa:','APPROVED');if(answer===null)return;
-            const decision=answer.trim().toUpperCase();if(!['APPROVED','REJECTED'].includes(decision))throw new Error('Quyết định phải là APPROVED hoặc REJECTED.');
-            const feedback=prompt(decision==='REJECTED'?'Lý do yêu cầu sửa (bắt buộc):':'Nhận xét (không bắt buộc):','');if(feedback===null)return;
-            await request(`/tasks/${task.id}/review`,{method:'POST',json:{decision,feedback}});await refresh();notice(`Đã lưu kết quả: ${decision}.`);
+            const answer=prompt('Enter APPROVED to approve or REJECTED to request changes:','APPROVED');if(answer===null)return;
+            const decision=answer.trim().toUpperCase();if(!['APPROVED','REJECTED'].includes(decision))throw new Error('Decision must be APPROVED or REJECTED.');
+            const feedback=prompt(decision==='REJECTED'?'Reason for requesting changes (required):':'Feedback (optional):','');if(feedback===null)return;
+            await request(`/tasks/${task.id}/review`,{method:'POST',json:{decision,feedback}});await refresh();notice(`Review result saved: ${decision}.`);
         });
-        bindText(/^Analyze$/,()=>{exportJson({taskId:task.id,status:task.status,labels:task.labels,reviews:task.reviews},`task-${task.id}-analysis.json`);notice(`Đã xuất ${task.labels.length} nhãn và ${task.reviews.length} quyết định kiểm duyệt.`);});
+        bindText(/^Analyze$/,()=>{exportJson({taskId:task.id,status:task.status,labels:task.labels,reviews:task.reviews},`task-${task.id}-analysis.json`);notice(`Exported ${task.labels.length} labels and ${task.reviews.length} review decisions.`);});
         notice(`${task.document_title} — ${task.status}`);
     }
     async function logsPage() {
@@ -1547,7 +1547,7 @@
             const filtered=rows.filter(r=>Object.values(r).join(' ').toLowerCase().includes(query)&&filters.every((s,i)=>!s.value||r[i===0?'resource_type':'action']===s.value));
             table($('table'),columns,filtered,r=>[action('View',()=>show(r))]);
             previous.disabled=pageIndex===0;next.disabled=rows.length<100;
-            $$('p,span').filter(p=>p.children.length===0&&/^Showing/.test(text(p))).forEach(p=>p.textContent=`Trang ${pageIndex+1}: ${filtered.length} bản ghi`);
+            $$('p,span').filter(p=>p.children.length===0&&/^Showing/.test(text(p))).forEach(p=>p.textContent=`Page ${pageIndex+1}: ${filtered.length} records`);
         };
         const configureFilters=()=>filters.forEach((s,i)=>options(s,[...new Set(rows.map(r=>r[i===0?'resource_type':'action']))].sort(),true));
         configureFilters();search.addEventListener('input',render);filters.forEach(s=>s.addEventListener('change',render));
@@ -1639,9 +1639,9 @@
         bind(saveButton,async()=>{
             if(user.role!=='ADMIN'||!snapshot)return;
             const permissions=[...changes.values()];
-            if(!permissions.length){notice('Không có thay đổi permission.');return;}
+            if(!permissions.length){notice('No permission changes.');return;}
             const data=await request(`/permissions/${selectedRole}`,{method:'PUT',json:{permissions}});
-            renderSnapshot(data); notice('Đã lưu thay đổi permission.');
+            renderSnapshot(data); notice('Permission changes saved.');
         });
         await selectRole(selectedRole);
     }
@@ -1677,7 +1677,7 @@
                     || $$('h3,p',card).find(e=>/^\d/.test(text(e)));
                 if(!value)return;
                 const entry=entries[index];value.textContent=entry?String(entry[1]):'—';
-                const label=value.previousElementSibling;if(label)label.textContent=entry?entry[0]:'Chưa có dữ liệu';
+                const label=value.previousElementSibling;if(label)label.textContent=entry?entry[0]:'No data available';
                 $$('svg',card).forEach(s=>s.hidden=true);
                 $$('span,p,div',card).filter(e=>e!==value&&e!==label&&!e.contains(value)&&!e.contains(label)&&/\+\d|%|STABLE|Critical|Action Required|Last 7 Days|^add\s+\d/i.test(text(e))).forEach(e=>e.textContent='');
             });
@@ -1709,9 +1709,9 @@
                     bindText(/Continue/,()=>go(`Task.html?id=${row.id}`),card);cards.append(card);}
             }}
             $$('h3,h4').filter(h=>['Recent Activity','Top Reviewers','Recent Analysis Summary','Recent Error Overview'].includes(text(h))).forEach(h=>replacePanel(h,rows.slice(0,5).map(r=>`${r.document_title} — ${r.status}`)));
-            $$('h3,h4').filter(h=>['Accuracy Trend','Annotation Distribution','Agreement Performance','Error Trend','Review Progress'].includes(text(h))).forEach(h=>replacePanel(h,['Chưa có dữ liệu cho chỉ số này.']));
+            $$('h3,h4').filter(h=>['Accuracy Trend','Annotation Distribution','Agreement Performance','Error Trend','Review Progress'].includes(text(h))).forEach(h=>replacePanel(h,['No data available for this metric.']));
         }
-        buttons(/Last 30 Days/).forEach(b=>{b.textContent='All Time';unavailable(b,'API dashboard hiện trả số liệu toàn thời gian.');});
+        buttons(/Last 30 Days/).forEach(b=>{b.textContent='All Time';unavailable(b,'Dashboard API currently returns all-time metrics.');});
     }
     function replacePanel(heading,lines) {
         let container=heading.parentElement;
@@ -1719,18 +1719,18 @@
         const keep=[...container.children].find(c=>c===heading||c.contains(heading));
         [...container.children].filter(c=>c!==keep).forEach(c=>c.remove());
         const content=document.createElement('div');content.className='p-4 text-sm space-y-2';
-        for(const line of lines.length?lines:['Chưa có dữ liệu.']){const p=document.createElement('p');p.textContent=line;content.append(p);}container.append(content);
+        for(const line of lines.length?lines:['No data available.']){const p=document.createElement('p');p.textContent=line;content.append(p);}container.append(content);
     }
     async function statisticsPage() {
         const [data,tasks,assignees,sessions]=await Promise.all([request('/statistics'),request('/tasks'),request('/assignees'),request('/sessions')]);
         const main=$('main');
         main.className='manager-workflow';
-        main.innerHTML=`<section class="manager-workflow__head"><div><p>WORKFLOW CONTROL</p><h2>Tiến độ gán nhãn và kiểm duyệt</h2></div><div class="manager-filters"><label>Session<select id="statsSession"><option value="">Tất cả session</option></select></label><label>AI assistance<select id="statsMode"><option value="">Tất cả chế độ</option><option value="NONE">NONE</option><option value="AI_ASSISTED">AI_ASSISTED</option></select></label></div></section><section id="statsKpis" class="manager-kpis"></section><section class="manager-grid"><div class="manager-panel manager-panel--wide"><div class="manager-panel__head"><div><span>TEAM DELIVERY</span><h3>Tiến độ theo người và section</h3></div><button id="exportStatistics" class="manager-icon-button" type="button" title="Xuất dữ liệu"><span class="material-symbols-outlined">download</span></button></div><div class="manager-table-wrap"><table><thead><tr><th>Người thực hiện</th><th>Task</th><th>Section</th><th>Tiến độ</th><th>Trễ hạn</th></tr></thead><tbody id="productivityBody"></tbody></table></div></div><div class="manager-panel"><div class="manager-panel__head"><div><span>TIME STUDY</span><h3>AI hỗ trợ và thủ công</h3></div></div><div id="timeComparison" class="time-comparison"></div></div><div class="manager-panel manager-panel--wide"><div class="manager-panel__head"><div><span>DEADLINES</span><h3>Task cần chú ý</h3></div><span id="overdueCount" class="danger-count"></span></div><div class="manager-table-wrap"><table><thead><tr><th>Tài liệu</th><th>Người thực hiện</th><th>Chế độ</th><th>Trạng thái</th><th>Deadline</th></tr></thead><tbody id="overdueBody"></tbody></table></div></div><div class="manager-panel"><div class="manager-panel__head"><div><span>PAIR REVIEW</span><h3>Tạo review case</h3></div></div><form id="reviewCaseForm" class="review-case-form"><label>Nguồn A<select id="reviewLeft" required></select></label><label>Nguồn B<select id="reviewRight" required></select></label><label>Reviewer<select id="reviewerSelect" required></select></label><label>Deadline<input id="reviewDue" type="datetime-local" required></label><button type="submit"><span class="material-symbols-outlined">compare_arrows</span>Tạo review case</button><p id="reviewCaseMessage"></p></form></div></section>`;
+        main.innerHTML=`<section class="manager-workflow__head"><div><p>WORKFLOW CONTROL</p><h2>Labeling and Review Progress</h2></div><div class="manager-filters"><label>Session<select id="statsSession"><option value="">All sessions</option></select></label><label>AI assistance<select id="statsMode"><option value="">All modes</option><option value="NONE">NONE</option><option value="AI_ASSISTED">AI_ASSISTED</option></select></label></div></section><section id="statsKpis" class="manager-kpis"></section><section class="manager-grid"><div class="manager-panel manager-panel--wide"><div class="manager-panel__head"><div><span>TEAM DELIVERY</span><h3>Progress by member and section</h3></div><button id="exportStatistics" class="manager-icon-button" type="button" title="Export data"><span class="material-symbols-outlined">download</span></button></div><div class="manager-table-wrap"><table><thead><tr><th>Assignee</th><th>Task</th><th>Section</th><th>Progress</th><th>Overdue</th></tr></thead><tbody id="productivityBody"></tbody></table></div></div><div class="manager-panel"><div class="manager-panel__head"><div><span>TIME STUDY</span><h3>AI-assisted vs Manual</h3></div></div><div id="timeComparison" class="time-comparison"></div></div><div class="manager-panel manager-panel--wide"><div class="manager-panel__head"><div><span>DEADLINES</span><h3>Tasks requiring attention</h3></div><span id="overdueCount" class="danger-count"></span></div><div class="manager-table-wrap"><table><thead><tr><th>Document</th><th>Assignee</th><th>Mode</th><th>Status</th><th>Deadline</th></tr></thead><tbody id="overdueBody"></tbody></table></div></div><div class="manager-panel"><div class="manager-panel__head"><div><span>PAIR REVIEW</span><h3>Create review case</h3></div></div><form id="reviewCaseForm" class="review-case-form"><label>Source A<select id="reviewLeft" required></select></label><label>Source B<select id="reviewRight" required></select></label><label>Reviewer<select id="reviewerSelect" required></select></label><label>Deadline<input id="reviewDue" type="datetime-local" required></label><button type="submit"><span class="material-symbols-outlined">compare_arrows</span>Create review case</button><p id="reviewCaseMessage"></p></form></div></section>`;
         const sessionSelect=$('#statsSession'),modeSelect=$('#statsMode');
         sessions.forEach(row=>sessionSelect.add(new Option(row.name,String(row.id))));
         const eligible=tasks.filter(row=>['SUBMITTED','APPROVED'].includes(row.status));
-        const taskLabel=row=>`${row.document_title} · ${row.assignee||'Chưa gán'} · #${row.id}`;
-        const fillTaskSelect=(select,rows)=>select.replaceChildren(new Option('Chọn task',''),...rows.map(row=>new Option(taskLabel(row),String(row.id))));
+        const taskLabel=row=>`${row.document_title} · ${row.assignee||'Unassigned'} · #${row.id}`;
+        const fillTaskSelect=(select,rows)=>select.replaceChildren(new Option('Select task',''),...rows.map(row=>new Option(taskLabel(row),String(row.id))));
         fillTaskSelect($('#reviewLeft'),eligible);fillTaskSelect($('#reviewRight'),eligible);
         assignees.filter(row=>row.role==='REVIEWER').forEach(row=>$('#reviewerSelect').add(new Option(row.username,String(row.id))));
         $('#reviewLeft').addEventListener('change',event=>{const left=eligible.find(row=>String(row.id)===event.target.value);fillTaskSelect($('#reviewRight'),left?eligible.filter(row=>row.id!==left.id&&row.document_id===left.document_id):eligible);});
@@ -1741,27 +1741,27 @@
             const taskIds=new Set(sections.map(row=>row.task_id));
             const people=(data.userProductivity||[]).filter(row=>!sessionId||sections.some(section=>section.username===row.username));
             const reviewed=sections.filter(row=>row.section_status==='REVIEWED').length,totalSections=sections.filter(row=>row.field_key).length;
-            $('#statsKpis').innerHTML=[['Tổng task',taskIds.size||data.statuses.reduce((n,row)=>n+Number(row.total),0),'assignment'],['Đã duyệt',statusTotals.APPROVED||0,'task_alt'],['Section hoàn tất',`${reviewed}/${totalSections}`,'view_week'],['Task trễ hạn',(data.overdueTasks||[]).length,'warning']].map(([label,value,icon])=>`<article><span class="material-symbols-outlined">${icon}</span><small>${label}</small><strong>${value}</strong></article>`).join('');
-            $('#productivityBody').innerHTML=people.length?people.map(row=>{const total=Number(row.saved_sections||0)+Number(row.submitted_sections||0)+Number(row.reviewed_sections||0),done=Number(row.reviewed_sections||0),percent=total?Math.round(done/total*100):0;return `<tr><td><b>${row.username||'Chưa phân công'}</b></td><td>${row.completed_tasks}/${row.assigned_tasks}</td><td>${done}/${total}</td><td><div class="progress-cell"><span style="width:${percent}%"></span></div><small>${percent}%</small></td><td><span class="${Number(row.overdue_tasks)?'status-overdue':'status-ok'}">${row.overdue_tasks||0}</span></td></tr>`;}).join(''):'<tr><td colspan="5">Chưa có dữ liệu phù hợp.</td></tr>';
+            $('#statsKpis').innerHTML=[['Total tasks',taskIds.size||data.statuses.reduce((n,row)=>n+Number(row.total),0),'assignment'],['Approved',statusTotals.APPROVED||0,'task_alt'],['Sections completed',`${reviewed}/${totalSections}`,'view_week'],['Overdue tasks',(data.overdueTasks||[]).length,'warning']].map(([label,value,icon])=>`<article><span class="material-symbols-outlined">${icon}</span><small>${label}</small><strong>${value}</strong></article>`).join('');
+            $('#productivityBody').innerHTML=people.length?people.map(row=>{const total=Number(row.saved_sections||0)+Number(row.submitted_sections||0)+Number(row.reviewed_sections||0),done=Number(row.reviewed_sections||0),percent=total?Math.round(done/total*100):0;return `<tr><td><b>${row.username||'Unassigned'}</b></td><td>${row.completed_tasks}/${row.assigned_tasks}</td><td>${done}/${total}</td><td><div class="progress-cell"><span style="width:${percent}%"></span></div><small>${percent}%</small></td><td><span class="${Number(row.overdue_tasks)?'status-overdue':'status-ok'}">${row.overdue_tasks||0}</span></td></tr>`;}).join(''):'<tr><td colspan="5">No matching data.</td></tr>';
         };
         const comparisons=data.timeComparison||[];const maxTime=Math.max(1,...comparisons.map(row=>Number(row.average_seconds)||0));
-        $('#timeComparison').innerHTML=comparisons.length?comparisons.map(row=>`<div><header><b>${row.assistance_mode}</b><span>${Math.round(Number(row.average_seconds||0)/60)} phút TB · n=${row.sample_size}</span></header><span class="time-bar"><i style="width:${Number(row.average_seconds||0)/maxTime*100}%"></i></span><small>Trung vị ${Math.round(Number(row.median_seconds||0)/60)} phút</small></div>`).join(''):'<p>Chưa đủ task hoàn thành để so sánh thời gian.</p>';
-        const overdue=data.overdueTasks||[];$('#overdueCount').textContent=`${overdue.length} quá hạn`;$('#overdueBody').innerHTML=overdue.length?overdue.map(row=>`<tr><td>${row.document_title}</td><td>${row.username||'—'}</td><td>${row.assistance_mode}</td><td><span class="status-overdue">${row.status}</span></td><td>${date(row.due_at)}</td></tr>`).join(''):'<tr><td colspan="5"><span class="status-ok">Không có task trễ hạn.</span></td></tr>';
+        $('#timeComparison').innerHTML=comparisons.length?comparisons.map(row=>`<div><header><b>${row.assistance_mode}</b><span>${Math.round(Number(row.average_seconds||0)/60)} min avg · n=${row.sample_size}</span></header><span class="time-bar"><i style="width:${Number(row.average_seconds||0)/maxTime*100}%"></i></span><small>Median ${Math.round(Number(row.median_seconds||0)/60)} min</small></div>`).join(''):'<p>Not enough completed tasks for time comparison.</p>';
+        const overdue=data.overdueTasks||[];$('#overdueCount').textContent=`${overdue.length} overdue`;$('#overdueBody').innerHTML=overdue.length?overdue.map(row=>`<tr><td>${row.document_title}</td><td>${row.username||'—'}</td><td>${row.assistance_mode}</td><td><span class="status-overdue">${row.status}</span></td><td>${date(row.due_at)}</td></tr>`).join(''):'<tr><td colspan="5"><span class="status-ok">No overdue tasks.</span></td></tr>';
         sessionSelect.addEventListener('change',render);modeSelect.addEventListener('change',render);render();
         bind($('#exportStatistics'),()=>exportJson(data,'aair-manager-statistics.json'));
-        $('#reviewCaseForm').addEventListener('submit',event=>{event.preventDefault();run(event.submitter,async()=>{const leftId=Number($('#reviewLeft').value),rightId=Number($('#reviewRight').value),assignedTo=Number($('#reviewerSelect').value),due=$('#reviewDue').value;if(!leftId||!rightId||!assignedTo||!due)throw new Error('Vui lòng chọn đủ hai nguồn, Reviewer và deadline.');await request('/review-cases',{method:'POST',json:{leftTaskId:leftId,rightTaskId:rightId,assignedTo,dueAt:`${due}:00`}});$('#reviewCaseMessage').textContent='Đã tạo review case và giao Reviewer.';});});
+        $('#reviewCaseForm').addEventListener('submit',event=>{event.preventDefault();run(event.submitter,async()=>{const leftId=Number($('#reviewLeft').value),rightId=Number($('#reviewRight').value),assignedTo=Number($('#reviewerSelect').value),due=$('#reviewDue').value;if(!leftId||!rightId||!assignedTo||!due)throw new Error('Please select both sources, Reviewer and deadline.');await request('/review-cases',{method:'POST',json:{leftTaskId:leftId,rightTaskId:rightId,assignedTo,dueAt:`${due}:00`}});$('#reviewCaseMessage').textContent='Review case created and assigned to Reviewer.';});});
     }
     async function monitoringPage() {
         const logs=await request('/audit-logs');
         table($('table'),[['Timestamp',r=>date(r.created_at)],['User','username'],['Resource','resource_type'],['Action','action']],logs.slice(0,10));
-        $$('main h3,main h4').filter(h=>['CPU & Memory Usage (24h)','API Latency vs GPU Load'].includes(text(h))).forEach(h=>replacePanel(h,['Chưa có API cung cấp số liệu giám sát.']));
-        buttons(/^Restart$|^Logs$|filter_list/).forEach(b=>unavailable(b,'Chưa có API quản lý dịch vụ.'));
+        $$('main h3,main h4').filter(h=>['CPU & Memory Usage (24h)','API Latency vs GPU Load'].includes(text(h))).forEach(h=>replacePanel(h,['No monitoring API available.']));
+        buttons(/^Restart$|^Logs$|filter_list/).forEach(b=>unavailable(b,'No service management API available.'));
         bindText(/View All Full Logs/,()=>go('LogView.html'));
         $$('main h3').filter(h=>['RTMPose','Model Server','REST API','Database','Storage Service'].includes(text(h))).forEach(h=>{
             const card=h.closest('.bg-white')||h.parentElement.parentElement;
             $$('p,span',card).filter(e=>!e.classList.contains('material-symbols-outlined')).forEach(e=>{if(e.children.length===0)e.textContent='—';});
         });
-        notice('API đang phản hồi. Chưa có API giám sát CPU/GPU, mô hình và dịch vụ.');
+        notice('API is responding. Monitoring API for CPU/GPU, models and services is not yet available.');
     }
     try {
         // System Monitoring is retired; remove its navigation entry everywhere,
@@ -1773,7 +1773,7 @@
         });
         const main=$('main');if(main)main.style.visibility='hidden';
         // Clear sample rows immediately so network failures never look like real data.
-        $$('tbody').forEach(body=>{const el=body.closest('table');tableStyles.set(el,$$('tr:first-child td',body).map(c=>c.className));const columns=$$('thead th',el).length;body.replaceChildren();const td=body.insertRow().insertCell();td.colSpan=columns||1;td.className='p-4';td.textContent='Đang tải dữ liệu…';});
+        $$('tbody').forEach(body=>{const el=body.closest('table');tableStyles.set(el,$$('tr:first-child td',body).map(c=>c.className));const columns=$$('thead th',el).length;body.replaceChildren();const td=body.insertRow().insertCell();td.colSpan=columns||1;td.className='p-4';td.textContent='Loading data…';});
         user=await AAIR.guard();if(!user)return;window.AAIRGuidelineModal?.init();
         const profile=$('header .hidden.md\\:block');
         if(profile){const ps=$$('p',profile);const roleNames={ADMIN:'Administrator',MANAGER:'Manager',ANALYST:'Analyst',RESULT_ANALYST:'Analyst',AI_LABELER:'AI Labeler',MANUAL_LABELER:'Manual Labeler',REVIEWER:'Reviewer'};if(ps[0])ps[0].textContent=user.username;if(ps[1])ps[1].textContent=roleNames[user.role]||user.role;
@@ -1801,7 +1801,7 @@
         else if(page==='SystemMonitoring.html')await monitoringPage();
         if(main)main.style.visibility='';
     }catch(error){
-        $$('tbody').forEach(body=>{if(text(body)==='Đang tải dữ liệu…')$('td',body).textContent='Không tải được dữ liệu. Hãy thử lại.';});
+        $$('tbody').forEach(body=>{if(text(body)==='Loading data…'||text(body)==='Đang tải dữ liệu…')$('td',body).textContent='Failed to load data. Please try again.';});
         notice(error.message,true);
     }
 })();

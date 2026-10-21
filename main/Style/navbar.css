@@ -19,13 +19,20 @@
 .aair-navbar__nav a { display:flex; align-items:center; gap:var(--aair-nav-gap); padding:0 var(--aair-nav-padding-x); border-right:1px solid var(--aair-nav-border); color:#eaf9fd; text-decoration:none; font-size:var(--aair-nav-font-size); font-weight:600; white-space:nowrap; transition:background-color .15s,color .15s; }
 .aair-navbar__nav a:hover, .aair-navbar__nav a:focus-visible { color:#fff; background:rgba(0,73,105,.28); text-decoration:none; }
 .aair-navbar__nav a.is-active { color:#fff; background:var(--aair-nav-active); box-shadow:inset 0 -3px 0 #fff; }
-.aair-navbar__account { display:flex; align-items:center; gap:var(--aair-nav-gap); margin-left:auto; padding:0 12px; min-width:0; }
-.aair-navbar__avatar { display:grid; place-items:center; flex:0 0 var(--aair-nav-avatar-size); width:var(--aair-nav-avatar-size); height:var(--aair-nav-avatar-size); border-radius:50%; color:#fff; background:#167ea5; font-size:12px; font-weight:800; }
-.aair-navbar__identity { display:flex; min-width:0; flex-direction:column; line-height:1.15; }
-.aair-navbar__identity b { overflow:hidden; text-overflow:ellipsis; max-width:130px; color:#fff; font-size:13px; }
-.aair-navbar__identity small { margin-top:2px; color:#dff5fc; font-size:var(--aair-nav-role-font-size); font-weight:600; letter-spacing:.02em; }
-.aair-navbar__logout { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:34px; margin-left:4px; padding:0 11px; border:1px solid rgba(255,255,255,.75); border-radius:7px; color:#fff; background:rgba(0,90,128,.18); font:600 12px Inter,Arial,sans-serif; cursor:pointer; }
-.aair-navbar__logout:hover, .aair-navbar__logout:focus-visible { background:rgba(255,255,255,.2); outline:2px solid rgba(255,255,255,.7); outline-offset:1px; }
+.aair-navbar .aair-navbar__account,
+.aair-navbar__account { display:flex !important; align-items:center !important; gap:var(--aair-nav-gap) !important; margin-left:auto !important; padding:0 12px !important; min-width:0 !important; }
+.aair-navbar .aair-navbar__avatar,
+.aair-navbar__avatar { display:grid !important; place-items:center !important; flex:0 0 var(--aair-nav-avatar-size) !important; width:var(--aair-nav-avatar-size) !important; height:var(--aair-nav-avatar-size) !important; border-radius:50% !important; color:#fff !important; background:#167ea5 !important; font-size:12px !important; font-weight:800 !important; line-height:1 !important; }
+.aair-navbar .aair-navbar__identity,
+.aair-navbar__identity { display:flex !important; min-width:0 !important; width:auto !important; height:auto !important; flex-direction:column !important; line-height:1.15 !important; background:transparent !important; border-radius:0 !important; box-shadow:none !important; }
+.aair-navbar .aair-navbar__identity b,
+.aair-navbar__identity b { overflow:hidden !important; text-overflow:ellipsis !important; max-width:130px !important; color:#fff !important; font-size:13px !important; font-weight:700 !important; white-space:nowrap !important; }
+.aair-navbar .aair-navbar__identity small,
+.aair-navbar__identity small { margin-top:2px !important; color:#dff5fc !important; font-size:var(--aair-nav-role-font-size) !important; font-weight:600 !important; letter-spacing:.02em !important; white-space:nowrap !important; }
+.aair-navbar .aair-navbar__logout,
+.aair-navbar__logout { display:inline-flex !important; align-items:center !important; justify-content:center !important; gap:6px !important; min-height:34px !important; margin-left:4px !important; padding:0 11px !important; border:1px solid rgba(255,255,255,.75) !important; border-radius:7px !important; color:#fff !important; background:rgba(0,90,128,.18) !important; font:600 12px Inter,Arial,sans-serif !important; cursor:pointer !important; white-space:nowrap !important; }
+.aair-navbar .aair-navbar__logout:hover, .aair-navbar .aair-navbar__logout:focus-visible,
+.aair-navbar__logout:hover, .aair-navbar__logout:focus-visible { background:rgba(255,255,255,.2) !important; outline:2px solid rgba(255,255,255,.7) !important; outline-offset:1px !important; }
 .aair-navbar__menu { display:none; width:38px; height:38px; margin-left:8px; border:1px solid rgba(255,255,255,.55); border-radius:6px; color:#fff; background:transparent; cursor:pointer; }
 .aair-dashboard-button { border:1px solid #087da7; color:#fff; background:#087da7; font-weight:700; cursor:pointer; }
 .aair-dashboard-button:hover:not(:disabled) { background:#066b91; }

@@ -15,7 +15,7 @@ async function request(path, options = {}) {
   const body = await response.json().catch(() => null)
 
   if (!response.ok) {
-    const error = new Error(body?.message || 'Không thể kết nối tới máy chủ.')
+    const error = new Error(body?.message || 'Unable to connect to the server.')
     error.status = response.status
     error.code = body?.code
     error.details = body?.details
@@ -45,6 +45,6 @@ export async function pdfBlob(path) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   })
-  if (!response.ok) throw new Error('Không thể tải tài liệu PDF.')
+  if (!response.ok) throw new Error('Unable to load PDF document.')
   return response.blob()
 }

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="light" lang="vi">
+<html class="light" lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,94 +22,18 @@
     <link href="../../../Style/navbar.css" rel="stylesheet">
 </head>
 <body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
-    <!-- Fixed Header -->
-    <header
-        class="fixed top-0 left-0 right-0 h-[50px] bg-normal border-b border-outline-variant flex items-center px-2 z-50">
-
-        <!-- AAIR Logo -->
-        <div class="flex items-center gap-2 mr-6">
-            <img src="/resource/icon/logo_remove_BG.png" alt="AAIR Lab Logo" class="h-8 w-auto">
-
-            <h1 class="font-headline-sm text-[14px] font-bold text-primary">
-                AAIR Lab
-            </h1>
-        </div>
-
-        <div class="h-12 w-[1px] bg-outline-variant ms-2"></div>
-
-        <!-- Navigation -->
-        <nav class="flex items-center h-full">
-
-            <!-- Dashboard -->
-            <a href="../../User/Terminology/Dashboard.html" class="flex items-center gap-2 px-4 h-full
-                   text-on-surface-variant
-                   hover:text-text-hover
-                   hover:bg-button-hover
-                   transition-colors duration-200">
-
-                <span class="material-symbols-outlined">
-                    dashboard
-                </span>
-
-                <span class="font-body-md text-[12px]">
-                    Dashboard
-                </span>
-            </a>
-
-            <div class="h-12 w-[1px] bg-outline-variant"></div>
-
-            <!-- Terminology Base -->
-            <a href="../../User/Terminology/BaseManagement.html" class="flex items-center gap-2 px-4 h-full
-                   text-text-active
-                   bg-button-active
-                   transition-colors duration-200">
-
-                <span class="material-symbols-outlined">
-                    dictionary
-                </span>
-
-                <span class="font-body-md  text-[12px]">
-                    Terminology Base
-                </span>
-            </a>
-
-            <div class="h-12 w-[1px] bg-outline-variant"></div>
-
-        </nav>
-
-        <!-- User Profile -->
-        <div class="ml-auto flex items-center gap-3">
-
-            <div class="w-7 h-7 rounded-full
-                   bg-primary-container/10
-                   flex items-center justify-center
-                   text-primary font-bold">
-                A
-            </div>
-
-            <div class="hidden md:block">
-                <p class="text-[12px] font-bold text-on-surface">
-                    NV. A
-                </p>
-                <p class="text-[8px] text-on-surface-variant uppercase tracking-wider">
-                    Terminology
-                </p>
-            </div>
-
-        </div>
-
-    </header>
+    <div data-aair-navbar-mount></div>
 
     <!-- TopNavBar -->
     <header class="w-full h-12
            flex items-center gap-2 px-lg
            bg-text-active border-b border-outline-variant
-           shadow-sm sticky top-[50px] z-50 mb-4">
+           shadow-sm sticky top-[58px] z-50 mb-4">
 
         <div class="relative flex-1 W-[240px] ">
             <span
                 class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">filter_list</span>
-            <input id="termSearch" type="search" aria-label="Search terminology" placeholder="Tìm thuật ngữ, viết tắt hoặc từ đồng nghĩa" class="w-[500px] bg-white border border-outline-variant/60 rounded-lg
+            <input id="termSearch" type="search" aria-label="Search terminology" placeholder="Search terminology, abbreviation or synonyms" class="w-[500px] bg-white border border-outline-variant/60 rounded-lg
                           py-2 pl-10 pr-4 text-body-sm
                           focus:outline-none focus:ring-0 
                           focus:border-outline-variant/60
@@ -120,7 +44,7 @@
             <label for="termCategoryFilter" class="text-label-md text-on-surface-variant">Category:</label>
             <select id="termCategoryFilter"
                 class="w-[150px] bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
-                <option value="">Tất cả category</option>
+                <option value="">All categories</option>
             </select>
 
             <!-- Buttons -->
@@ -186,7 +110,7 @@
                         id="termFormMode"
                         class="mt-1 text-[10px] text-on-surface-variant"
                     >
-                        Tạo thuật ngữ mới
+                        Create new term
                     </p>
                 </div>
     
@@ -207,7 +131,7 @@
                             id="termAbbreviation"
                             maxlength="100"
                             class="rounded-md border-outline-variant text-sm"
-                            placeholder="Có thể để trống"
+                            placeholder="Optional"
                         >
                     </label>
     
@@ -237,8 +161,8 @@
                         <label class="mb-1.5 block text-xs font-bold">Synonyms</label>
                         <div id="termSynonyms" class="tag-editor">
                             <input
-                                aria-label="Thêm từ đồng nghĩa"
-                                placeholder="Nhập rồi Enter hoặc dấu phẩy"
+                                aria-label="Add synonym"
+                                placeholder="Enter or comma to add"
                             >
                         </div>
                     </div>
@@ -249,9 +173,9 @@
                         </label>
                         <div id="termRelated" class="tag-editor">
                             <input
-                                aria-label="Thêm thuật ngữ liên quan"
+                                aria-label="Add related term"
                                 list="relatedOptions"
-                                placeholder="Tìm thuật ngữ rồi Enter"
+                                placeholder="Search term and press Enter"
                             >
                             <datalist id="relatedOptions"></datalist>
                         </div>
@@ -306,7 +230,7 @@
                 <div class="mr-auto">
                     <h2 class="font-bold">History</h2>
                     <p class="mt-1 text-[10px] text-on-surface-variant">
-                        Nhật ký thêm, sửa, xóa · mới nhất trước
+                        Creation, update, and deletion log · newest first
                     </p>
                 </div>
     
@@ -314,14 +238,14 @@
                     id="historyUser"
                     class="rounded-md border-outline-variant text-xs"
                 >
-                    <option value="">Tất cả người dùng</option>
+                    <option value="">All users</option>
                 </select>
     
                 <select
                     id="historyTerm"
                     class="rounded-md border-outline-variant text-xs"
                 >
-                    <option value="">Tất cả thuật ngữ</option>
+                    <option value="">All terms</option>
                 </select>
             </header>
     
@@ -329,11 +253,11 @@
                 <table class="w-full text-left text-xs">
                     <thead class="sticky top-0 bg-white">
                         <tr>
-                            <th class="px-4 py-3">Thời gian</th>
-                            <th class="px-4 py-3">Người thực hiện</th>
-                            <th class="px-4 py-3">Hành động</th>
-                            <th class="px-4 py-3">Thuật ngữ</th>
-                            <th class="px-4 py-3">Thay đổi</th>
+                            <th class="px-4 py-3">Time</th>
+                            <th class="px-4 py-3">User</th>
+                            <th class="px-4 py-3">Action</th>
+                            <th class="px-4 py-3">Term</th>
+                            <th class="px-4 py-3">Changes</th>
                         </tr>
                     </thead>
                     <tbody id="historyRows"></tbody>

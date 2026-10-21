@@ -39,7 +39,7 @@ export default function DashboardPage() {
         </div>
         <nav className="workspace-nav">
           <Link className="active" to={config.route}>
-            <span className="material-symbols-outlined">grid_view</span> Tổng quan
+            <span className="material-symbols-outlined">grid_view</span> Overview
           </Link>
           {config.actions.map(([title, , icon]) => (
             <a href={`#${title.toLowerCase().replaceAll(' ', '-')}`} key={title}>
@@ -48,14 +48,14 @@ export default function DashboardPage() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <Link to="/"><span className="material-symbols-outlined">home</span> Trang chủ</Link>
+          <Link to="/"><span className="material-symbols-outlined">home</span> Home</Link>
           <button onClick={handleLogout} type="button">
-            <span className="material-symbols-outlined">logout</span> Đăng xuất
+            <span className="material-symbols-outlined">logout</span> Log out
           </button>
         </div>
       </aside>
 
-      {menuOpen && <button className="sidebar-backdrop" onClick={() => setMenuOpen(false)} aria-label="Đóng menu" />}
+      {menuOpen && <button className="sidebar-backdrop" onClick={() => setMenuOpen(false)} aria-label="Close menu" />}
 
       <main className="workspace-main">
         <header className="workspace-header">
@@ -67,8 +67,8 @@ export default function DashboardPage() {
             <strong>{config.label}</strong>
           </div>
           <div className="workspace-header__right">
-            <span className="status-dot">Hệ thống hoạt động</span>
-            <button className="notification-button" type="button" aria-label="Thông báo">
+            <span className="status-dot">System operational</span>
+            <button className="notification-button" type="button" aria-label="Notifications">
               <span className="material-symbols-outlined">notifications</span><i />
             </button>
           </div>
@@ -77,23 +77,23 @@ export default function DashboardPage() {
         <div className="workspace-content">
           <section className="welcome-panel">
             <div>
-              <p className="section-kicker">WORKSPACE CỦA BẠN</p>
-              <h1>Xin chào, {user.username}.</h1>
+              <p className="section-kicker">YOUR WORKSPACE</p>
+              <h1>Welcome, {user.username}.</h1>
               <p>{config.description}</p>
             </div>
             <div className="role-badge">
               <span className="material-symbols-outlined">badge</span>
-              <small>Vai trò hiện tại</small>
+              <small>Current role</small>
               <strong>{config.shortLabel}</strong>
             </div>
           </section>
 
-          <section className="stats-grid" aria-label="Thống kê nhanh">
+          <section className="stats-grid" aria-label="Quick statistics">
             {(stats ? Object.entries(stats).map(([label, value]) => [String(value), label]) : config.stats).map(([value, label]) => (
               <article key={label}>
                 <span>{label}</span>
                 <strong>{value}</strong>
-                <small><i /> Cập nhật vừa xong</small>
+                <small><i /> Just updated</small>
               </article>
             ))}
           </section>
@@ -101,10 +101,10 @@ export default function DashboardPage() {
           <section className="workspace-section">
             <div className="workspace-section__heading">
               <div>
-                <p className="section-kicker">TRUY CẬP NHANH</p>
-                <h2>Công việc chính</h2>
+                <p className="section-kicker">QUICK ACCESS</p>
+                <h2>Main tasks</h2>
               </div>
-              <span>{new Intl.DateTimeFormat('vi-VN', { dateStyle: 'long' }).format(new Date())}</span>
+              <span>{new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date())}</span>
             </div>
             <div className="action-grid">
               {config.actions.map(([title, text, icon], index) => (
@@ -113,7 +113,7 @@ export default function DashboardPage() {
                   <span className="action-grid__icon material-symbols-outlined">{icon}</span>
                   <h3>{title}</h3>
                   <p>{text}</p>
-                  <Link to={user.role === 'RESULT_ANALYST' ? '/user/result-analysis/analysis' : `${config.route}/data`}>Mở phân hệ <span className="material-symbols-outlined">arrow_forward</span></Link>
+                  <Link to={user.role === 'RESULT_ANALYST' ? '/user/result-analysis/analysis' : `${config.route}/data`}>Open module <span className="material-symbols-outlined">arrow_forward</span></Link>
                 </article>
               ))}
             </div>
@@ -122,8 +122,8 @@ export default function DashboardPage() {
           <section className="account-note">
             <span className="material-symbols-outlined">shield_lock</span>
             <div>
-              <strong>Phiên đăng nhập được bảo vệ</strong>
-              <p>Tài khoản được xác thực qua API Spring Boot và token JWT được giữ trong phiên trình duyệt.</p>
+              <strong>Protected login session</strong>
+              <p>Account authenticated via Spring Boot API and JWT token stored in browser session.</p>
             </div>
             <span className="account-note__active">ACTIVE</span>
           </section>

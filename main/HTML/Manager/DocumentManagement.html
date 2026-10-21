@@ -27,141 +27,19 @@
 
     <!-- Custom CSS -->
     <link href="../../Style/basic.css" rel="stylesheet" />
+    <link href="../../Style/navbar.css" rel="stylesheet" />
 </head>
 
 <body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
 
-    <!-- Fixed Header -->
-    <header
-        class="fixed top-0 left-0 right-0 h-[50px] bg-normal border-b border-outline-variant flex items-center px-2 z-50">
-
-        <!-- AAIR Logo -->
-        <div class="flex items-center gap-2 mr-6">
-            <img src="/resource/icon/logo_remove_BG.png" alt="AAIR Lab Logo" class="h-8 w-auto">
-
-            <h1 class="font-headline-sm text-[14px] font-bold text-primary">
-                AAIR Lab
-            </h1>
-        </div>
-
-        <div class="h-12 w-[1px] bg-outline-variant ms-2"></div>
-
-        <nav class="flex items-center h-full">
-
-            <a href="../../HTML/Manager/Dashboard.html" class="flex items-center gap-2 px-4 h-full
-                   text-on-surface-variant
-                   hover:text-text-hover
-                   hover:bg-button-hover
-                   transition-colors duration-200">
-
-                <span class="material-symbols-outlined">
-                    dashboard
-                </span>
-
-                <span class="font-body-md text-[12px]">
-                    Dashboard
-                </span>
-            </a>
-
-            <div class="h-12 w-[1px] bg-outline-variant"></div>
-
-            <a href="../../HTML/Manager/UserManagement.html" class="flex items-center gap-2 px-4 h-full
-                   text-on-surface-variant
-                   hover:text-text-hover
-                   hover:bg-button-hover
-                   transition-colors duration-200">
-
-                <span class="material-symbols-outlined">
-                    group
-                </span>
-
-                <span class="font-body-md  text-[12px]">
-                    User
-                </span>
-            </a>
-
-            <div class="h-12 w-[1px] bg-outline-variant"></div>
-
-            <a href="../../HTML/Manager/DocumentManagement.html" class="flex items-center gap-2 px-4 h-full
-                   text-text-active
-                   bg-button-active
-                   transition-colors duration-200">
-
-                <span class="material-symbols-outlined">
-                    description
-                </span>
-
-                <span class="font-body-md  text-[12px]">
-                    Document
-                </span>
-            </a>
-
-            <div class="h-12 w-[1px] bg-outline-variant"></div>
-
-            <a href="../../HTML/Manager/Session.html" class="flex items-center gap-2 px-4 h-full
-                   text-on-surface-variant
-                   hover:text-text-hover
-                   hover:bg-button-hover
-                   transition-colors duration-200">
-
-                <span class="material-symbols-outlined">
-                    smart_toy
-                </span>
-
-                <span class="font-body-md  text-[12px]">
-                    Session
-                </span>
-            </a>
-
-            <div class="h-12 w-[1px] bg-outline-variant"></div>
-
-            <a href="../../HTML/Manager/Statistics.html" class="flex items-center gap-2 px-4 h-full
-                   text-on-surface-variant
-                   hover:text-text-hover
-                   hover:bg-button-hover
-                   transition-colors duration-200">
-
-                <span class="material-symbols-outlined">
-                    monitoring
-                </span>
-
-                <span class="font-body-md  text-[12px]">
-                    Statistics
-                </span>
-            </a>
-
-            <div class="h-12 w-[1px] bg-outline-variant"></div>
-
-        </nav>
-
-        <!-- User Profile -->
-        <div class="ml-auto flex items-center gap-3">
-
-            <div class="w-7 h-7 rounded-full
-                   bg-primary-container/10
-                   flex items-center justify-center
-                   text-primary font-bold">
-                A
-            </div>
-
-            <div class="hidden md:block">
-                <p class="text-[12px] font-bold text-on-surface">
-                    NV. A
-                </p>
-                <p class="text-[8px] text-on-surface-variant uppercase tracking-wider">
-                    Manager
-                </p>
-            </div>
-
-        </div>
-
-    </header>
+    <!-- Unified Navbar Mount -->
+    <div data-aair-navbar-mount></div>
 
     <!-- TopNavBar -->
     <header class="w-full h-12
            flex items-center gap-3 px-lg
            bg-text-active border-b border-outline-variant
-           shadow-sm sticky top-[50px] z-30 mb-6">
+           shadow-sm sticky top-[58px] z-30 mb-6">
 
         <div class="relative flex-1 min-w-[240px] ">
             <span
@@ -640,6 +518,7 @@
     </main>
 
     <script src="../../JavaScript/api.js"></script>
+    <script src="../../JavaScript/navbar.js"></script>
     <script src="../../JavaScript/workspace.js"></script>
 </body>
 
