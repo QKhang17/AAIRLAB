@@ -3,7 +3,7 @@ import { logo } from '../assets'
 
 export default function Brand({ compact = false }) {
   return (
-    <Link className="brand" to="/" aria-label="AAIR Lab - Trang chủ">
+    <Link className="brand" to="/" aria-label="AAIR Lab - Home">
       <span className="brand__mark">
         <img src={logo} alt="" />
       </span>

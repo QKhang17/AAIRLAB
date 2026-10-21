@@ -5,12 +5,12 @@ window.AAIRTerminologyDashboardPage = async function ({ request, user }) {
         request('/terms')
     ]);
 
-    const totalTerms = Number(summary['Thuật ngữ'] ?? terms.length);
+    const totalTerms = Number(summary['Terms'] ?? summary['Thuật ngữ'] ?? terms.length);
     const activeTerms = Number(
-        summary['Đang sử dụng'] ?? terms.filter(term => term.status === 'ACTIVE').length
+        summary['In Use'] ?? summary['Đang sử dụng'] ?? terms.filter(term => term.status === 'ACTIVE').length
     );
     const categoryCount = Number(
-        summary['Nhóm chủ đề'] ?? new Set(terms.map(term => term.category).filter(Boolean)).size
+        summary['Categories'] ?? summary['Nhóm chủ đề'] ?? new Set(terms.map(term => term.category).filter(Boolean)).size
     );
     const recentlyUpdated = terms.filter(term => {
         const updatedAt = Date.parse(term.updated_at || term.created_at || '');
@@ -41,7 +41,7 @@ window.AAIRTerminologyDashboardPage = async function ({ request, user }) {
     if (rangeButton) {
         rangeButton.textContent = 'All Time';
         rangeButton.disabled = true;
-        rangeButton.title = 'API dashboard hiện trả số liệu toàn thời gian.';
+        rangeButton.title = 'Dashboard API currently returns all-time statistics.';
     }
 
     function setText(selector, value) {

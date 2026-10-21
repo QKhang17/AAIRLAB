@@ -4,18 +4,18 @@
     <strong>AAIR Lab</strong>
   </a>
   <button class="aair-navbar__menu" type="button" aria-label="Open navigation" aria-expanded="false">Menu</button>
-  <nav class="aair-navbar__nav" aria-label="Điều hướng chính">
+  <nav class="aair-navbar__nav" aria-label="Main navigation">
     <a href="Dashboard.html" data-page="Dashboard.html"><span>Dashboard</span></a>
     <a href="ViewAll.html" data-page="ViewAll.html"><span>Task List</span></a>
     <a href="Task.html" data-page="Task.html"><span>Analysis</span></a>
   </nav>
-  <div class="aair-navbar__account aa-account">
-    <span class="aair-navbar__avatar" data-aa-avatar aria-hidden="true">--</span>
-    <span class="aair-navbar__identity">
-      <b data-aa-username>Đang tải</b>
-      <small data-aa-role>Analyst</small>
-    </span>
-    <button class="aair-navbar__logout" id="raLogout" type="button" title="Log out of the system">
+  <div class="aair-navbar__account aa-account ra-account review-account">
+    <span class="aair-navbar__avatar review-avatar" id="raAvatar" data-aa-avatar data-manual-avatar aria-hidden="true">--</span>
+    <div class="aair-navbar__identity">
+      <b id="raUsername" data-aa-username data-manual-username>Loading...</b>
+      <small id="raRole" data-aa-role data-manual-role>Analyst</small>
+    </div>
+    <button class="aair-navbar__logout outline-button" id="raLogout" data-manual-logout type="button" title="Log out of the system">
       <span>Log out</span>
     </button>
   </div>

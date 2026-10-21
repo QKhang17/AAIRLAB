@@ -25,6 +25,7 @@
     <script src="../../../JavaScript/tailwind.js"></script>
 
     <link href="../../../Style/basic.css" rel="stylesheet" />
+    <link href="../../../Style/navbar.css" rel="stylesheet" />
     <link href="../../../Style/taskWorkspace.css" rel="stylesheet" />
     <link href="../../../Style/sessionCompletion.css" rel="stylesheet" />
 
@@ -33,97 +34,34 @@
 <body
     class="ai-task-page bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container overflow-hidden">
 
-    <!-- Fixed Header -->
-    <header
-        class="fixed top-0 left-0 right-0 h-[50px] bg-normal border-b border-outline-variant flex items-center px-2 z-50">
-
-        <!-- AAIR Logo -->
-        <div class="flex items-center gap-2 mr-6">
-            <img src="/resource/icon/logo_remove_BG.png" alt="AAIR Lab Logo" class="h-8 w-auto">
-
-            <h1 class="font-headline-sm text-[14px] font-bold text-primary">
-                AAIR Lab
-            </h1>
-        </div>
-
-        <div class="h-12 w-[1px] bg-outline-variant ms-2"></div>
-
-        <!-- Navigation -->
-        <nav class="flex items-center h-full">
-
-            <a class="flex items-center gap-2 px-4 h-full
-                   text-on-surface-variant
-                   hover:text-text-hover
-                   hover:bg-button-hover
-                   transition-colors duration-200" href="../../User/AILabeling/Dashboard.html">
-                <span class=" material-symbols-outlined" data-icon="dashboard">dashboard</span>
-                <span class="font-body-md text-[12px]">Dashboard</span>
-            </a>
-
-            <div class="h-12 w-[1px] bg-outline-variant"></div>
-
-            <a class="flex items-center gap-2 px-4 h-full
-                   text-on-surface-variant
-                   hover:text-text-hover
-                   hover:bg-button-hover
-                   transition-colors duration-200" href="../../User/AILabeling/ViewAll.html">
-                <span class="material-symbols-outlined">list_alt </span>
-                <span class="font-body-md text-[12px]">My Tasks</span>
-            </a>
-
-            <div class="h-12 w-[1px] bg-outline-variant"></div>
-
-            <a class="flex items-center gap-2 px-4 h-full
-                   text-text-active
-                   bg-button-active
-                   transition-colors duration-200" href="../../User/AILabeling/Task.html">
-                <span class="material-symbols-outlined">play_circle</span>
-                <span class="font-body-md text-[12px]">Session</span>
-            </a>
-
-            <div class="h-12 w-[1px] bg-outline-variant"></div>
-
-            <a class="flex items-center gap-2 px-4 h-full
-                   text-on-surface-variant
-                   hover:text-text-hover
-                   hover:bg-button-hover
-                   transition-colors duration-200" href="../../User/AILabeling/Prompt.html">
-                <span class="material-symbols-outlined">description</span>
-                <span class="font-body-md text-[12px]">Prompt</span>
-            </a>
-
-            <div class="h-12 w-[1px] bg-outline-variant"></div>
-
+    <!-- Unified Navbar -->
+    <header class="aair-navbar" data-aair-navbar>
+        <a class="aair-navbar__brand" href="Dashboard.html" aria-label="AAIR Lab - Dashboard">
+            <img src="/resource/icon/logo_remove_BG.png" alt="AAIR Lab Logo">
+            <strong>AAIR Lab</strong>
+        </a>
+        <button class="aair-navbar__menu" type="button" aria-label="Open navigation" aria-expanded="false">Menu</button>
+        <nav class="aair-navbar__nav" aria-label="Navigation">
+            <a href="Dashboard.html" data-page="Dashboard.html"><span>Dashboard</span></a>
+            <a href="ViewAll.html" data-page="ViewAll.html"><span>View ALL</span></a>
+            <a class="is-active" href="Task.html" data-page="Task.html"><span>Session</span></a>
+            <a href="Prompt.html" data-page="Prompt.html"><span>Prompt</span></a>
         </nav>
-
-        <!-- User Profile -->
-        <div class="ml-auto flex items-center gap-3">
-
-            <div class="w-7 h-7 rounded-full
-                   bg-primary-container/10
-                   flex items-center justify-center
-                   text-primary font-bold">
-                E
+        <div class="aair-navbar__account aa-account ra-account review-account">
+            <span class="aair-navbar__avatar review-avatar" id="raAvatar" data-aa-avatar aria-hidden="true">AI</span>
+            <div class="aair-navbar__identity">
+                <b id="raUsername" data-aa-username>ai_labeler01</b>
+                <small id="raRole" data-aa-role>AI Labeler</small>
             </div>
-
-            <div class="hidden md:block">
-                <p class="text-[12px] font-bold text-on-surface">
-                    NV. E
-                </p>
-                <p class="text-[8px] text-on-surface-variant uppercase tracking-wider">
-                    AI Labeler
-                </p>
-            </div>
-
+            <button class="outline-button aair-navbar__logout" id="raLogout" type="button" aria-label="Log out" title="Log out of the system">Log out</button>
         </div>
-
     </header>
 
     <!-- TopNavBar -->
-    <header class="manual-session-toolbar mt-[50px] ml-[157px] w-[calc(100%-157px)] h-12
+    <header class="manual-session-toolbar mt-[58px] ml-[157px] w-[calc(100%-157px)] h-12
            flex items-center gap-2 px-lg
            bg-text-active border-b border-outline-variant
-           shadow-sm sticky top-[50px] z-30 gap-4">
+           shadow-sm sticky top-[58px] z-30 gap-4">
 
         <h2 id="sessionTitle" class="text-lg font-bold text-on-surface whitespace-nowrap">Q4 Performance Audit</h2>
 
@@ -180,7 +118,7 @@
     </header>
 
     <!-- Fixed Sidebar -->
-    <aside class="fixed left-0 top-[50px] h-[calc(100vh-50px)] w-[157px]
+    <aside class="fixed left-0 top-[58px] h-[calc(100vh-58px)] w-[157px]
        bg-surface border-r border-outline-variant
        flex flex-col z-40 items-center">
 
@@ -241,7 +179,7 @@
 
     <!-- Main Workspace -->
     <main class="ml-[157px] w-[calc(100%-157px)]
-            h-[calc(100vh-98px)]
+            h-[calc(100vh-106px)]
             mt-0
             grid grid-cols-[62%_38%]
             overflow-hidden">
@@ -1112,6 +1050,7 @@
     <script src="../../../JavaScript/api.js"></script>
     <script src="../../../JavaScript/timeTracking.js"></script>
     <script src="../../../JavaScript/sessionCompletion.js"></script>
+    <script src="../../../JavaScript/navbar.js"></script>
     <script src="../../../JavaScript/workspace.js"></script>
 </body>
 

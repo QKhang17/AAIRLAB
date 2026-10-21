@@ -107,7 +107,7 @@ for (const [role,directory] of Object.entries(roleDirs)) {
       try {
         assert.ok(ctx.calls.length, 'must call an API')
         if(!['MANUAL_LABELER','RESULT_ANALYST','TERMINOLOGY'].includes(role)) assert.ok(true, 'logout is checked by role-specific accessibility tests')
-        assert.ok(!ctx.w.document.body.textContent.includes('Đang tải dữ liệu…'))
+        assert.ok(!ctx.w.document.body.textContent.includes('Loading data…') && !ctx.w.document.body.textContent.includes('Đang tải dữ liệu…'))
         assert.equal(ctx.w.document.querySelector('tbody script'), null, 'API text must not execute as HTML')
         if(page==='Task.html' && ctx.w.document.body.matches('.ai-task-page,.manual-task-page')) {
           assert.equal(ctx.w.document.querySelector('#processingPanel'),null,'removes the static processing strip')
@@ -223,7 +223,7 @@ test('manager session form creates manual session with 2 manual labelers and val
     m1Select.value='4'
     m1Select.dispatchEvent(new c.w.Event('change'))
     c.button('Create Session').click();await c.settle()
-    assert.deepEqual(c.errors(),['Vui lòng chọn Reviewer.'])
+    assert.deepEqual(c.errors(),['Please select a Reviewer.'])
     assert.equal(c.calls.filter(x=>x.method).length,0,'No API call when validation fails')
 
     // Clear previous error notification before valid submission
@@ -270,7 +270,7 @@ test('manager session form creates AI session via single atomic POST /sessions a
 
     // CASE B: Missing AI Labeler
     c.button('Create Session').click();await c.settle()
-    assert.deepEqual(c.errors(),['Vui lòng chọn AI Labeler.'])
+    assert.deepEqual(c.errors(),['Please select an AI Labeler.'])
     assert.equal(c.calls.filter(x=>x.method).length,0)
     c.w.document.querySelectorAll('#apiNotice').forEach(e=>e.remove())
 
@@ -278,7 +278,7 @@ test('manager session form creates AI session via single atomic POST /sessions a
     aiLabelerSelect.value='3'
     aiLabelerSelect.dispatchEvent(new c.w.Event('change'))
     c.button('Create Session').click();await c.settle()
-    assert.deepEqual(c.errors(),['Vui lòng chọn Reviewer.'])
+    assert.deepEqual(c.errors(),['Please select a Reviewer.'])
     assert.equal(c.calls.filter(x=>x.method).length,0)
     c.w.document.querySelectorAll('#apiNotice').forEach(e=>e.remove())
 

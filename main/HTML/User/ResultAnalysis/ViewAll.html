@@ -27,7 +27,6 @@
     <link href="../../../Style/basic.css" rel="stylesheet" />
     <link href="../../../Style/shared.css" rel="stylesheet" />
     <link href="../../../Style/navbar.css" rel="stylesheet" />
-    <link href="../../../Style/analystTaskList.css?v=20261018" rel="stylesheet" />
 
 </head>
 
@@ -36,7 +35,7 @@
     <div data-aair-navbar-mount></div>
 
     <!-- TopNavBar -->
-    <header class="aa-task-list-toolbar w-full h-12
+    <header class="w-full h-12
            flex items-center gap-2 px-lg
            bg-text-active border-b border-outline-variant
            shadow-sm sticky top-0 z-30 mb-6">
@@ -51,7 +50,7 @@
                 search
             </span>
 
-                <input id="taskSearch" type="text" placeholder="Search tasks..." class="w-full h-8
+                <input id="taskSearch" type="text" placeholder="Search..." class="w-full h-8
                    pl-10 pr-4
                    rounded-lg
                    border border-slate-300
@@ -69,7 +68,7 @@
             <div class="flex items-center gap-2">
                 <label class="text-label-md text-on-surface-variant">Session:</label>
                     <select id="sessionFilter"
-                    class="filter-select bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
+                    class="w-[80px] bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
                     <option value="">All</option>
                     <option>001</option>
                     <option>002</option>
@@ -79,7 +78,7 @@
             <div class="flex items-center gap-2">
                 <label class="text-label-md text-on-surface-variant">Status:</label>
                     <select id="statusFilter"
-                    class="filter-select bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
+                    class="bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
                     <option value="">All</option>
                     <option>Active</option>
                     <option>Disabled</option>
@@ -94,14 +93,13 @@
      MAIN CONTENT — VIEW ALL DOCUMENTS
 ========================================================= -->
 
-    <main class="aa-task-list-page w-full min-h-[calc(100vh-98px)] overflow-y-auto overflow-x-hidden">
+    <main class="w-full min-h-[calc(100vh-98px)] overflow-y-auto overflow-x-hidden pt-4">
 
         <!-- ===================================================== -->
         <!-- PAGE CONTENT -->
         <!-- ===================================================== -->
 
-        <section class="aa-task-list-content">
-            <div class="aa-page-heading"><h1>Task List</h1><p>Review and analyze assigned AI tasks.</p></div>
+        <section class="p-8">
 
             <!-- ================================================= -->
             <!-- DOCUMENT TABLE -->
@@ -151,7 +149,7 @@
                                        text-right
                                        font-semibold
                                        text-slate-600">
-                                    Loại
+                                    Type
                                 </th>
 
                                 <th class="px-6 py-3
@@ -165,7 +163,7 @@
                                        text-left
                                        font-semibold
                                        text-slate-600">
-                                    Hạn nộp
+                                    Deadline
                                 </th>
 
                                 <th class="px-6 py-3
@@ -693,7 +691,7 @@
                 <!-- PAGINATION -->
                 <!-- ================================================= -->
 
-                <div id="staticPagination" class="px-6 py-4
+                <div class="px-6 py-4
                         bg-text-active
                         border-t border-slate-200
                         flex items-center
@@ -812,7 +810,7 @@
     <script src="../../../JavaScript/api.js"></script>
     <script src="../../../JavaScript/guidelineModal.js"></script>
     <script src="../../../JavaScript/navbar.js"></script>
-    <script src="../../../JavaScript/resultAnalysisViewAll.js?v=20261018"></script>
+    <script src="../../../JavaScript/resultAnalysisViewAll.js"></script>
 </body>
 
 </html>

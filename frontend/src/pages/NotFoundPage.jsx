@@ -4,9 +4,9 @@ export default function NotFoundPage() {
   return (
     <main className="not-found">
       <span>404</span>
-      <h1>Không tìm thấy trang</h1>
-      <p>Đường dẫn bạn vừa mở không tồn tại trong ứng dụng AAIR.</p>
-      <Link className="button" to="/">Quay về trang chủ</Link>
+      <h1>Page Not Found</h1>
+      <p>The link you opened does not exist in the AAIR application.</p>
+      <Link className="button" to="/">Back to Home</Link>
     </main>
   )
 }

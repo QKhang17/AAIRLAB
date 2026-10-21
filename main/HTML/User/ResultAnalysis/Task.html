@@ -13,28 +13,28 @@
     <link href="../../../Style/sessionCompletion.css" rel="stylesheet">
     <link href="../../../Style/resultAnalysis.css" rel="stylesheet">
     <link href="../../../Style/navbar.css" rel="stylesheet">
-    <link href="../../../Style/resultAnalysisTask.css" rel="stylesheet">
 </head>
 <body class="result-analysis-page">
-    <header class="ra-topbar">
-        <a class="ra-brand" href="Dashboard.html">
+    <header class="aair-navbar" data-aair-navbar>
+        <a class="aair-navbar__brand" href="Dashboard.html" aria-label="AAIR Lab - Dashboard">
             <img src="/resource/icon/logo_remove_BG.png" alt="">
             <strong>AAIR Lab</strong>
         </a>
-
-        <nav>
-            <a href="Dashboard.html">Dashboard</a>
-            <a href="ViewAll.html">Task List</a>
-            <a class="active" href="Task.html">Analysis</a>
+        <button class="aair-navbar__menu" type="button" aria-label="Open navigation" aria-expanded="false">Menu</button>
+        <nav class="aair-navbar__nav" aria-label="Main navigation">
+            <a href="Dashboard.html" data-page="Dashboard.html"><span>Dashboard</span></a>
+            <a href="ViewAll.html" data-page="ViewAll.html"><span>View ALL</span></a>
+            <a class="is-active" href="Task.html" data-page="Task.html"><span>Analyst</span></a>
         </nav>
-
-        <div class="ra-account">
-            <span id="raAvatar">AN</span>
-            <div>
-                <b id="raUsername">analyst</b>
-                <small>RESULT ANALYST</small>
+        <div class="aair-navbar__account aa-account ra-account">
+            <span class="aair-navbar__avatar" id="raAvatar" data-aa-avatar aria-hidden="true">AN</span>
+            <div class="aair-navbar__identity">
+                <b id="raUsername" data-aa-username>analyst01</b>
+                <small id="raRole" data-aa-role>Analyst</small>
             </div>
-            <button id="raLogout" aria-label="Log out" type="button">Log out</button>
+            <button class="aair-navbar__logout outline-button" id="raLogout" type="button" title="Log out of the system">
+                <span>Log out</span>
+            </button>
         </div>
     </header>
 
@@ -66,7 +66,7 @@
             <div class="ra-documents__header">
                 <span class="material-symbols-outlined">folder_open</span>
                 <strong>Documents</strong>
-                <button id="raToggleDocuments" type="button" title="Collapse document list">
+                <button id="raToggleDocuments" type="button" title="Collapse documents panel">
                     <span class="material-symbols-outlined">chevron_left</span>
                 </button>
             </div>
@@ -79,13 +79,13 @@
                     <span class="material-symbols-outlined">picture_as_pdf</span>
                     <span id="raDocumentTitle">No document selected</span>
                 </strong>
-                <span id="raPageLabel">Page 1 / —</span>
+                <span id="raPageLabel">Page 1</span>
             </div>
-            <iframe id="raPdf" title="PDF document"></iframe>
+            <iframe id="raPdf" title="PDF Document"></iframe>
             <div id="raPdfEmpty" class="ra-empty">
                 <span class="material-symbols-outlined">picture_as_pdf</span>
-                <b>Select a task to view the PDF</b>
-                <span>Select a source page in a result to jump here.</span>
+                <b>Select a task to view PDF</b>
+                <span>Click on a source page in AI results to jump to that page.</span>
             </div>
         </section>
 
@@ -93,10 +93,10 @@
             <div class="ra-panel-header">
                 <strong>
                     <span class="material-symbols-outlined">auto_awesome</span>
-                    Model A
+                    AI Extraction
                 </strong>
                 <label>
-                    Result source
+                    Model A
                     <select id="raModelA"></select>
                 </label>
             </div>
@@ -107,10 +107,10 @@
             <div class="ra-panel-header">
                 <strong>
                     <span class="material-symbols-outlined">auto_awesome</span>
-                    Model B
+                    AI Extraction
                 </strong>
                 <label>
-                    Result source
+                    Model B
                     <select id="raModelB"></select>
                 </label>
             </div>
@@ -121,33 +121,33 @@
     <footer class="ra-footer">
         <span id="raMessage"></span>
         <b id="raDifferenceCount">0</b>
-        differences after analysis
+        differences after Analyze
     </footer>
 
     <aside id="raNote" class="ra-note" hidden>
         <div class="ra-note__header">
             <strong>
                 <span class="material-symbols-outlined">sticky_note_2</span>
-                NOTE · Error analysis and prompt
+                NOTE · Error & Prompt Analysis
             </strong>
             <button id="raCloseNote" type="button">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
         <div id="raNoteCompare" class="ra-note__compare"></div>
-        <p>Select an error, improve the prompt, and run AI again to verify the result.</p>
+        <p>Select error, edit prompt, and re-run AI to determine why the new result is correct.</p>
         <label>
             Correction prompt
             <textarea id="raCorrectionPrompt"></textarea>
         </label>
         <button id="raRunCorrection" class="ra-button" type="button">
             <span class="material-symbols-outlined">refresh</span>
-            Run correction
+            Request AI correction
         </button>
         <div id="raCorrectionResult" class="ra-note-result"></div>
         <hr>
         <label>
-            Suggested original prompt
+            Proposed ORIGINAL prompt
             <textarea id="raOriginalPrompt"></textarea>
         </label>
         <button id="raImprovePrompt" class="ra-secondary-button" type="button">
@@ -159,6 +159,7 @@
     <script src="../../../JavaScript/api.js"></script>
     <script src="../../../JavaScript/guidelineModal.js"></script>
     <script src="../../../JavaScript/sessionCompletion.js"></script>
+    <script src="../../../JavaScript/navbar.js"></script>
     <script src="../../../JavaScript/workspace.js"></script>
 </body>
 </html>

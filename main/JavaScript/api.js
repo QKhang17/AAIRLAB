@@ -68,7 +68,7 @@ window.AAIR = (() => {
         const tokens = [...new Set([sessionToken, storedToken, windowToken].filter(Boolean))];
         if (!tokens.length && path !== '/auth/login') {
             location.replace(loginUrl());
-            throw new Error('Phiên đăng nhập không tồn tại.');
+            throw new Error('Session does not exist.');
         }
         let lastResponse;
         let lastBody;
@@ -81,7 +81,7 @@ window.AAIR = (() => {
                 requestInit.body = JSON.stringify(json);
             }
             try { lastResponse = await fetch(base + path, { ...requestInit, headers }); }
-            catch { throw new Error('Không kết nối được máy chủ API. Hãy kiểm tra backend và kết nối mạng.'); }
+            catch { throw new Error('Cannot connect to API server. Please check backend and network connection.'); }
             if (lastResponse.ok) {
                 if (token && token !== sessionToken) sessionStorage.setItem('aair_access_token', token);
                 if (blob) return lastResponse.blob();
@@ -103,12 +103,12 @@ window.AAIR = (() => {
                 location.replace(loginUrl());
             }
         }
-        const error = new Error(lastBody?.message || `Yêu cầu thất bại (${lastResponse?.status || 0}).`);
+        const error = new Error(lastBody?.message || `Request failed (${lastResponse?.status || 0}).`);
         error.status = lastResponse?.status;
         throw error;
     }
     function home(role) {
-        if (!homes[role]) throw new Error('Vai trò tài khoản không được hỗ trợ.');
+        if (!homes[role]) throw new Error('Account role is not supported.');
         return `/main/HTML/${homes[role]}/Dashboard.html`;
     }
     function assetUrl(path) {
