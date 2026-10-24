@@ -2,6 +2,7 @@
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
 
   function showMissingDialog(items, title = 'Cannot complete yet') {
+    const previousFocus = document.activeElement;
     document.querySelector('.session-completion-dialog')?.remove();
     const overlay = document.createElement('div');
     overlay.className = 'session-completion-dialog';
@@ -13,7 +14,11 @@
       }).join('')}</div>
       <footer><button type="button">Understood</button></footer>
     </section>`;
-    const close = () => overlay.remove();
+    const close = () => { overlay.remove(); previousFocus?.focus(); };
+    overlay.addEventListener('keydown', event => {
+      if (event.key === 'Escape') { event.preventDefault(); close(); }
+      if (event.key === 'Tab') { event.preventDefault(); overlay.querySelector('button').focus(); }
+    });
     overlay.addEventListener('click', event => { if (event.target === overlay) close(); });
     overlay.querySelector('button').addEventListener('click', close);
     document.body.append(overlay);

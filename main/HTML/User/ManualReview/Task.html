@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Review | AAIR Lab</title>
-    <link rel="icon" type="image/png" href="/resource/icon/logo_remove_BG.png">
+    <link rel="icon" type="image/svg+xml" href="/resource/icon/brand/aair-logo.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
@@ -30,10 +30,12 @@
     .review-files{top:58px}
     .review-workspace{top:113px}
   </style>
+  <link href="../../../Style/comparisonResponsive.css" rel="stylesheet" />
+  <script src="../../../JavaScript/workspaceViews.js" defer></script>
 </head>
 <body class="review-page">
   <header class="review-topbar aair-navbar" data-aair-navbar>
-    <a class="review-brand aair-navbar__brand" href="Dashboard.html" aria-label="AAIR Lab - Dashboard"><img src="/resource/icon/logo_remove_BG.png" alt="AAIR Lab" /><strong>AAIR Lab</strong></a>
+    <a class="review-brand aair-navbar__brand" href="Dashboard.html" aria-label="AAIR Lab - Dashboard"><img src="/resource/icon/brand/aair-logo.svg" alt="AAIR Lab" /><strong>AAIR Lab</strong></a>
     <nav class="review-nav aair-navbar__nav" aria-label="Navigation"><a href="Dashboard.html" data-page="Dashboard.html"><span>Dashboard</span></a><a href="ViewAll.html" data-page="ViewAll.html"><span>View ALL</span></a><a class="is-active" href="Task.html" data-page="Task.html"><span>Review</span></a></nav>
     <div class="review-account aair-navbar__account aa-account"><span class="review-avatar aair-navbar__avatar" id="raAvatar" data-aa-avatar aria-hidden="true">RE</span><div class="aair-navbar__identity"><b id="reviewerName" data-aa-username>reviewer01</b><small id="raRole" data-aa-role>Reviewer</small></div><button id="logoutButton" class="outline-button aair-navbar__logout" id="raLogout" type="button" aria-label="Log out" title="Log out of the system">Log out</button></div>
   </header>

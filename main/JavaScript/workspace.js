@@ -10,6 +10,49 @@
     const taskSuccessNotices = new Set(['Lưu dữ liệu thành công.', 'Data saved successfully.', 'Submit task thành công.', 'Task submitted successfully.']);
     let noticeTimer;
     let user;
+    const interactionStyles = document.createElement('link');
+    interactionStyles.rel = 'stylesheet';
+    interactionStyles.href = '/main/Style/interactions.css';
+    document.head.append(interactionStyles);
+
+    function reviewDecision() {
+        return new Promise(resolve => {
+            const previousFocus = document.activeElement;
+            const dialog = document.createElement('dialog');
+            dialog.className = 'aa-decision-dialog';
+            dialog.setAttribute('aria-labelledby', 'reviewDecisionTitle');
+            dialog.innerHTML = `<form method="dialog">
+                <h2 id="reviewDecisionTitle">Review decision</h2>
+                <p>Approve this task or return it to the annotator for changes.</p>
+                <label for="reviewDecision">Decision</label>
+                <select id="reviewDecision" name="decision"><option value="APPROVED">Approve task</option><option value="REJECTED">Request changes</option></select>
+                <label for="reviewFeedback">Feedback <span id="reviewFeedbackRequirement">(optional)</span></label>
+                <textarea id="reviewFeedback" name="feedback" rows="4" maxlength="2000" aria-describedby="reviewFeedbackRequirement"></textarea>
+                <div class="aa-dialog-actions"><button type="button" data-cancel>Cancel</button><button type="submit" class="aa-dialog-primary">Save decision</button></div>
+            </form>`;
+            const select = dialog.querySelector('select');
+            const feedback = dialog.querySelector('textarea');
+            let result = null;
+            select.addEventListener('change', () => {
+                feedback.required = select.value === 'REJECTED';
+                dialog.querySelector('#reviewFeedbackRequirement').textContent = feedback.required ? '(required)' : '(optional)';
+                feedback.setCustomValidity('');
+            });
+            feedback.addEventListener('input', () => feedback.setCustomValidity(''));
+            dialog.querySelector('form').addEventListener('submit', event => {
+                event.preventDefault();
+                if (feedback.required && !feedback.value.trim()) {
+                    feedback.setCustomValidity('Explain what needs to change.'); feedback.reportValidity(); return;
+                }
+                result = { decision: select.value, feedback: feedback.value.trim() };
+                dialog.close();
+            });
+            dialog.querySelector('[data-cancel]').addEventListener('click', () => dialog.close());
+            dialog.addEventListener('close', () => { dialog.remove(); previousFocus?.focus(); resolve(result); }, { once: true });
+            document.body.append(dialog);
+            dialog.showModal();
+        });
+    }
     function notice(message, error = false) {
         // The application only uses toasts for explicit Save and Submit successes.
         if (!error && !taskSuccessNotices.has(message)) return;
@@ -146,6 +189,27 @@
         let frame=0;
         pdfPane.classList.add('workspace-pdf-pane');
         dataPane.classList.add('workspace-data-pane');
+        const paneSwitch = document.createElement('div');
+        paneSwitch.className = 'workspace-pane-switch';
+        paneSwitch.setAttribute('role', 'group');
+        paneSwitch.setAttribute('aria-label', 'Workspace view');
+        pdfPane.id ||= 'workspacePdfPane';
+        dataPane.id ||= 'workspaceDataPane';
+        for (const [view, label, pane] of [['pdf', 'PDF document', pdfPane], ['data', 'Annotation fields', dataPane]]) {
+            const button = document.createElement('button');
+            button.type = 'button'; button.textContent = label;
+            button.dataset.view = view;
+            button.setAttribute('aria-controls', pane.id);
+            button.setAttribute('aria-pressed', String(view === 'data'));
+            button.addEventListener('click', () => {
+                document.body.dataset.workspaceView = view;
+                paneSwitch.querySelectorAll('button').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+                window.dispatchEvent(new Event('resize'));
+            });
+            paneSwitch.append(button);
+        }
+        document.body.dataset.workspaceView = 'data';
+        workspace.before(paneSwitch);
         $('#pdfViewer',pdfPane).parentElement?.classList.add('workspace-pdf-viewport');
         workspace.style.setProperty('--pdf-pane-width',`${width}%`);
 
@@ -1500,7 +1564,7 @@
             if(!Array.isArray(data)||data.length>500||data.some(l=>!l||typeof l.labelName!=='string'||!l.labelName.trim()||l.labelName.length>150||!(l.labelValue==null||typeof l.labelValue==='string')||(l.labelValue?.length||0)>20000||!Number.isInteger(l.sourcePage)||l.sourcePage<1||(pdfPageCount&&l.sourcePage>pdfPageCount)||!(l.confidence==null||typeof l.confidence==='number'&&l.confidence>=0&&l.confidence<=1)))throw new Error(`Each field requires a name, value, source page from 1${pdfPageCount?`-${pdfPageCount}`:''} and confidence from 0 to 1 (or null); maximum 500 fields.`);
             return data;
         }
-        let manualSaveButton=null;
+        let manualSaveButton=null, manualSaveStatus=null;
         const save=async(showNotice=true,track=true,refreshAfter=true)=>{
             const data=labels();
             if(['PENDING','REJECTED'].includes(task.status)){await request(`/tasks/${task.id}/start`,{method:'POST'});task.status='IN_PROGRESS';}
@@ -1512,8 +1576,31 @@
         if(labeler && panel && !aiContent){
             const saveWrap=document.createElement('div');saveWrap.className='annotation-panel-save';
             manualSaveButton=document.createElement('button');manualSaveButton.type='button';manualSaveButton.textContent='Save';manualSaveButton.disabled=true;manualSaveButton.className='annotation-save-button';manualSaveButton.setAttribute('aria-label','Save');
-            saveWrap.append(manualSaveButton);panel.append(saveWrap);
-            manualSaveButton.onclick=async()=>{if(manualSaveButton.disabled)return;manualSaveButton.disabled=true;manualSaveButton.textContent='Saving…';try{await save();setDocumentSaveState(task.id,'saved');cards.forEach(card=>{card.dirty=false;card.saved=true;card.saveState.dataset.state='saved';card.saveState.textContent='Saved';});window.location.reload();}catch(error){manualSaveButton.disabled=false;manualSaveButton.textContent='Save';throw error;}manualSaveButton.textContent='Save';};
+            manualSaveStatus=document.createElement('span');
+            manualSaveStatus.className='workspace-save-status';
+            manualSaveStatus.setAttribute('role','status');
+            manualSaveStatus.textContent=readonly?'Submitted · read-only':'No unsaved changes';
+            saveWrap.append(manualSaveStatus,manualSaveButton);panel.append(saveWrap);
+            manualSaveButton.onclick=()=>run(manualSaveButton,async()=>{
+                const snapshot=JSON.stringify(labels());
+                manualSaveButton.disabled=true;manualSaveButton.textContent='Saving…';
+                manualSaveStatus.textContent='Saving changes…';
+                try{
+                    await save(true,true,false);
+                    const unchanged=snapshot===JSON.stringify(labels());
+                    if(unchanged){
+                        setDocumentSaveState(task.id,'saved');
+                        cards.forEach(card=>{card.dirty=false;card.saved=true;card.saveState.dataset.state='saved';card.saveState.textContent='Saved';});
+                    }
+                    manualSaveStatus.textContent=unchanged?'All changes saved':'Unsaved changes';
+                    manualSaveStatus.dataset.state=unchanged?'saved':'dirty';
+                    manualSaveButton.disabled=unchanged;
+                }catch(error){
+                    manualSaveButton.disabled=false;
+                    manualSaveStatus.textContent='Save failed · try again';manualSaveStatus.dataset.state='error';
+                    throw error;
+                }finally{manualSaveButton.textContent='Save';}
+            });
         }
         let autoSaveTimer=null,autoSavePromise=Promise.resolve();
         const setSaveState=(state,message)=>cards.filter(card=>card.dirty).forEach(card=>{card.saveState.dataset.state=state;card.saveState.textContent=message;});
@@ -1533,7 +1620,7 @@
         };
         queueAutoSave=()=>{
             if(autoSaveTimer)clearTimeout(autoSaveTimer);
-            if(manualSaveButton){manualSaveButton.disabled=false;return;}
+            if(manualSaveButton){manualSaveButton.disabled=false;manualSaveStatus.textContent='Unsaved changes';manualSaveStatus.dataset.state='dirty';return;}
             if(aiContent)return;
             autoSaveTimer=setTimeout(()=>{autoSaveTimer=null;autoSavePromise=autoSavePromise.then(performAutoSave,performAutoSave);},1000);
         };
@@ -1564,9 +1651,8 @@
             }
         }
         bindText(/Approve Review/,async()=>{
-            const answer=prompt('Enter APPROVED to approve or REJECTED to request changes:','APPROVED');if(answer===null)return;
-            const decision=answer.trim().toUpperCase();if(!['APPROVED','REJECTED'].includes(decision))throw new Error('Decision must be APPROVED or REJECTED.');
-            const feedback=prompt(decision==='REJECTED'?'Reason for requesting changes (required):':'Feedback (optional):','');if(feedback===null)return;
+            const result=await reviewDecision();if(!result)return;
+            const {decision,feedback}=result;
             await request(`/tasks/${task.id}/review`,{method:'POST',json:{decision,feedback}});await refresh();notice(`Review result saved: ${decision}.`);
         });
         bindText(/^Analyze$/,()=>{exportJson({taskId:task.id,status:task.status,labels:task.labels,reviews:task.reviews},`task-${task.id}-analysis.json`);notice(`Exported ${task.labels.length} labels and ${task.reviews.length} review decisions.`);});

@@ -141,7 +141,7 @@ window.AAIRNavbar = (() => {
       link.href = tab.href;
       link.dataset.page = tab.page || tab.href.split('/').pop().split('?')[0];
       const label = document.createElement('span');
-      label.textContent = tab.label;
+      label.textContent = tab.label === 'View ALL' ? 'All tasks' : tab.label === 'Analyst' ? 'Analysis' : tab.label;
       link.append(label);
       return link;
     }));
@@ -152,15 +152,40 @@ window.AAIRNavbar = (() => {
     host.querySelectorAll('[data-page]').forEach(link => {
       const active = link.dataset.page === page || (page === '' && link.dataset.page === 'Dashboard.html');
       link.classList.toggle('is-active', active);
+      if (active) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
     });
-    const menu = host.querySelector('.aair-navbar__menu');
+    let menu = host.querySelector('.aair-navbar__menu');
+    if (!menu && host.querySelector('.aair-navbar__nav')) {
+      menu = document.createElement('button');
+      menu.type = 'button';
+      menu.className = 'aair-navbar__menu';
+      menu.textContent = 'Menu';
+      host.querySelector('.aair-navbar__nav').before(menu);
+    }
+    const closeMenu = () => {
+      host.classList.remove('is-menu-open');
+      menu?.setAttribute('aria-expanded', 'false');
+      menu?.setAttribute('aria-label', 'Open navigation');
+    };
     if (menu) {
+      menu.setAttribute('aria-expanded', 'false');
+      menu.setAttribute('aria-label', 'Open navigation');
+      const nav = host.querySelector('.aair-navbar__nav');
+      if (nav) { nav.id ||= 'aair-navigation'; menu.setAttribute('aria-controls', nav.id); }
       menu.addEventListener('click', () => {
         const open = host.classList.toggle('is-menu-open');
         menu.setAttribute('aria-expanded', String(open));
+        menu.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
       });
+      host.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && host.classList.contains('is-menu-open')) {
+          closeMenu(); menu.focus();
+        }
+      });
+      document.addEventListener('click', event => { if (!host.contains(event.target)) closeMenu(); });
     }
-    host.querySelectorAll('.aair-navbar__nav a').forEach(link => link.addEventListener('click', () => host.classList.remove('is-menu-open')));
+    host.querySelectorAll('.aair-navbar__nav a').forEach(link => link.addEventListener('click', closeMenu));
     host.querySelectorAll('#raLogout, #logoutButton, [data-manual-logout], .aair-navbar__logout').forEach(btn => {
       btn.addEventListener('click', () => {
         if (confirm('Are you sure you want to log out?')) window.AAIR?.logout();
@@ -171,7 +196,7 @@ window.AAIRNavbar = (() => {
   const inlineTemplate = `
 <header class="aair-navbar" data-aair-navbar>
   <a class="aair-navbar__brand" href="Dashboard.html" aria-label="AAIR Lab - Dashboard">
-    <img src="/resource/icon/logo_remove_BG.png" alt="">
+    <img src="/resource/icon/brand/aair-logo.svg" alt="">
     <strong>AAIR Lab</strong>
   </a>
   <button class="aair-navbar__menu" type="button" aria-label="Open navigation" aria-expanded="false">Menu</button>

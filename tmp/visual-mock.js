@@ -1,6 +1,6 @@
 (() => {
   const kind = new URLSearchParams(parent.location.search).get('kind') || 'manual';
-  const roles = { manual: 'MANUAL_LABELER', ai: 'AI_LABELER', review: 'REVIEWER', manager: 'MANAGER' };
+  const roles = { manual: 'MANUAL_LABELER', ai: 'AI_LABELER', review: 'REVIEWER', manager: 'MANAGER', analysis: 'RESULT_ANALYST' };
   const task = { id: 31, document_id: 11, session_id: 21, document_title: 'Bao cao tai chinh 2024.pdf', session_name: 'Kiem thu nghiem thu', task_type: kind === 'ai' ? 'AI' : 'MANUAL', assigned_to: 4, assignee: 'labeler01', status: 'IN_PROGRESS', assistance_mode: kind === 'manual' ? 'NONE' : 'AI_ASSISTED', labels: [
     { label_name: 'COMPANY_NAME', label_value: 'CONG TY CO PHAN 28.1', source_page: 1, confidence: .98 },
     { label_name: 'REVENUE', label_value: '262.611.441.370 VND', source_page: 2, confidence: .94 },
@@ -15,10 +15,13 @@
     { task_id: 32, session_id: 21, username: 'manual_b', field_key: 'REVENUE', section_status: 'SUBMITTED', assistance_mode: 'AI_ASSISTED' },
   ], userProductivity: [{ username: 'manual_a', assigned_tasks: 4, completed_tasks: 3, saved_sections: 1, submitted_sections: 2, reviewed_sections: 8, overdue_tasks: 0 }, { username: 'manual_b', assigned_tasks: 5, completed_tasks: 2, saved_sections: 2, submitted_sections: 4, reviewed_sections: 5, overdue_tasks: 1 }], timeComparison: [{ assistance_mode: 'NONE', average_seconds: 1260, median_seconds: 1140, sample_size: 8 }, { assistance_mode: 'AI_ASSISTED', average_seconds: 780, median_seconds: 720, sample_size: 9 }], overdueTasks: [{ document_title: 'Bao cao tai chinh 2023.pdf', username: 'manual_b', assistance_mode: 'NONE', status: 'IN_PROGRESS', due_at: '2026-09-20T17:00:00' }] };
   window.AAIR = {
+    assetUrl: path => path,
     guard: async () => ({ id: 1, username: roles[kind].toLowerCase(), role: roles[kind] }),
     logout() {},
     createWorkTimer: () => ({ stop: async () => {}, seconds: 0 }),
     request: async (path, options = {}) => {
+      if (path.startsWith('/session-completion')) return {allDone:false,documents:[{id:31,name:task.document_title,status:'processing'}],missingItems:[{fileName:task.document_title,detail:['Finalize the remaining fields.']}]};
+      if (path.endsWith('/ai-results')) return [];
       if (options.blob) return fetch('/resource/guidelines/aair-labeling-guidelines.pdf').then(response => response.blob());
       if (path === '/tasks') return [task, { ...task, id: 32, assignee: 'manual_b', status: 'SUBMITTED' }];
       if (path === '/tasks/31' || path === '/tasks/32') return task;

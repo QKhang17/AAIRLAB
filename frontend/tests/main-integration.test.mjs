@@ -139,6 +139,39 @@ test('manual label edits save before submit and preserve confidence',async()=>{
     assert.ok(!definition.isConnected || definition.disabled)
   } finally {c.dom.window.close()}
 })
+test('manual Save retains the editor and reports saved state without reloading',async()=>{
+  const c=await setup('MANUAL_LABELER','Task.html')
+  try {
+    const field=c.w.document.querySelector('textarea[aria-label="Field value"]')
+    field.value='Saved locally in the editor'
+    field.dispatchEvent(new c.w.Event('input',{bubbles:true}))
+    assert.equal(c.w.document.querySelector('.workspace-save-status').textContent,'Unsaved changes')
+    c.button('Save').click();await c.settle()
+    assert.deepEqual(c.errors(),[])
+    assert.equal(field.isConnected,true)
+    assert.equal(field.value,'Saved locally in the editor')
+    assert.equal(c.w.document.querySelector('.workspace-save-status').textContent,'All changes saved')
+    assert.equal(c.button('Save').disabled,true)
+  } finally {c.dom.window.close()}
+})
+
+test('manual Save failure keeps edits and allows retry',async()=>{
+  const c=await setup('MANUAL_LABELER','Task.html',{
+    'PUT:/tasks/31/labels':()=>{throw new Error('Connection interrupted')},
+  })
+  try {
+    const field=c.w.document.querySelector('textarea[aria-label="Field value"]')
+    field.value='Keep this unsaved value'
+    field.dispatchEvent(new c.w.Event('input',{bubbles:true}))
+    c.button('Save').click();await c.settle()
+    assert.equal(field.isConnected,true)
+    assert.equal(field.value,'Keep this unsaved value')
+    assert.equal(c.w.document.querySelector('.workspace-save-status').textContent,'Save failed · try again')
+    assert.equal(c.button('Save').disabled,false)
+    assert.deepEqual(c.errors(),['Connection interrupted'])
+  } finally {c.dom.window.close()}
+})
+
 test('term editor sends API field names and keeps content as text',async()=>{
   const c=await setup('TERMINOLOGY','BaseManagement.html')
   try {
