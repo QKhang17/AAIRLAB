@@ -79,10 +79,10 @@
             sourceLabel,
         };
     }
-    function viDateToIso(value) {
-        const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim());
-        if (!match) throw new Error('Expiration date must be in dd/mm/yyyy format.');
-        const [, day, month, year] = match;
+    function dueDateToIso(value) {
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+        if (!match) throw new Error('Please select a valid due date.');
+        const [, year, month, day] = match;
         const parsed = new Date(Number(year), Number(month) - 1, Number(day), 23, 59, 0);
         if (parsed.getFullYear() !== Number(year) || parsed.getMonth() !== Number(month) - 1 || parsed.getDate() !== Number(day))
             throw new Error('Invalid expiration date.');
@@ -571,20 +571,22 @@
         manualAssignContainer.className='space-y-4';
         manualAssignContainer.innerHTML=`
             <div class="space-y-1.5">
-                <label class="text-label-md text-on-surface-variant uppercase tracking-wider font-bold">
+                <label for="manualLabeler1" class="text-label-md text-on-surface-variant uppercase tracking-wider font-bold">
                     Manual Labeler 1 <span class="text-error font-normal">*</span>
                 </label>
-                <select id="manualLabeler1" class="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-body-md cursor-pointer">
+                <select id="manualLabeler1" required aria-required="true" aria-describedby="manualLabeler1Error" class="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-body-md cursor-pointer">
                     <option value="">Select user...</option>
                 </select>
+                <p id="manualLabeler1Error" class="text-sm text-error" role="alert" hidden></p>
             </div>
             <div class="space-y-1.5">
-                <label class="text-label-md text-on-surface-variant uppercase tracking-wider font-bold">
-                    Manual Labeler 2 <span class="font-normal normal-case text-on-surface-variant">(Optional)</span>
+                <label for="manualLabeler2" class="text-label-md text-on-surface-variant uppercase tracking-wider font-bold">
+                    Manual Labeler 2 <span class="text-error font-normal">*</span>
                 </label>
-                <select id="manualLabeler2" class="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-body-md cursor-pointer">
-                    <option value="">Select user (optional)...</option>
+                <select id="manualLabeler2" required aria-required="true" aria-describedby="manualLabeler2Error" class="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-body-md cursor-pointer">
+                    <option value="">Select user...</option>
                 </select>
+                <p id="manualLabeler2Error" class="text-sm text-error" role="alert" hidden></p>
             </div>
             <div class="space-y-1.5">
                 <label class="text-label-md text-on-surface-variant uppercase tracking-wider font-bold">
@@ -623,6 +625,8 @@
         const m1Select=$('#manualLabeler1',manualAssignContainer);
         const m2Select=$('#manualLabeler2',manualAssignContainer);
         const reviewerSelect=$('#manualReviewer',manualAssignContainer);
+        const m1Error=$('#manualLabeler1Error',manualAssignContainer);
+        const m2Error=$('#manualLabeler2Error',manualAssignContainer);
 
         const aiLabelerSelect=$('#aiLabeler',aiAssignContainer);
         const aiReviewerSelect=$('#aiReviewer',aiAssignContainer);
@@ -656,9 +660,39 @@
 
         function populateManualOptions(){
             populateSelect(m1Select,manualLabelers,'Select user...');
-            populateSelect(m2Select,manualLabelers,'Select user (optional)...');
+            populateSelect(m2Select,manualLabelers,'Select user...');
             populateSelect(reviewerSelect,reviewers,'Select user...');
             syncAssignmentOptions();
+        }
+
+        function setManualLabelerError(select,error,message=''){
+            const invalid=Boolean(message);
+            select.setAttribute('aria-invalid',String(invalid));
+            select.classList.toggle('border-error',invalid);
+            if(error){
+                error.hidden=!invalid;
+                error.textContent=message;
+            }
+        }
+
+        function clearManualLabelerErrors(){
+            setManualLabelerError(m1Select,m1Error);
+            setManualLabelerError(m2Select,m2Error);
+        }
+
+        function validateManualLabelers(){
+            const missing=[];
+            if(!m1Select.value){
+                const message='Please select Manual Labeler 1.';
+                setManualLabelerError(m1Select,m1Error,message);
+                missing.push(message);
+            }else setManualLabelerError(m1Select,m1Error);
+            if(!m2Select.value){
+                const message='Please select Manual Labeler 2.';
+                setManualLabelerError(m2Select,m2Error,message);
+                missing.push(message);
+            }else setManualLabelerError(m2Select,m2Error);
+            if(missing.length)throw new Error(missing.join(' '));
         }
 
         function populateAiOptions(){
@@ -752,11 +786,13 @@
         m1Select.addEventListener('change',()=>{
             if(m1Select.value && m1Select.value===m2Select.value)m2Select.value='';
             if(m1Select.value && m1Select.value===reviewerSelect.value)reviewerSelect.value='';
+            setManualLabelerError(m1Select,m1Error);
             syncAssignmentOptions();
         });
         m2Select.addEventListener('change',()=>{
             if(m2Select.value && m2Select.value===m1Select.value)m1Select.value='';
             if(m2Select.value && m2Select.value===reviewerSelect.value)reviewerSelect.value='';
+            setManualLabelerError(m2Select,m2Error);
             syncAssignmentOptions();
         });
         reviewerSelect.addEventListener('change',()=>{
@@ -784,6 +820,7 @@
                     m1Select.value='';
                     m2Select.value='';
                     reviewerSelect.value='';
+                    clearManualLabelerErrors();
                     syncAssignmentOptions();
                 }else{
                     aiLabelerSelect.value='';
@@ -821,17 +858,21 @@
         const startDate=$('#sessionStartDate',modal), dueDate=$('#sessionDueDate',modal);
         startDate.closest('[class~="space-y-1.5"]').hidden=true;
         dueDate.setAttribute('aria-label','Session due date');dueDate.required=true;
-        dueDate.pattern='\\d{2}/\\d{2}/\\d{4}';
-        dueDate.addEventListener('input',()=>{
-            const digits=dueDate.value.replace(/\D/g,'').slice(0,8);
-            dueDate.value=[digits.slice(0,2),digits.slice(2,4),digits.slice(4,8)].filter(Boolean).join('/');
-        });
+        const setDueDateMinimum=()=>{
+            const tomorrow=new Date();
+            tomorrow.setHours(0,0,0,0);
+            tomorrow.setDate(tomorrow.getDate()+1);
+            const month=String(tomorrow.getMonth()+1).padStart(2,'0');
+            const day=String(tomorrow.getDate()).padStart(2,'0');
+            dueDate.min=`${tomorrow.getFullYear()}-${month}-${day}`;
+        };
         const dueLabel=$('label',dueDate.parentElement.parentElement);if(dueLabel)dueLabel.textContent='Session Due Date *';
         const reset=()=>{
-            editing=null;name.value='';description.value='';dueDate.value='';name.disabled=false;description.disabled=false;
+            editing=null;name.value='';description.value='';dueDate.value='';setDueDateMinimum();name.disabled=false;description.disabled=false;
             $$('input',documentList).forEach(i=>i.checked=false);$$('input',memberList).forEach(i=>i.checked=false);
             documentList.parentElement.hidden=false;typeList.parentElement.hidden=false;dueDate.parentElement.parentElement.hidden=false;
             m1Select.value='';m2Select.value='';reviewerSelect.value='';
+            clearManualLabelerErrors();
             aiLabelerSelect.value='';aiReviewerSelect.value='';
             const typeInputs=$$('input',typeList);if(typeInputs[0])typeInputs[0].checked=true;
             previousType='MANUAL';
@@ -872,30 +913,30 @@
             if(type==='MANUAL'){
                 required(name,'session name');
                 required(dueDate,'due date');
-                const sessionDue=viDateToIso(dueDate.value);
+                if(dueDate.value<dueDate.min)throw new Error('Due date must be in the future.');
+                const sessionDue=dueDateToIso(dueDate.value);
                 if(sessionDue.parsed<=new Date())throw new Error('Due date must be in the future.');
                 if(!docIds.length)throw new Error('Please select at least one PDF document.');
 
-                if(!m1Select.value)throw new Error('Please select Manual Labeler 1.');
+                validateManualLabelers();
                 if(!reviewerSelect.value)throw new Error('Please select a Reviewer.');
 
                 const m1Id=Number(m1Select.value);
-                const m2Id=m2Select.value?Number(m2Select.value):null;
+                const m2Id=Number(m2Select.value);
                 const revId=Number(reviewerSelect.value);
 
-                const chosenIds=[m1Id,m2Id,revId].filter(Boolean);
+                const chosenIds=[m1Id,m2Id,revId];
                 if(new Set(chosenIds).size!==chosenIds.length)throw new Error('Cannot select the same user across different roles.');
 
                 const m1User=currentAssignees.find(u=>u.id===m1Id);
-                const m2User=m2Id?currentAssignees.find(u=>u.id===m2Id):null;
+                const m2User=currentAssignees.find(u=>u.id===m2Id);
                 const revUser=currentAssignees.find(u=>u.id===revId);
 
                 if(!m1User || m1User.role!=='MANUAL_LABELER')throw new Error('Manual Labeler 1 must have role MANUAL_LABELER.');
-                if(m2User && m2User.role!=='MANUAL_LABELER')throw new Error('Manual Labeler 2 must have role MANUAL_LABELER.');
+                if(!m2User || m2User.role!=='MANUAL_LABELER')throw new Error('Manual Labeler 2 must have role MANUAL_LABELER.');
                 if(!revUser || revUser.role!=='REVIEWER')throw new Error('Reviewer must have role REVIEWER.');
 
-                const manualLabelerIds=[m1Id];
-                if(m2Id)manualLabelerIds.push(m2Id);
+                const manualLabelerIds=[m1Id,m2Id];
 
                 const payload={
                     name:name.value.trim(),
@@ -917,7 +958,8 @@
             if(type==='AI'){
                 required(name,'session name');
                 required(dueDate,'due date');
-                const sessionDue=viDateToIso(dueDate.value);
+                if(dueDate.value<dueDate.min)throw new Error('Due date must be in the future.');
+                const sessionDue=dueDateToIso(dueDate.value);
                 if(sessionDue.parsed<=new Date())throw new Error('Due date must be in the future.');
                 if(!docIds.length)throw new Error('Please select at least one PDF document.');
 

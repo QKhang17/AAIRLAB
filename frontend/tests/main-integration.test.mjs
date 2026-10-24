@@ -154,8 +154,15 @@ test('term editor sends API field names and keeps content as text',async()=>{
     assert.equal(call.path,'/terms');assert.equal(call.json.term,'Test term');assert.equal(call.json.status,'INACTIVE')
   } finally {c.dom.window.close()}
 })
-test('manager session form creates manual session via single atomic POST /sessions',async()=>{
-  const c=await setup('MANAGER','Session.html')
+test('manager session form requires both manual labelers and creates via one atomic POST /sessions',async()=>{
+  const c=await setup('MANAGER','Session.html',{
+    '/assignees': [
+      {id: 4, username: 'manual_labeler01', role: 'MANUAL_LABELER'},
+      {id: 6, username: 'manual_labeler02', role: 'MANUAL_LABELER'},
+      {id: 3, username: 'ai_labeler01', role: 'AI_LABELER'},
+      {id: 5, username: 'reviewer01', role: 'REVIEWER'}
+    ]
+  })
   try {
     const m1Select=c.w.document.querySelector('#manualLabeler1')
     const m2Select=c.w.document.querySelector('#manualLabeler2')
@@ -164,14 +171,18 @@ test('manager session form creates manual session via single atomic POST /sessio
     // Verify role filtering
     const m1Values=[...m1Select.options].map(o=>o.value).filter(Boolean)
     const revValues=[...revSelect.options].map(o=>o.value).filter(Boolean)
-    assert.deepEqual(m1Values,['4'],'Manual Labeler must only include MANUAL_LABELER')
+    assert.deepEqual(m1Values,['4','6'],'Manual Labeler must only include MANUAL_LABELER')
     assert.deepEqual(revValues,['5'],'Reviewer must only include REVIEWER')
     assert.ok(!m1Values.includes('3'),'AI_LABELER must not appear in manual labelers')
     assert.ok(!revValues.includes('3'),'AI_LABELER must not appear in reviewers')
+    assert.equal(m1Select.required,true)
+    assert.equal(m2Select.required,true)
+    assert.equal(m2Select.getAttribute('aria-required'),'true')
+    assert.equal(m2Select.options[0].textContent,'Select user...')
 
     c.w.document.querySelector('input[placeholder^="e.g."]').value='New Session'
     c.w.document.querySelector('input[name="documents"]').checked=true
-    c.w.document.querySelector('[aria-label="Session due date"]').value='31/12/2099'
+    c.w.document.querySelector('[aria-label="Session due date"]').value='2099-12-31'
 
     m1Select.value='4'
     m1Select.dispatchEvent(new c.w.Event('change'))
@@ -182,6 +193,19 @@ test('manager session form creates manual session via single atomic POST /sessio
 
     revSelect.value='5'
     revSelect.dispatchEvent(new c.w.Event('change'))
+
+    // A session cannot be created with only Manual Labeler 1.
+    c.button('Create Session').click();await c.settle()
+    assert.deepEqual(c.errors(),['Please select Manual Labeler 2.'])
+    assert.equal(c.calls.filter(x=>x.method).length,0,'No API call when Manual Labeler 2 is missing')
+    assert.equal(m2Select.getAttribute('aria-invalid'),'true')
+    assert.equal(c.w.document.querySelector('#manualLabeler2Error').textContent,'Please select Manual Labeler 2.')
+
+    c.w.document.querySelectorAll('#apiNotice').forEach(e=>e.remove())
+    m2Select.value='6'
+    m2Select.dispatchEvent(new c.w.Event('change'))
+    assert.equal(m2Select.getAttribute('aria-invalid'),'false')
+    assert.equal(c.w.document.querySelector('#manualLabeler2Error').hidden,true)
 
     c.button('Create Session').click();await c.settle()
     assert.deepEqual(c.errors(),[])
@@ -194,12 +218,27 @@ test('manager session form creates manual session via single atomic POST /sessio
       sessionType:'MANUAL',
       dueAt:'2099-12-31T23:59:00',
       documents:[11],
-      manualLabelerIds:[4],
+      manualLabelerIds:[4,6],
       aiLabelerId:null,
       reviewerId:5,
       assistanceMode:'NONE'
     })
     assert.equal(c.w.document.querySelector('#apiNotice'),null,'non-Save/Submit actions must not show a popup')
+  } finally {c.dom.window.close()}
+})
+test('manager session due date opens a calendar and excludes dates before tomorrow',async()=>{
+  const c=await setup('MANAGER','Session.html')
+  try {
+    ;[...c.w.document.querySelectorAll('button')].find(button=>button.textContent.includes('New Session')).click();await c.settle()
+    const dueInput=c.w.document.querySelector('[aria-label="Session due date"]')
+    const tomorrow=new Date()
+    tomorrow.setHours(0,0,0,0)
+    tomorrow.setDate(tomorrow.getDate()+1)
+    const expectedMin=`${tomorrow.getFullYear()}-${String(tomorrow.getMonth()+1).padStart(2,'0')}-${String(tomorrow.getDate()).padStart(2,'0')}`
+
+    assert.equal(dueInput.type,'date')
+    assert.equal(dueInput.min,expectedMin)
+    assert.equal(dueInput.required,true)
   } finally {c.dom.window.close()}
 })
 test('manager session form creates manual session with 2 manual labelers and validates requirements',async()=>{
@@ -217,21 +256,27 @@ test('manager session form creates manual session with 2 manual labelers and val
 
     c.w.document.querySelector('input[placeholder^="e.g."]').value='Dual Labeler Session'
     c.w.document.querySelector('input[name="documents"]').checked=true
-    c.w.document.querySelector('[aria-label="Session due date"]').value='31/12/2099'
+    c.w.document.querySelector('[aria-label="Session due date"]').value='2099-12-31'
 
-    // Block when reviewer missing
+    // Block when Manual Labeler 2 is missing, even if Manual Labeler 1 was selected.
     m1Select.value='4'
     m1Select.dispatchEvent(new c.w.Event('change'))
     c.button('Create Session').click();await c.settle()
-    assert.deepEqual(c.errors(),['Please select a Reviewer.'])
+    assert.deepEqual(c.errors(),['Please select Manual Labeler 2.'])
     assert.equal(c.calls.filter(x=>x.method).length,0,'No API call when validation fails')
+    assert.equal(m2Select.getAttribute('aria-invalid'),'true')
 
     // Clear previous error notification before valid submission
     c.w.document.querySelectorAll('#apiNotice').forEach(e=>e.remove())
 
-    // Add optional Manual Labeler 2 and Reviewer
+    // Add required Manual Labeler 2; reviewer is still independently required.
     m2Select.value='6'
     m2Select.dispatchEvent(new c.w.Event('change'))
+    c.button('Create Session').click();await c.settle()
+    assert.deepEqual(c.errors(),['Please select a Reviewer.'])
+    assert.equal(c.calls.filter(x=>x.method).length,0,'No API call when reviewer is missing')
+    c.w.document.querySelectorAll('#apiNotice').forEach(e=>e.remove())
+
     revSelect.value='5'
     revSelect.dispatchEvent(new c.w.Event('change'))
 
@@ -266,7 +311,7 @@ test('manager session form creates AI session via single atomic POST /sessions a
     // Fill common session fields
     c.w.document.querySelector('input[placeholder^="e.g."]').value='AI Annotation Session'
     c.w.document.querySelector('input[name="documents"]').checked=true
-    c.w.document.querySelector('[aria-label="Session due date"]').value='31/12/2099'
+    c.w.document.querySelector('[aria-label="Session due date"]').value='2099-12-31'
 
     // CASE B: Missing AI Labeler
     c.button('Create Session').click();await c.settle()
@@ -309,13 +354,23 @@ test('manager session type switching isolates assignment selections between MANU
     const aiRadio=[...c.w.document.querySelectorAll('input[name="sessionType"]')].find(r=>r.value==='AI')
     const manualRadio=[...c.w.document.querySelectorAll('input[name="sessionType"]')].find(r=>r.value==='MANUAL')
     const m1Select=c.w.document.querySelector('#manualLabeler1')
+    const m2Select=c.w.document.querySelector('#manualLabeler2')
     const revSelect=c.w.document.querySelector('#manualReviewer')
     const aiLabelerSelect=c.w.document.querySelector('#aiLabeler')
     const aiReviewerSelect=c.w.document.querySelector('#aiReviewer')
 
-    // In MANUAL mode, select user 4 and user 5
+    // In MANUAL mode, missing Labeler 2 is shown inline until the mode changes.
+    c.w.document.querySelector('input[placeholder^="e.g."]').value='Switch Mode Session'
+    c.w.document.querySelector('input[name="documents"]').checked=true
+    c.w.document.querySelector('[aria-label="Session due date"]').value='2099-12-31'
     m1Select.value='4'
     m1Select.dispatchEvent(new c.w.Event('change'))
+    c.button('Create Session').click();await c.settle()
+    assert.equal(m2Select.getAttribute('aria-invalid'),'true')
+    assert.equal(c.w.document.querySelector('#manualLabeler2Error').hidden,false)
+    c.w.document.querySelectorAll('#apiNotice').forEach(e=>e.remove())
+
+    // In MANUAL mode, select user 4 and user 5
     revSelect.value='5'
     revSelect.dispatchEvent(new c.w.Event('change'))
 
@@ -324,7 +379,10 @@ test('manager session type switching isolates assignment selections between MANU
 
     // MANUAL selections must be cleared/reset
     assert.equal(m1Select.value,'')
+    assert.equal(m2Select.value,'')
     assert.equal(revSelect.value,'')
+    assert.equal(m2Select.getAttribute('aria-invalid'),'false')
+    assert.equal(c.w.document.querySelector('#manualLabeler2Error').hidden,true)
     assert.equal(aiLabelerSelect.value,'')
     assert.equal(aiReviewerSelect.value,'')
 
@@ -344,6 +402,11 @@ test('manager session type switching isolates assignment selections between MANU
 })
 test('manager create session API error keeps modal open, preserves data, and performs no secondary calls',async()=>{
   const c=await setup('MANAGER','Session.html',{
+    '/assignees': [
+      {id: 4, username: 'manual_labeler01', role: 'MANUAL_LABELER'},
+      {id: 6, username: 'manual_labeler02', role: 'MANUAL_LABELER'},
+      {id: 5, username: 'reviewer01', role: 'REVIEWER'}
+    ],
     'POST:/sessions': () => { throw new Error('Simulated backend failure') }
   })
   try {
@@ -356,13 +419,16 @@ test('manager create session API error keeps modal open, preserves data, and per
     const nameInput=c.w.document.querySelector('input[placeholder^="e.g."]')
     const dueInput=c.w.document.querySelector('[aria-label="Session due date"]')
     const m1Select=c.w.document.querySelector('#manualLabeler1')
+    const m2Select=c.w.document.querySelector('#manualLabeler2')
     const revSelect=c.w.document.querySelector('#manualReviewer')
 
     nameInput.value='Audit Error Session'
-    dueInput.value='31/12/2099'
+    dueInput.value='2099-12-31'
     c.w.document.querySelector('input[name="documents"]').checked=true
     m1Select.value='4'
     m1Select.dispatchEvent(new c.w.Event('change'))
+    m2Select.value='6'
+    m2Select.dispatchEvent(new c.w.Event('change'))
     revSelect.value='5'
     revSelect.dispatchEvent(new c.w.Event('change'))
 
@@ -376,8 +442,9 @@ test('manager create session API error keeps modal open, preserves data, and per
 
     // Form inputs must be preserved
     assert.equal(nameInput.value,'Audit Error Session')
-    assert.equal(dueInput.value,'31/12/2099')
+    assert.equal(dueInput.value,'2099-12-31')
     assert.equal(m1Select.value,'4')
+    assert.equal(m2Select.value,'6')
     assert.equal(revSelect.value,'5')
 
     // No secondary /members or /tasks calls
@@ -598,6 +665,7 @@ test('manager session workflow populates assignees from /api/assignees and refre
   const c=await setup('MANAGER','Session.html',{'/assignees':customAssignees})
   try {
     const m1Select=c.w.document.querySelector('#manualLabeler1')
+    const m2Select=c.w.document.querySelector('#manualLabeler2')
     const revSelect=c.w.document.querySelector('#manualReviewer')
 
     // Verify select options populated directly from /api/assignees
@@ -609,9 +677,20 @@ test('manager session workflow populates assignees from /api/assignees and refre
     // Submit a valid session creation
     c.w.document.querySelector('input[placeholder^="e.g."]').value='Refresh Test Session'
     c.w.document.querySelector('input[name="documents"]').checked=true
-    c.w.document.querySelector('[aria-label="Session due date"]').value='31/12/2099'
+    c.w.document.querySelector('[aria-label="Session due date"]').value='2099-12-31'
+
+    // Both Manual Labeler fields are required and show actionable errors together.
+    c.button('Create Session').click();await c.settle()
+    assert.deepEqual(c.errors(),['Please select Manual Labeler 1. Please select Manual Labeler 2.'])
+    assert.equal(c.calls.filter(x=>x.method).length,0,'No API call when both manual labelers are missing')
+    assert.equal(m1Select.getAttribute('aria-invalid'),'true')
+    assert.equal(m2Select.getAttribute('aria-invalid'),'true')
+    c.w.document.querySelectorAll('#apiNotice').forEach(e=>e.remove())
+
     m1Select.value='101'
     m1Select.dispatchEvent(new c.w.Event('change'))
+    m2Select.value='102'
+    m2Select.dispatchEvent(new c.w.Event('change'))
     revSelect.value='201'
     revSelect.dispatchEvent(new c.w.Event('change'))
 
@@ -737,9 +816,11 @@ test('create session dropdowns display user status correctly (CASES 1-5)', async
     // Form submission still submits numeric id
     c.w.document.querySelector('input[placeholder^="e.g."]').value = 'Status Test Session'
     c.w.document.querySelector('input[name="documents"]').checked = true
-    c.w.document.querySelector('[aria-label="Session due date"]').value = '31/12/2099'
+    c.w.document.querySelector('[aria-label="Session due date"]').value = '2099-12-31'
     m1Select.value = '1'
     m1Select.dispatchEvent(new c.w.Event('change'))
+    m2Select.value = '4'
+    m2Select.dispatchEvent(new c.w.Event('change'))
     revSelect.value = '7'
     revSelect.dispatchEvent(new c.w.Event('change'))
 
@@ -752,7 +833,7 @@ test('create session dropdowns display user status correctly (CASES 1-5)', async
     assert.deepEqual(c.errors(), [])
     const postCall = c.calls.find(x => x.path === '/sessions' && x.method === 'POST')
     assert.ok(postCall)
-    assert.deepEqual(JSON.parse(JSON.stringify(postCall.json.manualLabelerIds)), [1])
+    assert.deepEqual(JSON.parse(JSON.stringify(postCall.json.manualLabelerIds)), [1,4])
     assert.equal(postCall.json.reviewerId, 7)
   } finally {
     c.dom.window.close()

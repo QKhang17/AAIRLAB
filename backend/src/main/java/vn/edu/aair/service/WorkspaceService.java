@@ -471,10 +471,8 @@ public class WorkspaceService {
 
     private void validateSessionAssignment(String sessionType, Session r) {
         if ("MANUAL".equalsIgnoreCase(sessionType)) {
-            valid(r.manualLabelerIds() != null && !r.manualLabelerIds().isEmpty(),
-                    "Manual session requires 1 to 2 manual labelers.");
-            valid(r.manualLabelerIds().size() <= 2,
-                    "Manual session requires 1 to 2 manual labelers.");
+            valid(r.manualLabelerIds() != null && r.manualLabelerIds().size() == 2,
+                    "Manual session requires exactly 2 manual labelers.");
             valid(r.manualLabelerIds().stream().allMatch(Objects::nonNull),
                     "Manual labeler ID không được để trống");
             valid(r.aiLabelerId() == null,
