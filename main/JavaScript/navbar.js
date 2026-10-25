@@ -10,9 +10,30 @@ window.AAIRNavbar = (() => {
     ],
   };
 
+  const roleTabs = {
+    MANAGER: [
+      { label: 'Dashboard', href: 'Dashboard.html' },
+      { label: 'User Management', href: 'UserManagement.html' },
+      { label: 'Document Management', href: 'DocumentManagement.html' },
+      { label: 'Session', href: 'Session.html' },
+      { label: 'Statistics', href: 'Statistics.html' },
+    ],
+    AI_LABELER: [
+      { label: 'Dashboard', href: 'Dashboard.html' },
+      { label: 'Prompts', href: 'Prompt.html' },
+      { label: 'Tasks', href: 'Task.html' },
+      { label: 'View All', href: 'ViewAll.html' },
+    ],
+    MANUAL_LABELER: [
+      { label: 'Dashboard', href: 'Dashboard.html' },
+      { label: 'Tasks', href: 'Task.html' },
+      { label: 'View All', href: 'ViewAll.html' },
+    ],
+  };
+
   function pageConfig() {
     const config = window.AAIRNavbarConfig || {};
-    return { ...defaultConfig, ...config, tabs: config.tabs || defaultConfig.tabs };
+    return { ...defaultConfig, ...config, tabs: config.tabs || roleTabs[currentUser?.role] || defaultConfig.tabs };
   }
 
   const roleLabel = role => role === 'RESULT_ANALYST' ? 'ANALYST' : role === 'TERMINOLOGY' ? 'TERMINOLOGY' : String(role || '')
@@ -25,6 +46,8 @@ window.AAIRNavbar = (() => {
   function paint(user) {
     if (!host || !user) return;
     currentUser = user;
+    applyConfig();
+    bindNavLinks();
     const username = user.username || user.email || 'User';
     host.querySelector('[data-aa-username]').textContent = username;
     host.querySelector('[data-aa-role]').textContent = roleLabel(user.role);
@@ -53,17 +76,21 @@ window.AAIRNavbar = (() => {
   }
 
   function bind() {
-    const page = location.pathname.split('/').pop() || 'Dashboard.html';
-    host.querySelectorAll('[data-page]').forEach(link => link.classList.toggle('is-active', link.dataset.page === page));
+    bindNavLinks();
     const menu = host.querySelector('.aair-navbar__menu');
     menu.addEventListener('click', () => {
       const open = host.classList.toggle('is-menu-open');
       menu.setAttribute('aria-expanded', String(open));
     });
-    host.querySelectorAll('.aair-navbar__nav a').forEach(link => link.addEventListener('click', () => host.classList.remove('is-menu-open')));
     host.querySelector('#raLogout').addEventListener('click', () => {
       if (confirm('Are you sure you want to log out?')) window.AAIR?.logout();
     });
+  }
+
+  function bindNavLinks() {
+    const page = location.pathname.split('/').pop() || 'Dashboard.html';
+    host.querySelectorAll('[data-page]').forEach(link => link.classList.toggle('is-active', link.dataset.page === page));
+    host.querySelectorAll('.aair-navbar__nav a').forEach(link => link.addEventListener('click', () => host.classList.remove('is-menu-open')));
   }
 
   async function init() {
