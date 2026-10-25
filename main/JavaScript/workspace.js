@@ -47,12 +47,18 @@
     }
     function buttons(pattern, root = document) { return $$('button', root).filter(b => pattern.test(text(b))); }
     function bindText(pattern, fn, root) { buttons(pattern, root).forEach(b => bind(b, () => fn(b))); }
-    function unavailable(el, message = 'This feature is not yet supported by the API.') {
+    function unavailable(el, message = 'Chức năng này chưa có API hỗ trợ.') {
         if (!el) return;
         el.removeAttribute('onclick'); el.disabled = true; el.title = message;
         el.setAttribute('aria-label', `${text(el)} — ${message}`); el.style.opacity = '0.5';
     }
-    const date = value => value ? new Date(value).toLocaleString('en-US') : '—';
+    const date = value => value ? new Date(value).toLocaleString('vi-VN') : '—';
+    const userRoleLabels = { ADMIN: 'Admin', MANAGER: 'Manager', AI_LABELER: 'AI Labeler', MANUAL_LABELER: 'Manual Labeler', REVIEWER: 'Reviewer', RESULT_ANALYST: 'Result Analyst', TERMINOLOGY: 'Terminology', LABELER: 'Labeler', ANALYST: 'Analyst' };
+    const userRoleLabel = value => userRoleLabels[String(value || '').toUpperCase()] || String(value || 'User');
+    const userDate = value => { const parsed = new Date(value); if (Number.isNaN(parsed.getTime())) return '—'; const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${parsed.getDate()} ${months[parsed.getMonth()]} ${parsed.getFullYear()}, ${String(parsed.getHours()).padStart(2,'0')}:${String(parsed.getMinutes()).padStart(2,'0')}`; };
+    function userBadge(label, tone) { const badge = document.createElement('span'); badge.className = `users-badge users-badge--${tone}`; badge.textContent = label; return badge; }
+    const userRoleBadge = value => userBadge(userRoleLabel(value), String(value || '').toLowerCase());
+    const userStatusBadge = value => { const active = String(value).toUpperCase() === 'ACTIVE'; return userBadge(active ? 'Active' : 'Inactive', active ? 'active' : 'inactive'); };
     function formattedLabelValue(labelName, value) {
         const input = String(value ?? '');
         if (/year|năm/i.test(labelName || '')) return input;
@@ -62,17 +68,17 @@
         let formatted;
         if (/^-?\d+$/.test(token)) {
             if (token.replace('-', '').length < 5) return input;
-            formatted = BigInt(token).toLocaleString('en-US');
+            formatted = BigInt(token).toLocaleString('vi-VN');
         } else {
             const number = Number(token);
             if (!Number.isFinite(number) || Math.abs(number) < 10000) return input;
-            formatted = number.toLocaleString('en-US', { maximumFractionDigits: 4 });
+            formatted = number.toLocaleString('vi-VN', { maximumFractionDigits: 4 });
         }
         return formatted + input.slice(token.length);
     }
     function splitLabelValue(value, explicitSourceLabel) {
         const input = String(value ?? '');
-        const marker = input.match(/\n\s*(?:Nhãn nguồn|Source label):\s*/i);
+        const marker = input.match(/\n\s*Nhãn nguồn:\s*/i);
         const sourceLabel = String(explicitSourceLabel ?? (marker ? input.slice(marker.index + marker[0].length) : '')).trim();
         return {
             editableValue: (marker ? input.slice(0, marker.index).trimEnd() : input).replace(/\s+text$/i, '').trim(),
@@ -81,11 +87,11 @@
     }
     function viDateToIso(value) {
         const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim());
-        if (!match) throw new Error('Expiration date must be in dd/mm/yyyy format.');
+        if (!match) throw new Error('Ngày hết hạn phải theo định dạng dd/mm/yyyy.');
         const [, day, month, year] = match;
         const parsed = new Date(Number(year), Number(month) - 1, Number(day), 23, 59, 0);
         if (parsed.getFullYear() !== Number(year) || parsed.getMonth() !== Number(month) - 1 || parsed.getDate() !== Number(day))
-            throw new Error('Invalid expiration date.');
+            throw new Error('Ngày hết hạn không hợp lệ.');
         return { parsed, iso: `${year}-${month}-${day}T23:59:00` };
     }
     const status = row => (row.is_active === false ? 'INACTIVE' : (row.status ?? (row.is_active ? 'ACTIVE' : '—')));
@@ -117,7 +123,7 @@
     }
     function avatarNode(row, sizeClass = 'w-9 h-9') {
         const holder=document.createElement('span');
-        holder.className=`${sizeClass} shrink-0 overflow-hidden rounded-full bg-primary/10 text-primary inline-flex items-center justify-center font-bold`;
+        holder.className=`${sizeClass} user-avatar user-avatar--${String(row.role || 'user').toLowerCase()} shrink-0 overflow-hidden rounded-full inline-flex items-center justify-center font-bold`;
         holder.textContent=(row.username||'?').slice(0,2).toUpperCase();
         return holder;
     }
@@ -152,9 +158,9 @@
         const splitter=document.createElement('button');
         splitter.type='button';
         splitter.className='task-workspace-splitter';
-        splitter.title='Drag to change PDF pane width';
+        splitter.title='Kéo để thay đổi chiều rộng vùng PDF';
         splitter.setAttribute('role','separator');
-        splitter.setAttribute('aria-label','Change PDF pane width');
+        splitter.setAttribute('aria-label','Thay đổi chiều rộng vùng PDF');
         splitter.setAttribute('aria-orientation','vertical');
         splitter.setAttribute('aria-valuemin','30');
         splitter.setAttribute('aria-valuemax','80');
@@ -229,7 +235,7 @@
         handle.type='button';
         handle.className=`document-sidebar-handle${options.handleClass?` ${options.handleClass}`:''}`;
         handle.setAttribute('role','separator');
-        handle.setAttribute('aria-label','Change document list width');
+        handle.setAttribute('aria-label','Thay đổi chiều rộng danh sách tài liệu');
         handle.setAttribute('aria-orientation','vertical');
         handle.setAttribute('aria-valuemin','0');
         handle.setAttribute('aria-valuemax','320');
@@ -247,12 +253,12 @@
                 document.body.classList.toggle('document-sidebar-collapsed',width===0);
                 handle.setAttribute('aria-valuenow',String(Math.round(width)));
                 handle.setAttribute('aria-expanded',String(width>0));
-                handle.title=width>0?'Drag to change width; click to collapse':'Click to expand document list';
+                handle.title=width>0?'Kéo để đổi chiều rộng; bấm để thu gọn':'Bấm để mở danh sách tài liệu';
                 icon.textContent=width>0?'chevron_left':'chevron_right';
                 if(options.toggleButton){
                     options.toggleButton.setAttribute('aria-expanded',String(width>0));
-                    options.toggleButton.setAttribute('aria-label',width>0?'Collapse document list':'Expand document list');
-                    options.toggleButton.title=width>0?'Collapse document list':'Expand document list';
+                    options.toggleButton.setAttribute('aria-label',width>0?'Thu gọn danh sách tài liệu':'Mở danh sách tài liệu');
+                    options.toggleButton.title=width>0?'Thu gọn danh sách tài liệu':'Mở danh sách tài liệu';
                     const toggleIcon=$('.material-symbols-outlined',options.toggleButton);
                     if(toggleIcon)toggleIcon.textContent=width>0?'chevron_left':'chevron_right';
                 }
@@ -327,10 +333,69 @@
             td.className = 'px-4 py-6 text-center text-on-surface-variant'; td.textContent = 'No data available.';
         }
     }
+    function formatDocumentTable(el) {
+        if (!el?.classList.contains('document-table')) return;
+        $$('tbody tr', el).forEach(tr => {
+            const cells = $$('td', tr);
+            if (cells.length < 6) return;
+            cells[0].classList.add('document-id');
+            const fileName = cells[1].textContent.trim();
+            const original = cells[2].textContent.trim();
+            const name = document.createElement('span'); name.className = 'document-name'; name.title = fileName; name.textContent = fileName; cells[1].replaceChildren(name);
+            const originalText = document.createElement('span'); originalText.className = 'document-secondary'; originalText.textContent = original && original !== fileName ? original : '—'; cells[2].replaceChildren(originalText);
+            const type = document.createElement('span'); type.className = 'document-type'; type.textContent = cells[3].textContent.trim() || '—'; cells[3].replaceChildren(type);
+            cells[4].classList.add('document-date');
+            $$('button',cells[5]).forEach(button => {button.classList.add('document-action');const icon=text(button);const label=icon==='visibility'?'View':icon==='edit'?'Edit':icon==='delete'?'Delete':icon;button.title=label;button.setAttribute('aria-label',label);if(label==='Delete')button.classList.add('document-delete');});
+        });
+    }
+    function formatSessionDate(value) {
+        if (!value) return '—';
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) return '—';
+        return new Intl.DateTimeFormat('en-GB', {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'}).format(parsed);
+    }
+    function formatSessionTable(el) {
+        if (!el?.classList.contains('session-table')) return;
+        $$('tbody tr', el).forEach(tr => {
+            const cells = $$('td', tr);
+            if (cells.length < 8) return;
+            cells[0].classList.add('session-secondary');
+            const sessionName = cells[1].textContent.trim() || 'Untitled session';
+            const session = document.createElement('span'); session.className = 'session-name'; session.textContent = sessionName; session.title = sessionName; cells[1].replaceChildren(session);
+            const typeText = cells[2].textContent.trim().toUpperCase();
+            const type = document.createElement('span'); type.className = 'session-type-badge'; type.textContent = typeText === 'MANUAL' ? 'Manual' : typeText || '—'; cells[2].replaceChildren(type);
+            const usersText = cells[3].textContent.trim(); const users = usersText && usersText !== '—' ? usersText.split(',').map(v => v.trim()).filter(Boolean) : [];
+            const usersWrap = document.createElement('div'); usersWrap.className = 'session-users';
+            if (!users.length) { const empty = document.createElement('span'); empty.className = 'session-empty'; empty.textContent = '—'; usersWrap.append(empty); }
+            else { users.slice(0, 2).forEach(user => { const avatar = document.createElement('span'); avatar.className = 'session-avatar'; avatar.title = user; avatar.textContent = user.slice(0,2).toUpperCase(); usersWrap.append(avatar); }); if (users.length > 2) { const more = document.createElement('span'); more.className = 'session-user-more'; more.textContent = `+${users.length - 2}`; more.title = users.slice(2).join(', '); usersWrap.append(more); } }
+            cells[3].replaceChildren(usersWrap);
+            const due = cells[4].textContent.trim(); cells[4].classList.add('session-date'); cells[4].title = due && due !== '—' ? `Due date: ${due}` : 'No due date';
+            if (due && due !== '—' && !Number.isNaN(new Date(due).getTime()) && new Date(due) < new Date()) { cells[4].classList.add('session-overdue'); cells[4].title = `Overdue · ${due}`; }
+            const rawStatus = cells[5].textContent.trim().toUpperCase(); const status = document.createElement('span'); status.className = `session-status-badge session-status-badge--${rawStatus.toLowerCase() || 'draft'}`; status.textContent = rawStatus === 'ACTIVE' ? 'Active' : rawStatus === 'CLOSED' ? 'Closed' : 'Draft'; cells[5].replaceChildren(status);
+            cells[6].classList.add('session-date');
+            const actionButtons = $$('button', cells[7]); const actionWrap = document.createElement('div'); actionWrap.className = 'session-actions'; actionButtons.forEach(button => { const raw = text(button).trim(); const label = raw === 'edit' ? 'Edit' : raw === 'Tasks' ? 'Tasks' : raw === 'Start' ? 'Start' : raw === 'Close' ? 'Close' : raw; button.classList.add('session-action'); button.title = label; button.setAttribute('aria-label', label); if (label === 'Close') button.classList.add('session-close'); actionWrap.append(button); }); cells[7].replaceChildren(actionWrap);
+        });
+    }
+    function formatTaskListTable(el) {
+        if (!el?.classList.contains('task-list-table')) return;
+        const statusLabels={PENDING:'Pending',IN_PROGRESS:'In progress',SUBMITTED:'Submitted',APPROVED:'Approved',REJECTED:'Rejected'};
+        const statusClasses={PENDING:'pending',IN_PROGRESS:'progress',SUBMITTED:'submitted',APPROVED:'approved',REJECTED:'rejected'};
+        $$('tbody tr',el).forEach(tr=>{
+            const cells=$$('td',tr); if(cells.length<5)return;
+            const documentLink=$('a',cells[0]); if(documentLink)documentLink.classList.add('cell-primary');
+            const reviewerConflictIndex=cells.length===8?6:-1;
+            const typeIndex=cells.length>=7?3:-1, statusIndex=cells.length>=7?4:2, dueIndex=cells.length>=7?5:3, actionIndex=cells.length-1;
+            if(typeIndex>=0){const rawType=cells[typeIndex].textContent.trim().toUpperCase();const type=document.createElement('span');type.className='task-type';type.textContent=rawType==='AI_ASSISTED'?'AI-assisted':rawType==='MANUAL'?'Manual':rawType||'—';cells[typeIndex].replaceChildren(type);}
+            const rawStatus=cells[statusIndex].textContent.trim().toUpperCase();const status=document.createElement('span');status.className=`task-status task-status--${statusClasses[rawStatus]||'pending'}`;status.textContent=statusLabels[rawStatus]||'Pending';cells[statusIndex].replaceChildren(status);
+            const due=cells[dueIndex].textContent.trim();cells[dueIndex].classList.add('task-due');cells[dueIndex].title=due&&due!=='—'?`Due date: ${due}`:'No due date';const parsed=new Date(due);if(due&&due!=='—'&&!Number.isNaN(parsed.getTime())){const days=(parsed.getTime()-Date.now())/86400000;if(days<0){cells[dueIndex].classList.add('task-due--overdue');cells[dueIndex].textContent='Overdue';cells[dueIndex].title=`Overdue · ${due}`;}else if(days<=2){cells[dueIndex].classList.add('task-due--soon');cells[dueIndex].textContent=`Due in ${Math.max(1,Math.ceil(days))} days`;}}
+            if(reviewerConflictIndex>=0){const raw=cells[reviewerConflictIndex].textContent.trim();const count=Number(raw);const conflict=document.createElement('span');conflict.className=`task-conflicts${Number.isFinite(count)&&count>0?' task-conflicts--active':''}`;conflict.textContent=Number.isFinite(count)&&count>0?`${count} conflict${count===1?'':'s'}`:'None';cells[reviewerConflictIndex].replaceChildren(conflict);}
+            const action=$('button',cells[actionIndex]);if(action){action.classList.add('task-action');const label=text(action).trim();action.title=label;action.setAttribute('aria-label',label);}
+        });
+    }
     function listTable(rows, columns, actions, filterFields = [], config = {}) {
         const el = config.table || $('table');
         const search = config.search || $('input[placeholder^="Search"]:not(#modalContent input)');
-        const selects = config.selects || $$('header select');
+        const selects = (config.selects || $$('header select')).filter(Boolean);
         const filterValue = (spec, row) => {
             const field = Array.isArray(spec) ? spec[0] : spec;
             return typeof field === 'function' ? field(row) : row[field];
@@ -347,11 +412,9 @@
         const pagers = config.pagers || buttons(/^(chevron_left|chevron_right|[1-6])$/);
         const render = () => {
             if(page==='Session.html'){
-                const metrics=[['Total Sessions',rows.length],['Active Sessions',rows.filter(r=>r.status==='ACTIVE').length],['Draft Sessions',rows.filter(r=>r.status==='DRAFT').length],['Closed Sessions',rows.filter(r=>r.status==='CLOSED').length]];
-                $$('main .font-display-lg').forEach((value,index)=>{
-                    value.textContent=String(metrics[index][1]);value.nextElementSibling.textContent=metrics[index][0];
-                    $$('span',value.parentElement).filter(s=>!s.classList.contains('material-symbols-outlined')).forEach(s=>s.textContent='');
-                });
+                const metrics=[rows.length,rows.filter(r=>r.status==='ACTIVE').length,rows.filter(r=>r.status==='DRAFT').length,rows.filter(r=>r.status==='CLOSED').length];
+                $$('[data-session-stat]').forEach((value,index)=>{ value.textContent=String(metrics[index] ?? 0); });
+                const count=$('[data-session-count]'); if(count) count.textContent=`${rows.length} ${rows.length === 1 ? 'session' : 'sessions'}`;
             }
             if(page==='DocumentManagement.html'){
                 const types=['','PDF'];
@@ -362,6 +425,7 @@
                     $('p',card).textContent=`${count} Files`;
                     const footer=card.lastElementChild;if(footer&&!footer.contains($('h3',card)))footer.textContent='';
                     card.onclick=()=>{folderFilter=type;current=0;const filter=selects[0];if(filter)filter.value=type;render();};
+                    const countLabel=document.querySelector('[data-document-count]');if(countLabel)countLabel.textContent=rows.length+' files uploaded';
                 });
             }
             const query = search?.value.toLocaleLowerCase().trim() || '';
@@ -371,15 +435,18 @@
                 const key=config.sortKeys?.[sortIndex] ?? columns[sortIndex]?.[1];
                 filtered=[...filtered].sort((left,right)=>{
                     const a=typeof key==='function'?key(left):left[key],b=typeof key==='function'?key(right):right[key];
-                    return String(a??'').localeCompare(String(b??''),'en',{numeric:true,sensitivity:'base'})*sortDirection;
+                    return String(a??'').localeCompare(String(b??''),'vi',{numeric:true,sensitivity:'base'})*sortDirection;
                 });
             }
             const pages = Math.max(1, Math.ceil(filtered.length / 10)); current = Math.min(current, pages - 1);
             const visible=filtered.slice(current * 10, current * 10 + 10).map((row,index)=>config.numbered?{...row,__rowNumber:current*10+index+1}:row);
             table(el, columns, visible, actions, config.body);
+            formatDocumentTable(el);
+            formatSessionTable(el);
+            formatTaskListTable(el);
             if(config.sortable)$$('thead th',el).forEach((th,index)=>{
                 if(!config.sortKeys?.[index])return;
-                th.style.cursor='pointer';th.title='Sort this column';th.setAttribute('aria-sort',sortIndex===index?(sortDirection===1?'ascending':'descending'):'none');
+                th.style.cursor='pointer';th.title='Sắp xếp cột này';th.setAttribute('aria-sort',sortIndex===index?(sortDirection===1?'ascending':'descending'):'none');
                 th.onclick=()=>{sortDirection=sortIndex===index?-sortDirection:1;sortIndex=index;current=0;render();};
             });
             pagers.forEach(b => {
@@ -388,6 +455,9 @@
                 b.disabled = label === 'chevron_left' ? current === 0 : label === 'chevron_right' ? current === pages - 1 : number === current + 1;
                 b.setAttribute('aria-current', number === current + 1 ? 'page' : 'false');
             });
+            if(page==='Session.html') pagers.forEach(b => { if (pages <= 1) b.hidden = true; });
+            if(page==='Session.html') { const footer=$('.session-pagination'); if(footer) footer.hidden=pages<=1; }
+            if(config.paginationContainer) config.paginationContainer.hidden=pages<=1;
             $$('p,span').filter(p => p.children.length === 0 && /^Showing\b/.test(text(p))).forEach(p => { p.textContent = `Showing ${filtered.length ? current * 10 + 1 : 0}–${Math.min((current + 1) * 10, filtered.length)} / ${filtered.length}`; });
         };
         search?.addEventListener('input', () => { current = 0; render(); });
@@ -407,7 +477,7 @@
         field.setAttribute('aria-label', label);
     }
     function required(field, label) {
-        if (!field.value.trim()) throw new Error(`Please enter ${label}.`);
+        if (!field.value.trim()) throw new Error(`Vui lòng nhập ${label}.`);
         return field.value.trim();
     }
     async function termsPage() {
@@ -423,27 +493,27 @@
             category.value = row.category || category.options[0].value; term.focus(); };
         const refresh = async () => { rows = await request('/terms'); list.reload(rows); };
         const list = listTable(rows, [['Financial Term','term'], ['Definition','definition'], ['Category','category'], ['Status','status'], ['Last Updated', r => date(r.updated_at)], ['Actions','$actions']], row => [
-            action('edit_note', () => edit(row)), action('delete', async () => { if (confirm(`Delete term “${row.term}”?`)) { await request(`/terms/${row.id}`, {method:'DELETE'}); if (editing === row.id) reset(); await refresh(); } }),
+            action('edit_note', () => edit(row)), action('delete', async () => { if (confirm(`Xóa thuật ngữ “${row.term}”?`)) { await request(`/terms/${row.id}`, {method:'DELETE'}); if (editing === row.id) reset(); await refresh(); } }),
         ], ['category','status']);
         bindText(/^Save Term$/, async () => {
-            const json = { term: required(term, 'term'), definition: required(definition, 'definition'), category: category.selectedIndex ? category.value : '', status: state.value };
-            if (!['ACTIVE','INACTIVE'].includes(json.status)) throw new Error('Status must be ACTIVE or INACTIVE.');
+            const json = { term: required(term, 'thuật ngữ'), definition: required(definition, 'định nghĩa'), category: category.selectedIndex ? category.value : '', status: state.value };
+            if (!['ACTIVE','INACTIVE'].includes(json.status)) throw new Error('Status phải là ACTIVE hoặc INACTIVE.');
             await request(editing ? `/terms/${editing}` : '/terms', { method: editing ? 'PUT' : 'POST', json });
-            reset(); await refresh(); notice('Term saved.');
+            reset(); await refresh(); notice('Đã lưu thuật ngữ.');
         });
         bindText(/^Cancel$/, reset);
         $('#csvFileInput').addEventListener('change', e => run(e.target, async () => {
             const file = e.target.files[0]; if (!file) return;
             const records = parseCsv(await file.text());
             const header = records.shift()?.map(h => h.replace(/^\uFEFF/, '').trim().toLowerCase());
-            if (!header?.includes('term') || !header.includes('definition')) throw new Error('CSV requires term, definition columns; category, status are optional.');
+            if (!header?.includes('term') || !header.includes('definition')) throw new Error('CSV cần cột term, definition; có thể thêm category, status.');
             const imports = records.filter(r => r.some(Boolean)).map(r => Object.fromEntries(header.map((h,i) => [h, r[i] || ''])));
-            if (imports.some(r => !r.term.trim() || !r.definition.trim() || !['ACTIVE','INACTIVE'].includes(r.status || 'ACTIVE'))) throw new Error('CSV has rows missing term/definition or invalid status.');
+            if (imports.some(r => !r.term.trim() || !r.definition.trim() || !['ACTIVE','INACTIVE'].includes(r.status || 'ACTIVE'))) throw new Error('CSV có dòng thiếu term/definition hoặc status không hợp lệ.');
             let saved = 0;
             try { for (const row of imports) { await request('/terms', {method:'POST', json:{...row, status: row.status || 'ACTIVE'}}); saved++; } }
-            catch (error) { throw new Error(`Imported ${saved}/${imports.length} rows; stopped at row ${saved + 2}: ${error.message}`); }
+            catch (error) { throw new Error(`Đã nhập ${saved}/${imports.length} dòng; dừng ở dòng ${saved + 2}: ${error.message}`); }
             finally { await refresh(); e.target.value = ''; }
-            notice(`Imported ${saved} terms.`);
+            notice(`Đã nhập ${saved} thuật ngữ.`);
         }));
     }
     function parseCsv(source) {
@@ -455,13 +525,19 @@
             else if ((c === '\n' || c === '\r') && !quoted) { if (c === '\r' && source[i+1] === '\n') i++; row.push(value); rows.push(row); row=[]; value=''; }
             else value += c;
         }
-        if (quoted) throw new Error('Unclosed quotes in CSV.');
+        if (quoted) throw new Error('CSV có dấu ngoặc kép chưa đóng.');
         if (value || row.length) { row.push(value); rows.push(row); } return rows;
     }
     async function promptsPage() {
         let editing = null;
-        const systemPrompt = await request('/prompts/system-default').catch(() => '');
+        let systemPrompt = '';
+        const loadSystemPrompt = async () => {
+            const value = await request('/prompts/system-default');
+            systemPrompt = typeof value === 'string' ? value : String(value?.content || '');
+            return systemPrompt;
+        };
         const modal = $('#modalContent'), name = $('input', modal), [description, content] = $$('textarea', modal), [active, model] = $$('select', modal);
+        content.wrap = 'off'; content.maxLength = 30000; content.classList.add('aair-prompt-editor');
         fieldLabel(active, 'Status'); options(active, [['true','ACTIVE'],['false','INACTIVE']]);
         const save = buttons(/^Create Prompt$/, modal)[0];
         const reset = () => { editing = null; name.value = ''; description.value = ''; content.value = systemPrompt; active.value = 'true'; model.selectedIndex = 0; save.textContent = 'Create Prompt'; };
@@ -474,12 +550,22 @@
         const refresh = async () => list.reload(await request('/prompts'));
         const list = listTable(await request('/prompts'), [['Prompt','name'],['Purpose','description'],['Model','model'],['Status',status],['Updated',r=>date(r.updated_at)],['Action','$actions']], row => [
             action('edit',()=>edit(row)), action(row.is_active ? 'Disable' : 'Enable', async()=>{ await request(`/prompts/${row.id}`,{method:'PUT',json:{name:row.name,description:row.description,content:row.content,model:row.model,active:!row.is_active}}); await refresh(); }),
-            action('delete',async()=>{if(confirm(`Delete prompt “${row.name}”?`)){await request(`/prompts/${row.id}`,{method:'DELETE'});await refresh();}}),
+            action('delete',async()=>{if(confirm(`Xóa prompt “${row.name}”?`)){await request(`/prompts/${row.id}`,{method:'DELETE'});await refresh();}}),
         ], [status]);
-        bindText(/New Prompt/, () => { reset(); modalOpen(); });
+        bindText(/New Prompt/, async () => {
+            try {
+                await loadSystemPrompt();
+                reset();
+                modalOpen();
+            } catch (error) {
+                reset();
+                modalOpen();
+                notice(`Không tải được prompt mặc định: ${error.message}`);
+            }
+        });
         bind(save, async () => {
-            await request(editing ? `/prompts/${editing}` : '/prompts', {method: editing ? 'PUT':'POST', json:{name:required(name,'prompt name'),description:description.value,content:required(content,'prompt content'),model:model.selectedIndex ? model.value : '',active:active.value==='true'}});
-            modalClose(); reset(); await refresh(); notice('Prompt saved.');
+            await request(editing ? `/prompts/${editing}` : '/prompts', {method: editing ? 'PUT':'POST', json:{name:required(name,'tên prompt'),description:description.value,content:required(content,'nội dung prompt'),model:model.selectedIndex ? model.value : '',active:active.value==='true'}});
+            modalClose(); reset(); await refresh(); notice('Đã lưu prompt.');
         });
     }
     async function usersPage() {
@@ -487,46 +573,54 @@
         const endpoint = canManageUsers ? '/users' : '/assignees';
         const refresh = async () => list.reload(await request(endpoint));
         const roles = canManageUsers ? await request('/roles') : [];
-        const list = listTable(await request(endpoint), [['No.',r=>r.__rowNumber],['Username',userIdentity],['Gmail','email'],['Role','role'],['Status',r=>canManageUsers?status(r):'ACTIVE'],['Created',r=>date(r.created_at)],['Actions','$actions']], row => canManageUsers ? [
-            action('edit',()=>edit(row)), action(row.is_active?'block':'check_circle',async()=>{
-                if (!confirm(`${row.is_active?'Lock':'Unlock'} account ${row.username}?`)) return;
+        const usersTable = $('main table'); usersTable?.classList.add('users-table');
+        const search = $('input[placeholder^="Search"]:not(#modalContent input)');
+        if (search) { search.classList.add('users-search'); search.placeholder = 'Search users…'; }
+        const filters = $$('header select'); filters.forEach(select => select.classList.add('filter-select'));
+        const paginationContainer = usersTable?.nextElementSibling;
+        const list = listTable(await request(endpoint), [['#',r=>r.__rowNumber],['Username',userIdentity],['Email','email'],['Role',r=>userRoleBadge(r.role)],['Status',r=>canManageUsers ? userStatusBadge(status(r)) : status(r)],['Created',r=>userDate(r.created_at)],['Actions','$actions']], row => canManageUsers ? [
+            (() => { const button = action('edit',()=>edit(row)); button.classList.add('users-action'); button.title = 'Edit user'; button.setAttribute('aria-label','Edit user'); return button; })(),
+            (() => { const label = row.is_active ? 'Deactivate user' : 'Activate user'; const button = action(row.is_active?'block':'check_circle',async()=>{
+                if (!confirm(`${row.is_active?'Deactivate':'Activate'} user ${row.username}?`)) return;
                 await request(`/users/${row.id}`,{method:'PUT',json:{role:row.role,active:!row.is_active}}); await refresh();
-            }),
-        ] : [], canManageUsers ? [[r=>r.role, roles], r=>status(r)] : ['role', r=>'ACTIVE'], {numbered:true,sortable:true,sortKeys:[null,'username','email','role',r=>status(r),'created_at',null]});
+            }); button.classList.add('users-action', 'users-action--toggle'); button.title = label; button.setAttribute('aria-label', label); if (Number(row.id) === Number(user.id)) { button.disabled = true; button.title = 'You cannot deactivate your own account'; } return button; })(),
+        ] : [], canManageUsers ? [[r=>r.role, roles], r=>status(r)] : ['role', r=>'ACTIVE'], {numbered:true,sortable:true,sortKeys:[null,'username','email',r=>r.role,r=>status(r),'created_at',null],search,selects:filters,paginationContainer});
         const modal=$('#modalContent'), [username,unused,email] = $$('input:not([type="checkbox"])',modal), role=$('select',modal);
         let editing=null;
         fieldLabel(username,'Username'); username.placeholder='e.g. manager02';
         unused.parentElement.hidden=true;
         fieldLabel(email,'Gmail'); email.placeholder='username@gmail.com'; email.type='email';
         fieldLabel(role,'Role'); options(role,roles);
-        role.insertBefore(new Option('— Select —',''), role.firstChild);
+        role.insertBefore(new Option('— Không chọn —',''), role.firstChild);
         const save=buttons(/^Create$/,modal)[0];
         const reset=()=>{editing=null;username.value='';username.disabled=false;email.value='';email.disabled=false;role.value='MANAGER';save.textContent='Create';$('h3',modal).textContent='Create User';};
         function edit(row){reset();editing=row;username.value=row.username;username.disabled=true;email.value=row.email||'';email.disabled=true;if(![...role.options].some(o=>o.value===row.role))role.add(new Option(row.role,row.role));role.value=row.role;save.textContent='Save';$('h3',modal).textContent='Edit User';modalOpen();}
-        bindText(/^New$|New Manager|New User/,()=>{reset();modalOpen();});
+        bindText(/^New$|New Manager|New User|New user/,()=>{reset();modalOpen();});
         bind(save,async()=>{
             const isEditing=Boolean(editing);
-            const json=editing?{role:role.value,active:editing.is_active}:{username:required(username,'username'),email:required(email,'Gmail'),role:role.value};
+            const json=editing?{role:role.value,active:editing.is_active}:{username:required(username,'tên tài khoản'),email:required(email,'Gmail'),role:role.value};
             await request(editing?`/users/${editing.id}`:'/users',{method:editing?'PUT':'POST',json});
             modalClose();reset();await refresh();
-            notice(isEditing?'Account updated.':'Account created, email sent and table refreshed.');
+            notice(isEditing?'Đã cập nhật tài khoản.':'Đã tạo tài khoản, gửi email và làm mới bảng.');
         });
     }
     async function documentsPage() {
+        const documentTable=$('table'); documentTable?.classList.add('document-table');
+        const documentDate=value=>{if(!value)return 'Date unavailable';const parsed=new Date(value);return Number.isNaN(parsed.getTime())?'Date unavailable':new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(parsed);};
         let pendingFiles=[];
-        const refresh = async()=>list.reload([...pendingFiles.map((file,index)=>({id:-(index+1),title:file.name,original_name:file.name,document_type:'PDF',uploaded_by_username:user.username,created_at:new Date().toISOString(),status:'PENDING_SAVE',pending:true})),...await request('/documents')]);
-        const list=listTable(await request('/documents'),[['No.','id'],['File Name','title'],['Original File','original_name'],['Type','document_type'],['Uploaded By',r=>r.uploaded_by_username||'—'],['Upload Date',r=>date(r.created_at)],['Status','status'],['Actions','$actions']],row=>row.pending?[]:[
+        const refresh = async()=>list.reload([...pendingFiles.map((file,index)=>({id:-(index+1),title:file.name,original_name:file.name,document_type:'PDF',uploaded_by_username:user.username,created_at:new Date().toISOString(),status:'NEW',pending:true})),...await request('/documents')]);
+        const list=listTable(await request('/documents'),[['ID','id'],['File Name','title'],['Original File','original_name'],['Type','document_type'],['Upload Date',r=>documentDate(r.created_at)],['Actions','$actions']],row=>row.pending?[]:[
             action('visibility',()=>documentFile(row)),action('edit',async()=>{
-                const title=prompt('Document name',row.title);if(title===null)return;if(!title.trim())throw new Error('Document name cannot be empty.');
+                const title=prompt('Tên tài liệu',row.title);if(title===null)return;if(!title.trim())throw new Error('Tên tài liệu không được trống.');
                 await request(`/documents/${row.id}`,{method:'PUT',json:{title:title.trim(),documentType:row.document_type}});await refresh();
-            }),action('delete',async()=>{if(confirm(`Delete document “${row.title}”?`)){await request(`/documents/${row.id}`,{method:'DELETE'});await refresh();}}),
-        ],['document_type']);
+            }),action('delete',async()=>{if(confirm(`Xóa tài liệu “${row.title}”?`)){await request(`/documents/${row.id}`,{method:'DELETE'});await refresh();}}),
+        ],['document_type'],{table:documentTable});
         const input=$('#documentInput');input.accept='.pdf,application/pdf';input.multiple=true;
         input.addEventListener('change',()=>run(input,async()=>{
             const files=[...input.files];if(!files.length)return;
             try {
                 const invalid=files.find(file=>!/\.pdf$/i.test(file.name)||file.size===0||file.size>50*1024*1024);
-                if(invalid)throw new Error(`File “${invalid.name}” is invalid. Please select only non-empty PDFs up to 50 MB each.`);
+                if(invalid)throw new Error(`File “${invalid.name}” không hợp lệ. Chỉ chọn PDF có nội dung, tối đa 50 MB mỗi file.`);
                 pendingFiles.push(...files); await refresh();
             } finally {input.value='';}
         }));
@@ -535,9 +629,9 @@
             if(!pendingFiles.length)return;
             const files=[...pendingFiles];let uploaded=0;
             for(const file of files){const data=new FormData();data.append('file',file);data.append('metadata',new Blob([JSON.stringify({title:file.name,documentType:'PDF'})],{type:'application/json'}));await request('/documents',{method:'POST',body:data});uploaded++;}
-            pendingFiles=[];await refresh();notice(`Saved ${uploaded} document(s) to the database.`);
+            pendingFiles=[];await refresh();notice(`Đã lưu ${uploaded} tài liệu vào cơ sở dữ liệu.`);
         });
-        window.addEventListener('beforeunload',event=>{if(!pendingFiles.length)return;event.preventDefault();event.returnValue='Confirm saving changes?';});
+        window.addEventListener('beforeunload',event=>{if(!pendingFiles.length)return;event.preventDefault();event.returnValue='Xác nhận lưu thay đổi?';});
     }
     async function sessionsPage() {
         const [documents, assignees] = await Promise.all([request('/documents'),request('/assignees')]);
@@ -559,7 +653,7 @@
         $('input',typeList).checked=true;
         const modelSection=typeList.parentElement;
         $('p',modelSection).textContent='Session Type';
-        $$('p',modelSection)[1].textContent='Choose AI labeling, manual labeling, or both.';
+        $$('p',modelSection)[1].textContent='Chọn gán nhãn AI, thủ công hoặc cả hai.';
         const modelSearch=$('input[placeholder="Search AI models..."]',modal);modelSearch.parentElement.hidden=true;
         checkList(memberList,assignees.map(u=>({id:u.id,name:`${u.username} — ${u.role}`})),'members');
         const userSection=memberList.parentElement;
@@ -580,7 +674,7 @@
             </div>
             <div class="space-y-1.5">
                 <label class="text-label-md text-on-surface-variant uppercase tracking-wider font-bold">
-                    Manual Labeler 2 <span class="font-normal normal-case text-on-surface-variant">(Optional)</span>
+                    Manual Labeler 2 <span class="font-normal normal-case text-on-surface-variant">(Required)</span>
                 </label>
                 <select id="manualLabeler2" class="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-body-md cursor-pointer">
                     <option value="">Select user (optional)...</option>
@@ -656,7 +750,7 @@
 
         function populateManualOptions(){
             populateSelect(m1Select,manualLabelers,'Select user...');
-            populateSelect(m2Select,manualLabelers,'Select user (optional)...');
+            populateSelect(m2Select,manualLabelers,'Select user...');
             populateSelect(reviewerSelect,reviewers,'Select user...');
             syncAssignmentOptions();
         }
@@ -852,50 +946,51 @@
             }catch{}
         };
         const refresh=async()=>{list.reload(await request('/sessions'));await reloadAssignees();};
-        const list=listTable(await request('/sessions'),[['No.','id'],['Session','name'],['Type','session_type'],['Assigned Users',r=>r.members.map(m=>m.username).join(', ')],['Due Date',r=>date(r.due_at)],['Status','status'],['Created',r=>date(r.created_at)],['Actions','$actions']],row=>[
+        const sessionTable=$('#sessionTable') || $('table'); sessionTable?.classList.add('session-table');
+        const list=listTable(await request('/sessions'),[['ID','id'],['Session','name'],['Type','session_type'],['Assigned Users',r=>(r.members||[]).map(m=>m.username).join(', ')||'—'],['Due Date',r=>formatSessionDate(r.due_at)],['Status','status'],['Created',r=>formatSessionDate(r.created_at)],['Actions','$actions']],row=>[
             action('edit',()=>edit(row)),action('Tasks',async()=>{
                 const tasks=(await request('/tasks')).filter(t=>t.session_id===row.id);
-                exportJson(tasks,`session-${row.id}-tasks.json`);notice(`${tasks.length} task(s) exported with assignment details.`);
+                exportJson(tasks,`session-${row.id}-tasks.json`);notice(`${tasks.length} tasks were exported with their assignments.`);
             }),...(row.status==='CLOSED'?[]:[action(row.status==='DRAFT'?'Start':'Close',async()=>{
                 if(!confirm(`${row.status==='DRAFT'?'Start':'Close'} session “${row.name}”?`))return;
                 await request(`/sessions/${row.id}/status`,{method:'PATCH',json:{status:row.status==='DRAFT'?'ACTIVE':'CLOSED'}});await refresh();
             })]),
-        ],['status']);
+        ],[['status',[['ACTIVE','Active'],['DRAFT','Draft'],['CLOSED','Closed']]]]);
         // Hide the static empty-state card; the actual table supplies its empty state.
         $$('h3').filter(h=>/No AI sessions/.test(text(h))).forEach(h=>h.parentElement.hidden=true);
         bindText(/New Session|Create First Session/,async()=>{reset();modalOpen();await reloadAssignees();});
         bind(save,async()=>{
             const userIds=selected(memberList).map(Number);
-            if(editing){await request(`/sessions/${editing.id}/members`,{method:'PUT',json:{userIds}});modalClose();await refresh();notice('Members updated.');return;}
+            if(editing){await request(`/sessions/${editing.id}/members`,{method:'PUT',json:{userIds}});modalClose();await refresh();notice('Đã cập nhật thành viên.');return;}
             const type=selected(typeList)[0]||'MANUAL', docIds=selected(documentList).map(Number);
 
             if(type==='MANUAL'){
-                required(name,'session name');
-                required(dueDate,'due date');
+                required(name,'tên phiên');
+                required(dueDate,'ngày hết hạn');
                 const sessionDue=viDateToIso(dueDate.value);
-                if(sessionDue.parsed<=new Date())throw new Error('Due date must be in the future.');
-                if(!docIds.length)throw new Error('Please select at least one PDF document.');
+                if(sessionDue.parsed<=new Date())throw new Error('Ngày hết hạn phải ở tương lai.');
+                if(!docIds.length)throw new Error('Vui lòng chọn ít nhất một tài liệu PDF.');
 
-                if(!m1Select.value)throw new Error('Please select Manual Labeler 1.');
-                if(!reviewerSelect.value)throw new Error('Please select a Reviewer.');
+                if(!m1Select.value)throw new Error('Vui lòng chọn Manual Labeler 1.');
+                if(!m2Select.value)throw new Error('Vui lòng chọn Manual Labeler 2.');
+                if(!reviewerSelect.value)throw new Error('Vui lòng chọn Reviewer.');
 
                 const m1Id=Number(m1Select.value);
-                const m2Id=m2Select.value?Number(m2Select.value):null;
+                const m2Id=Number(m2Select.value);
                 const revId=Number(reviewerSelect.value);
 
                 const chosenIds=[m1Id,m2Id,revId].filter(Boolean);
-                if(new Set(chosenIds).size!==chosenIds.length)throw new Error('Cannot select the same user across different roles.');
+                if(new Set(chosenIds).size!==chosenIds.length)throw new Error('Không được chọn trùng người dùng giữa các vai trò.');
 
                 const m1User=currentAssignees.find(u=>u.id===m1Id);
-                const m2User=m2Id?currentAssignees.find(u=>u.id===m2Id):null;
+                const m2User=currentAssignees.find(u=>u.id===m2Id);
                 const revUser=currentAssignees.find(u=>u.id===revId);
 
-                if(!m1User || m1User.role!=='MANUAL_LABELER')throw new Error('Manual Labeler 1 must have role MANUAL_LABELER.');
-                if(m2User && m2User.role!=='MANUAL_LABELER')throw new Error('Manual Labeler 2 must have role MANUAL_LABELER.');
-                if(!revUser || revUser.role!=='REVIEWER')throw new Error('Reviewer must have role REVIEWER.');
+                if(!m1User || m1User.role!=='MANUAL_LABELER')throw new Error('Manual Labeler 1 phải có vai trò MANUAL_LABELER.');
+                if(!m2User || m2User.role!=='MANUAL_LABELER')throw new Error('Manual Labeler 2 phải có vai trò MANUAL_LABELER.');
+                if(!revUser || revUser.role!=='REVIEWER')throw new Error('Reviewer phải có vai trò REVIEWER.');
 
-                const manualLabelerIds=[m1Id];
-                if(m2Id)manualLabelerIds.push(m2Id);
+                const manualLabelerIds=[m1Id,m2Id];
 
                 const payload={
                     name:name.value.trim(),
@@ -910,30 +1005,30 @@
                 };
 
                 await request('/sessions',{method:'POST',json:payload});
-                modalClose();reset();await refresh();notice('Session created successfully.');
+                modalClose();reset();await refresh();notice('Đã tạo session thành công');
                 return;
             }
 
             if(type==='AI'){
-                required(name,'session name');
-                required(dueDate,'due date');
+                required(name,'tên phiên');
+                required(dueDate,'ngày hết hạn');
                 const sessionDue=viDateToIso(dueDate.value);
-                if(sessionDue.parsed<=new Date())throw new Error('Due date must be in the future.');
-                if(!docIds.length)throw new Error('Please select at least one PDF document.');
+                if(sessionDue.parsed<=new Date())throw new Error('Ngày hết hạn phải ở tương lai.');
+                if(!docIds.length)throw new Error('Vui lòng chọn ít nhất một tài liệu PDF.');
 
-                if(!aiLabelerSelect.value)throw new Error('Please select an AI Labeler.');
-                if(!aiReviewerSelect.value)throw new Error('Please select a Reviewer.');
+                if(!aiLabelerSelect.value)throw new Error('Vui lòng chọn AI Labeler.');
+                if(!aiReviewerSelect.value)throw new Error('Vui lòng chọn Reviewer.');
 
                 const aiId=Number(aiLabelerSelect.value);
                 const revId=Number(aiReviewerSelect.value);
 
-                if(aiId===revId)throw new Error('Cannot select the same user across different roles.');
+                if(aiId===revId)throw new Error('Không được chọn trùng người dùng giữa các vai trò.');
 
                 const aiUser=currentAssignees.find(u=>u.id===aiId);
                 const revUser=currentAssignees.find(u=>u.id===revId);
 
-                if(!aiUser || aiUser.role!=='AI_LABELER')throw new Error('AI Labeler must have role AI_LABELER.');
-                if(!revUser || revUser.role!=='REVIEWER')throw new Error('Reviewer must have role REVIEWER.');
+                if(!aiUser || aiUser.role!=='AI_LABELER')throw new Error('AI Labeler phải có vai trò AI_LABELER.');
+                if(!revUser || revUser.role!=='REVIEWER')throw new Error('Reviewer phải có vai trò REVIEWER.');
 
                 const payload={
                     name:name.value.trim(),
@@ -948,27 +1043,50 @@
                 };
 
                 await request('/sessions',{method:'POST',json:payload});
-                modalClose();reset();await refresh();notice('Session created successfully.');
+                modalClose();reset();await refresh();notice('Đã tạo session thành công');
                 return;
             }
         });
     }
     async function taskList() {
-        const rows=await request('/tasks');
+        const rows=(await request('/tasks')).filter(row=>user.role!=='REVIEWER'||String(row.task_type||row.type||'').toUpperCase()==='MANUAL');
+        const isLabeler=['MANUAL_LABELER','LABELER','AI_LABELER'].includes(user.role);
+        const isReviewer=user.role==='REVIEWER';
+        if(isReviewer){
+            const conflictCounts=new Map();
+            const cases=await request('/review-cases').catch(()=>[]);
+            await Promise.all(cases.map(async reviewCase=>{
+                let detail=reviewCase;
+                if(!Array.isArray(detail.fields)&&detail.id)detail=await request(`/review-cases/${detail.id}`).catch(()=>reviewCase);
+                const count=Array.isArray(detail.fields)?detail.fields.filter(field=>String(field.comparisonType||'').toUpperCase()!=='EXACT').length:Number(detail.conflict_count??detail.conflicts??0)||0;
+                [detail.left_task_id,detail.right_task_id].filter(Boolean).forEach(taskId=>conflictCounts.set(String(taskId),count));
+            }));
+            rows.forEach(row=>{if(row.conflict_count==null)row.conflict_count=conflictCounts.get(String(row.id))??0;});
+        }
+        const formatTaskDate=value=>{if(!value)return '—';const parsed=new Date(value);if(Number.isNaN(parsed.getTime()))return '—';const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];const pad=number=>String(number).padStart(2,'0');return `${parsed.getDate()} ${months[parsed.getMonth()]} ${parsed.getFullYear()}, ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;};
         const tableTarget=$('#taskTable');
+        tableTarget?.classList.add('task-list-table');
         const pageTargets=tableTarget?{
             table:tableTarget,
             body:$('#taskRows'),
             search:$('#taskSearch'),
             selects:[$('#taskSessionFilter'),$('#taskStatusFilter')],
-            pagers:$$('button',$('#taskPagination')),
+            pagers:$('#taskPagination')?$$('button',$('#taskPagination')):[],
+            paginationContainer:$('#taskPagination')?.parentElement,
         }:{};
-        listTable(rows,[['Document','document_title'],['Session','session_name'],['Annotator','assignee'],['Type','task_type'],['Status','status'],['Due',r=>date(r.due_at)],['Action','$actions']],row=>[
-            action('Open',()=>go(`Task.html?id=${row.id}`)),
-        ],['session_name','status'],pageTargets);
+        const documentCell=row=>{const link=document.createElement('a');link.href=`Task.html?id=${row.id}`;link.textContent=row.document_title||'Untitled document';return link;};
+        const columns=isLabeler?[['Document',documentCell],['Session','session_name'],['Status','status'],['Due',r=>formatTaskDate(r.due_at)],['Action','$actions']]:isReviewer?[['Document',documentCell],['Session','session_name'],['Annotator','assignee'],['Type','task_type'],['Status','status'],['Due',r=>formatTaskDate(r.due_at)],['Conflicts',r=>r.conflict_count??r.conflicts??0],['Action','$actions']]:[['Document',documentCell],['Session','session_name'],['Annotator','assignee'],['Type','task_type'],['Status','status'],['Due',r=>formatTaskDate(r.due_at)],['Action','$actions']];
+        const list=listTable(rows,columns,row=>{
+            const status=String(row.status||'PENDING').toUpperCase();const label=status==='PENDING'?'Start':status==='IN_PROGRESS'?'Continue':status==='SUBMITTED'?'Review':status==='APPROVED'?'View':'Open';return [action(label,()=>go(`Task.html?id=${row.id}`))];
+        },['session_name','status'],{...pageTargets,table:tableTarget,numbered:false});
+        const count=$('[data-task-count]');if(count)count.textContent=`${rows.length} task${rows.length===1?'':'s'} assigned to you`;
     }
     async function legacyResultAnalysisPage() {
         window.AAIRSharedHeader?.mount(user);
+        const logoutButton=$('#raLogout');
+        logoutButton?.addEventListener('click',()=>{
+            if(window.confirm('Are you sure you want to log out?')) AAIR.logout();
+        });
         setupDocumentSidebar({
             sidebar:$('#raDocuments'),
             workspace:$('.ra-layout'),
@@ -978,7 +1096,11 @@
         });
         const qs=new URLSearchParams(location.search);
         const requestedId=qs.get('id');
-        const tasks=await request('/tasks');
+        const tasks=(await request('/tasks')).filter(task=>{
+            const session=String(task.session_name||task.session||'').trim();
+            const assignee=String(task.assignee||task.assigned_to||'').trim().toLowerCase();
+            return !/^test\d*$/i.test(session)&&assignee!=='yes';
+        });
         const taskSelect=$('#raTaskSelect');
         const durationEl=$('#raSessionDuration');
         let currentTimerSessionId=Symbol('initial');
@@ -998,10 +1120,10 @@
             currentTimerSessionId=sessionId;
             if(sessionTimerInterval){clearInterval(sessionTimerInterval);sessionTimerInterval=null;}
             if(!durationEl)return;
-            if(!startedAt){durationEl.textContent='—:—:—';durationEl.title='Session not started';return;}
+            if(!startedAt){durationEl.textContent='—:—:—';durationEl.title='Session has not started';return;}
             const startMs=new Date(startedAt).getTime();
             if(isNaN(startMs)){durationEl.textContent='—:—:—';return;}
-            durationEl.title=`Started: ${startedAt}`;
+            durationEl.title=`Bắt đầu: ${startedAt}`;
             const tick=()=>{
                 const elapsedSec=Math.max(0,Math.floor((Date.now()-startMs)/1000));
                 durationEl.textContent=formatSessionDuration(elapsedSec);
@@ -1029,6 +1151,10 @@
         const modelKey=row=>row?.run_id?`run::${row.run_id}`:`saved::${row?.provider||'AI'}::${row?.model||row?.provider||'Model'}`;
         const pct=row=>{const n=Number(row?.confidence);return Number.isFinite(n)?`${Math.round(n<=1?n*100:n)}%`:'—';};
         const name=task=>task?.document_title||task?.title||`Document #${task?.id||''}`;
+        const pageCount=task=>{
+            const total=task?.page_count??task?.pageCount??task?.total_pages??task?.document_page_count??task?.document?.page_count??task?.pages;
+            return Array.isArray(total)?total.length:(total||'—');
+        };
         const setMessage=message=>{const el=$('#raMessage');if(el)el.textContent=message||'';};
         const selectTask=(id)=>{
             const next=tasks.find(row=>String(row.id)===String(id))||tasks[0];
@@ -1038,6 +1164,7 @@
             $('#raSession').textContent=next.session_name||'AI Results';
             $('#raType').textContent=next.task_type||'AI';
             $('#raDocumentTitle').textContent=name(next);
+            $('#raPageLabel').textContent=`Page 1 / ${pageCount(next)}`;
             updateSessionTimer(next);
             renderDocuments();
             loadTaskResults();
@@ -1063,7 +1190,13 @@
         const rowFor=(rows,indicator)=>rows.find(row=>key(row)===indicator);
         const draw=(target,rows,other,side)=>{
             target.replaceChildren();
-            if(!rows.length){const empty=document.createElement('p');empty.className='ra-empty-results';empty.textContent='No results for this model.';target.append(empty);return;}
+            if(!rows.length){
+                const empty=document.createElement('div');empty.className='ra-empty-results';
+                const icon=document.createElement('span');icon.className='material-symbols-outlined';icon.textContent='compare_arrows';
+                const title=document.createElement('b');title.textContent='Select a result source to compare';
+                const hint=document.createElement('span');hint.textContent='Choose a source from the dropdown above.';
+                empty.append(icon,title,hint);target.append(empty);return;
+            }
             rows.forEach(row=>{
                 const compare=rowFor(other,key(row));
                 const different=state.analyzed&&(!compare||String(value(row))!==String(value(compare)));
@@ -1085,15 +1218,17 @@
         const renderResults=()=>{
             const a=rowsFor(state.modelA),b=rowsFor(state.modelB);
             const selectedA=state.models.find(model=>model.key===state.modelA),selectedB=state.models.find(model=>model.key===state.modelB);
-            const metaA=$('#raModelAMeta'),metaB=$('#raModelBMeta');if(metaA)metaA.textContent=selectedA?`${selectedA.provider} · ${selectedA.model}`:'';if(metaB)metaB.textContent=selectedB?`${selectedB.provider} · ${selectedB.model}`:'';
+            $('#raModelAMeta').textContent=selectedA?`${selectedA.provider} · ${selectedA.model}`:'';$('#raModelBMeta').textContent=selectedB?`${selectedB.provider} · ${selectedB.model}`:'';
             draw(resultsA,a,b,'A');draw(resultsB,b,a,'B');
             const all=[...new Set([...a,...b].map(key).filter(Boolean))];
             const differences=state.analyzed?all.filter(indicator=>{const left=rowFor(a,indicator),right=rowFor(b,indicator);return !left||!right||String(value(left))!==String(value(right));}):[];
             $('#raDifferenceCount').textContent=String(differences.length);
+            $('.ra-footer')?.classList.toggle('has-differences',differences.length>0);
         };
         const openPage=page=>{
             const next=Number(page);if(!Number.isInteger(next)||next<1)return;
-            state.page=next;$('#raPageLabel').textContent=`Page ${next}`;
+            state.page=next;
+            $('#raPageLabel').textContent=`Page ${next} / ${pageCount(state.task)}`;
             if(state.pdfUrl)pdf.src=`${state.pdfUrl}#page=${next}`;
         };
         const loadPdf=async()=>{
@@ -1112,7 +1247,7 @@
             if(state.task.id!==taskId)return;
             state.task=Object.assign(state.task,detail);
             const savedProvider=state.task.task_type==='MANUAL'?'Manual Labeler':'AI Labeler';
-            const savedModel=state.task.assignee?`Saved result · ${state.task.assignee}`:'Saved result';
+            const savedModel='Saved result';
             const savedRows=Array.isArray(detail.labels)?detail.labels.map(row=>({
                 provider:savedProvider,model:savedModel,indicator_name:row.label_name,
                 indicator_value:row.label_value,source_page:row.source_page,confidence:row.confidence,
@@ -1135,7 +1270,7 @@
         const initial=tasks.find(row=>String(row.id)===String(requestedId))||tasks[0];
         if(!initial){setMessage('No assigned task.');return;}
         taskSelect.onchange=()=>selectTask(taskSelect.value);
-        const syncModelOptions=()=>{[...modelBSelect.options].forEach(option=>{option.disabled=option.value===state.modelA;});[...modelASelect.options].forEach(option=>{option.disabled=option.value===state.modelB;});const analyze=$('#raAnalyze');const blocked=!state.modelA||!state.modelB||state.modelA===state.modelB;analyze.disabled=blocked;analyze.title=blocked?'Select two different result sources.':'Analyze differences between the two sources';};
+        const syncModelOptions=()=>{[...modelBSelect.options].forEach(option=>{option.disabled=option.value===state.modelA;});[...modelASelect.options].forEach(option=>{option.disabled=option.value===state.modelB;});const analyze=$('#raAnalyze');const blocked=!state.modelA||!state.modelB||state.modelA===state.modelB;analyze.disabled=blocked;analyze.title=blocked?'Select a task and two result sources.':'Analyze differences between the two sources';};
         modelASelect.onchange=()=>{state.modelA=modelASelect.value;if(state.modelA===state.modelB)state.modelB=[...modelBSelect.options].find(option=>!option.disabled&&option.value!==state.modelA)?.value||'';state.analyzed=false;syncModelOptions();renderResults();};
         modelBSelect.onchange=()=>{state.modelB=modelBSelect.value;if(state.modelA===state.modelB){setMessage('The two models must be different result sources.');state.analyzed=false;}syncModelOptions();renderResults();};
         $('#raAnalyze').onclick=()=>{state.analyzed=Boolean(state.modelA&&state.modelB&&state.modelA!==state.modelB);renderResults();setMessage(state.analyzed?'Differences between the two models have been analyzed.':'Select two different result sources.');};
@@ -1173,7 +1308,8 @@
                 :Promise.resolve(''),
         ]);
         const id=new URLSearchParams(location.search).get('id');
-        const initial=id?tasks.find(t=>String(t.id)===id):tasks.find(t=>user.role==='REVIEWER'?t.status==='SUBMITTED':!['APPROVED','SUBMITTED'].includes(t.status))||tasks[0];
+        const reviewerTasks=user.role==='REVIEWER'?tasks.filter(t=>String(t.task_type||t.type||'').toUpperCase()==='MANUAL'):tasks;
+        const initial=id?reviewerTasks.find(t=>String(t.id)===id):reviewerTasks.find(t=>user.role==='REVIEWER'?t.status==='SUBMITTED':!['APPROVED','SUBMITTED'].includes(t.status))||reviewerTasks[0];
         const item=$('.document-item'), container=$('#documentList')||item?.parentElement, template=item?.cloneNode(true);
         const documentButtons=new Map();
         const selectAll=$('#selectAll'), selectedCounter=$('#selectedCounter'), selectedCount=$('#selectedCount');
@@ -1229,7 +1365,7 @@
         let panel=$('[data-annotation-panel]')||heading?.parentElement;
         const reviewBodies=$$('main .overflow-y-auto').filter(el=>$('input[type="checkbox"]',el));
         if(!panel)panel=reviewBodies[0];
-        if(!panel)throw new Error('Task label panel not found.');
+        if(!panel)throw new Error('Không tìm thấy vùng nhãn của tác vụ.');
         const normalizedRole=String(user?.role||'').trim().toUpperCase().replace(/[\s-]+/g,'_');
         const isManualLabeler=normalizedRole==='MANUAL_LABELER';
         const labeler=['AI_LABELER','MANUAL_LABELER'].includes(normalizedRole);
@@ -1245,49 +1381,49 @@
             const card=document.createElement('article');card.className='annotation-field-card annotation-field-card--legacy';
             const parts=splitLabelValue(row.labelValue,row.sourceLabel);
             const top=document.createElement('div');top.className='annotation-field-card__top';
-            const friendlyLabels={company_name:'Company Name',industry:'Industry',report_period:'Report Period',report_year:'Report Year',revenue:'Revenue',total_assets:'Total Assets',equity:'Equity',cfo:'Operating Cash Flow (CFO)',cfi:'Investing Cash Flow (CFI)',cff:'Financing Cash Flow (CFF)',net_cash_flow:'Net Cash Flow'};
+            const friendlyLabels={company_name:'Tên công ty',industry:'Ngành nghề',report_period:'Kỳ báo cáo',report_year:'Năm báo cáo',revenue:'Doanh thu',total_assets:'Tổng tài sản',equity:'Vốn chủ sở hữu',cfo:'Dòng tiền từ HĐKD',cfi:'Dòng tiền từ HĐĐT',cff:'Dòng tiền từ HĐTC',net_cash_flow:'Dòng tiền thuần'};
             const key=String(row.labelName||'').trim().toLowerCase();
             const labelBlock=document.createElement('span');labelBlock.className='annotation-field-name';
-            const friendly=document.createElement('strong');friendly.textContent=friendlyLabels[key]||row.labelName||'New field';
+            const friendly=document.createElement('strong');friendly.textContent=friendlyLabels[key]||row.labelName||'Field mới';
             const technical=document.createElement('small');technical.textContent=row.labelName||'field_key';labelBlock.append(friendly,technical);
-            const termInput=document.createElement('input');termInput.type='text';termInput.value=row.labelName||'';termInput.maxLength=150;termInput.setAttribute('aria-label','Field name');termInput.className='annotation-term-input';termInput.disabled=readonly;termInput.hidden=true;
+            const termInput=document.createElement('input');termInput.type='text';termInput.value=row.labelName||'';termInput.maxLength=150;termInput.setAttribute('aria-label','Tên field');termInput.className='annotation-term-input';termInput.disabled=readonly;termInput.hidden=true;
             const stateBadge=document.createElement('span');stateBadge.className='annotation-status';
-            const editButton=document.createElement('button');editButton.type='button';editButton.className='annotation-icon-button';editButton.title=readonly?'Click Unlock to edit':'Edit field';editButton.disabled=readonly;editButton.innerHTML='<span class="material-symbols-outlined">edit</span>';
-            const confirmButton=document.createElement('button');confirmButton.type='button';confirmButton.className='annotation-icon-button annotation-icon-button--confirm';confirmButton.title='Confirm (Enter)';confirmButton.innerHTML='<span class="material-symbols-outlined">check</span>';
+            const editButton=document.createElement('button');editButton.type='button';editButton.className='annotation-icon-button';editButton.title=readonly?'Bấm Mở khóa để chỉnh sửa':'Sửa field';editButton.disabled=readonly;editButton.innerHTML='<span class="material-symbols-outlined">edit</span>';
+            const confirmButton=document.createElement('button');confirmButton.type='button';confirmButton.className='annotation-icon-button annotation-icon-button--confirm';confirmButton.title='Xác nhận (Enter)';confirmButton.innerHTML='<span class="material-symbols-outlined">check</span>';
             top.append(labelBlock,termInput,stateBadge,editButton,confirmButton);
             const valueInput=document.createElement('textarea');valueInput.value=parts.editableValue;valueInput.placeholder='Enter value...';valueInput.maxLength=20000;valueInput.rows=4;valueInput.setAttribute('aria-label','Field value');valueInput.className='annotation-definition-input';valueInput.disabled=readonly;
             const meta=document.createElement('div');meta.className='annotation-field-card__meta';
-            const pageInput=document.createElement('input');pageInput.type='number';pageInput.min='1';pageInput.max=String(pdfPageCount||9999);pageInput.step='1';pageInput.required=true;pageInput.value=row.sourcePage==null?'':String(row.sourcePage);pageInput.setAttribute('aria-label','Source page');pageInput.className='annotation-page-input';pageInput.disabled=readonly;pageInput.hidden=true;
-            const pageButton=document.createElement('button');pageButton.type='button';pageButton.className='annotation-page-chip';pageButton.title='Go to source page in PDF';
+            const pageInput=document.createElement('input');pageInput.type='number';pageInput.min='1';pageInput.max=String(pdfPageCount||9999);pageInput.step='1';pageInput.required=true;pageInput.value=row.sourcePage==null?'':String(row.sourcePage);pageInput.setAttribute('aria-label','Source page');pageInput.setAttribute('aria-readonly','true');pageInput.readOnly=true;pageInput.title='Click to jump to this PDF page';pageInput.className='annotation-page-input';pageInput.disabled=false;pageInput.hidden=true;
+            const pageButton=document.createElement('button');pageButton.type='button';pageButton.className='annotation-page-chip';pageButton.title='Đến trang nguồn trong PDF';
             const confidence=document.createElement('span');confidence.className='annotation-confidence';const confidencePct=row.confidence==null?null:Math.round(row.confidence*100);confidence.textContent=`AI ${confidencePct==null?'—':`${confidencePct}%`}`;confidence.dataset.level=confidencePct==null?'unknown':confidencePct>=90?'high':confidencePct>=70?'medium':'low';
             const currentValue=parts.editableValue.trim();const suspicious=(key==='report_period'&&currentValue&&/^fy$/i.test(currentValue))||(key==='report_year'&&currentValue&&!/^\d{4}$/.test(currentValue))||(key==='revenue'&&currentValue&&!/[\d]/.test(currentValue));
-            const warning=document.createElement('span');warning.className='annotation-warning';warning.hidden=!suspicious;warning.title='Value needs verification against source document.';warning.innerHTML='<span class="material-symbols-outlined">warning</span>';
-            const sourceToggle=document.createElement('button');sourceToggle.type='button';sourceToggle.className='annotation-source-toggle';sourceToggle.textContent='View source';sourceToggle.disabled=!pageInput.value;sourceToggle.title=pageInput.value?'View source label':'No source page';
+            const warning=document.createElement('span');warning.className='annotation-warning';warning.hidden=!suspicious;warning.title='Giá trị cần kiểm tra lại với tài liệu nguồn.';warning.innerHTML='<span class="material-symbols-outlined">warning</span>';
+            const sourceToggle=document.createElement('button');sourceToggle.type='button';sourceToggle.className='annotation-source-toggle';sourceToggle.textContent='Xem nguồn';sourceToggle.disabled=!pageInput.value;sourceToggle.title=pageInput.value?'Xem nhãn nguồn':'Chưa có trang nguồn';
             meta.append(pageButton,pageInput,confidence,warning,sourceToggle);
             const hasSavedValue=Boolean(row.labelName||row.labelValue||row.sourcePage);
             const saveState=document.createElement('span');saveState.className='annotation-save-state';
             const cardState={termInput,valueInput,pageInput,sourceLabel:parts.sourceLabel,confidence:row.confidence,saveState,dirty:false,saved:hasSavedValue,confirmed:false};
             const paintState=()=>{const state=readonly?'Read-only':cardState.confirmed?'Approved':cardState.dirty?'Edited':hasSavedValue?'Pending review':'Empty';stateBadge.textContent=state;stateBadge.dataset.state=readonly?'readonly':cardState.confirmed?'confirmed':cardState.dirty?'edited':'pending';saveState.textContent=readonly?'Read-only':cardState.dirty?'Unsaved':cardState.saved?'Saved':'Empty';pageButton.textContent=pageInput.value?`Page ${pageInput.value}`:'No source page';pageButton.disabled=!pageInput.value;sourceToggle.disabled=!pageInput.value;sourceToggle.title=pageInput.value?'View source label':'No source page';};
             const changed=()=>{if(readonly)return;cardState.dirty=true;cardState.confirmed=false;saveState.dataset.state='dirty';paintState();queueAutoSave(cardState);};
-            const jumpToSource=()=>{const page=Number(pageInput.value);if(!Number.isInteger(page)||page<1)return;const iframe=$('#pdfViewer');const viewer=iframe?.contentWindow?.PDFViewerApplication?.pdfViewer;if(viewer){viewer.currentPageNumber=page;return;}if(iframe?.src)iframe.src=iframe.src.replace(/#.*/,'')+`#page=${page}&zoom=page-width`;};
+            const jumpToSource=()=>{const raw=Number(pageInput.value);if(!Number.isFinite(raw))return;const max=pdfPageCount||Number(pageInput.max)||9999;const page=Math.min(max,Math.max(1,Math.trunc(raw)));pageInput.value=String(page);const iframe=$('#pdfViewer');const viewer=iframe?.contentWindow?.PDFViewerApplication?.pdfViewer;if(viewer){viewer.currentPageNumber=page;return;}if(iframe?.src)iframe.src=iframe.src.replace(/#.*/,'')+`#page=${page}&zoom=page-width`;};
             const original={term:termInput.value,value:valueInput.value,page:pageInput.value};
-            editButton.onclick=()=>{if(card.classList.contains('is-editing')){termInput.value=original.term;valueInput.value=original.value;pageInput.value=original.page;valueInput.readOnly=true;pageInput.disabled=true;cardState.dirty=false;card.classList.remove('is-editing');labelBlock.hidden=false;termInput.hidden=true;pageInput.hidden=true;paintState();return;}card.classList.add('is-editing');labelBlock.hidden=true;termInput.hidden=false;termInput.disabled=readonly;valueInput.readOnly=false;pageInput.disabled=false;pageInput.hidden=false;termInput.focus();};
+            editButton.onclick=()=>{if(card.classList.contains('is-editing')){termInput.value=original.term;valueInput.value=original.value;pageInput.value=original.page;valueInput.readOnly=true;pageInput.readOnly=true;cardState.dirty=false;card.classList.remove('is-editing');labelBlock.hidden=false;termInput.hidden=true;pageInput.hidden=true;paintState();return;}card.classList.add('is-editing');labelBlock.hidden=true;termInput.hidden=false;termInput.disabled=readonly;valueInput.readOnly=false;pageInput.readOnly=true;pageInput.hidden=false;termInput.focus();};
             confirmButton.onclick=()=>{cardState.confirmed=true;changed();paintState();};
             const definitionLabel=document.createElement('label');definitionLabel.className='annotation-legacy-label';definitionLabel.textContent='Definition';
             const source=document.createElement('div');source.className='annotation-source-label';source.hidden=false;
             const sourceTitle=document.createElement('strong');sourceTitle.textContent='SOURCE LABEL';
             const sourceValue=document.createElement('span');sourceValue.textContent=parts.sourceLabel||'NO AI SOURCE LABEL YET';
             source.append(sourceTitle,sourceValue);
-            sourceToggle.onclick=()=>{if(sourceToggle.disabled)return;source.hidden=!source.hidden;sourceToggle.textContent=source.hidden?'View source':'Hide source';};pageButton.onclick=jumpToSource;
-            termInput.addEventListener('input',changed);valueInput.addEventListener('input',changed);pageInput.addEventListener('input',changed);
+            sourceToggle.onclick=()=>{if(sourceToggle.disabled)return;source.hidden=!source.hidden;sourceToggle.textContent=source.hidden?'Xem nguồn':'Ẩn nguồn';};pageButton.onclick=jumpToSource;pageInput.addEventListener('click',jumpToSource);pageInput.addEventListener('change',()=>{jumpToSource();changed();});pageInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();jumpToSource();changed();}});
+            termInput.addEventListener('input',changed);valueInput.addEventListener('input',changed);
             valueInput.addEventListener('keydown',event=>{if(event.key==='Escape'&&card.classList.contains('is-editing')){editButton.click();return;}if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();confirmButton.click();}if(event.key==='Tab'&&!event.shiftKey){const index=cards.indexOf(cardState);const next=cards[index+1];if(next){event.preventDefault();next.valueInput.focus();}}});
             card.append(top,definitionLabel,valueInput,meta,source);paintState();cards.push(cardState);panel.append(card);return valueInput;
         }
         const editor={
-            get value(){return JSON.stringify(cards.map(c=>{const editableValue=c.valueInput.value;return {labelName:c.termInput.value.trim(),labelValue:c.sourceLabel?`${editableValue}\nSource label: ${c.sourceLabel}`:editableValue,sourcePage:c.pageInput.value?Number(c.pageInput.value):null,confidence:c.confidence};}).filter(c=>c.labelName||c.labelValue));},
+            get value(){return JSON.stringify(cards.map(c=>{const editableValue=c.valueInput.value;return {labelName:c.termInput.value.trim(),labelValue:c.sourceLabel?`${editableValue}\nNhãn nguồn: ${c.sourceLabel}`:editableValue,sourcePage:c.pageInput.value?Number(c.pageInput.value):null,confidence:c.confidence};}).filter(c=>c.labelName||c.labelValue));},
             set value(value){clearCards();const rows=JSON.parse(value);rows.forEach(addLabel);if(!rows.length&&labeler)addLabel();const saveDock=panel.querySelector('.annotation-panel-save');if(saveDock)panel.append(saveDock);},
             get readOnly(){return readonly;},
-            set readOnly(value){readonly=value;cards.forEach(c=>{c.termInput.disabled=readonly;c.valueInput.readOnly=readonly;c.pageInput.disabled=readonly;c.saveState.textContent=readonly?'Read-only':c.dirty?'Unsaved':c.saved?'Saved':'Empty';});},
+            set readOnly(value){readonly=value;cards.forEach(c=>{c.termInput.disabled=readonly;c.valueInput.readOnly=readonly;c.pageInput.disabled=false;c.pageInput.readOnly=true;c.saveState.textContent=readonly?'Read-only':c.dirty?'Unsaved':c.saved?'Saved':'Empty';});},
             focus(){cards[0]?.valueInput.focus();},
         };
         editor.value='[]';
@@ -1330,7 +1466,7 @@
                     runButton.title='';
                 }
             });
-            modelSelect.addEventListener('change',()=>{updatePrompts();if(modelSelect.value)notice(`Selected model ${modelSelect.value}.`);});
+            modelSelect.addEventListener('change',()=>{updatePrompts();if(modelSelect.value)notice(`Đã chọn model ${modelSelect.value}.`);});
         }else if(modelSelect){options(modelSelect,[],true);modelSelect.disabled=true;}
         if(!initial){
             buttons(/Save|Submit|Nộp bài|Approve|Analyze/).forEach(b=>unavailable(b,'No task assigned.'));
@@ -1369,7 +1505,7 @@
                 button.setAttribute('aria-current',selected?'true':'false');
             });
             const iframe=$('#pdfViewer');
-            if(iframe){iframe.removeAttribute('src');iframe.srcdoc='<p style="font-family:sans-serif;padding:24px">Loading PDF document…</p>';}
+            if(iframe){iframe.removeAttribute('src');iframe.srcdoc='<p style="font-family:sans-serif;padding:24px">Đang tải tài liệu PDF…</p>';}
             try {
                 const blob=await request(`/documents/${task.document_id}/file`,{blob:true});
                 if(fileUrl)URL.revokeObjectURL(fileUrl);
@@ -1382,7 +1518,7 @@
                             const documentInFrame=iframe.contentDocument;
                             const toolbar=documentInFrame?.querySelector('#toolbarViewerRight');
                             if(!toolbar||documentInFrame.querySelector('[data-aair-pdf-control]'))return;
-                            [['fit-width','↔','Fit width'],['fit-page','□','Fit page'],['rotate','↻','Rotate page']].forEach(([action,icon,title])=>{
+                            [['fit-width','↔','Vừa chiều rộng'],['fit-page','□','Vừa toàn trang'],['rotate','↻','Xoay trang']].forEach(([action,icon,title])=>{
                                 const button=documentInFrame.createElement('button');button.type='button';button.dataset.aairPdfControl=action;button.title=title;button.className='toolbarButton';button.textContent=icon;
                                 button.onclick=()=>{const viewer=iframe.contentWindow?.PDFViewerApplication?.pdfViewer;if(!viewer)return;if(action==='fit-width')viewer.currentScaleValue='page-width';if(action==='fit-page')viewer.currentScaleValue='page-fit';if(action==='rotate')viewer.pagesRotation=(viewer.pagesRotation+90)%360;};toolbar.append(button);
                             });
@@ -1391,7 +1527,7 @@
                         const syncPageCount=()=>{
                             if(task.id!==openedTaskId)return;
                             const count=Number(iframe.contentWindow?.PDFViewerApplication?.pdfDocument?.numPages||0);
-                            if(count>0){pdfPageCount=count;cards.forEach(card=>{card.pageInput.max=String(count);card.pageInput.title=`Valid page: 1-${count}`;});addPdfControls();return;}
+                            if(count>0){pdfPageCount=count;cards.forEach(card=>{card.pageInput.max=String(count);card.pageInput.title=`Trang hợp lệ: 1-${count}`;});addPdfControls();return;}
                             if(++attempts<30)setTimeout(syncPageCount,200);
                         };
                         syncPageCount();
@@ -1399,10 +1535,10 @@
                     iframe.removeAttribute('srcdoc');iframe.src=viewerUrl;iframe.title=task.document_title;
                 }
                 if(labeler && !['SUBMITTED','APPROVED'].includes(task.status) && AAIR.createWorkTimer) workTimer=AAIR.createWorkTimer({taskId:task.id});
-                notice(`Opened document ${task.document_title}.`);
+                notice(`Đã mở tài liệu ${task.document_title}.`);
                 if(completionGuard)await completionGuard.refresh();
             } catch(error) {
-                if(iframe)iframe.srcdoc=`<p style="font-family:sans-serif;padding:24px;color:#b91c1c">Failed to load PDF document.</p>`;
+                if(iframe)iframe.srcdoc=`<p style="font-family:sans-serif;padding:24px;color:#b91c1c">Không tải được tài liệu PDF.</p>`;
                 throw error;
             }
         }
@@ -1413,7 +1549,7 @@
                 button:submitTaskButton,
                 loadStatus:()=>request(`/session-completion${task?.session_id?`?sessionId=${task.session_id}`:''}`),
                 findItem:documentStatus=>documentButtons.get(Number(documentStatus.id)),
-                blockedTitle:status=>`${(status.missingItems||[]).length} document(s) remaining incomplete`,
+                blockedTitle:status=>`Còn ${(status.missingItems||[]).length} tài liệu chưa hoàn tất`,
                 onStatus:status=>{
                     const reported=status.documents||[];
                     const sessionTasks=reported.length?reported:tasks.filter(item=>String(item.session_id)===String(task?.session_id));
@@ -1430,6 +1566,10 @@
         window.addEventListener('pagehide',()=>{if(fileUrl)URL.revokeObjectURL(fileUrl);});
         const runAiButton=buttons(/Run AI|Chạy AI/)[0];
         if(runAiButton && ['AI_LABELER','MANUAL_LABELER'].includes(user.role)){ runAiButton.setAttribute('aria-label','Run AI');
+            if(normalizedRole==='MANUAL_LABELER'){
+                if(modelSelect)modelSelect.value='Gemini';
+                modelSelect?.closest('div')?.querySelector('label[for="manualAiModel"]')?.setAttribute('hidden','');
+            }
             const updateRunAiState=()=>{
                 const blocked=task?.task_type==='MANUAL'&&task?.assistance_mode==='NONE';
                 runAiButton.disabled=blocked||!modelSelect?.value;
@@ -1452,13 +1592,25 @@
                     notice(`Extracted ${result.labels?.length||0} fields using ${result.provider}. Review them and click Save.`);
                 }finally{runAiButton.innerHTML=oldMarkup;}
             });
-        }else if(runAiButton)unavailable(runAiButton,'Only AI Labeler can run AI models.');
+        }else if(runAiButton)unavailable(runAiButton,'Chỉ AI Labeler được chạy mô hình AI.');
+        const runAiSilently=async()=>{
+            if(normalizedRole!=='MANUAL_LABELER'||task?.assistance_mode==='NONE'||task?.labels?.length)return;
+            try{
+                const result=await request(`/tasks/${task.id}/run-ai`,{method:'POST',json:{provider:'Gemini',prompt:systemPrompt||null}});
+                editor.value=JSON.stringify(result.labels||[]);editor.readOnly=false;
+                setDocumentSaveState(task.id,'ai-pending');
+                cards.forEach(card=>{card.dirty=true;card.saveState.dataset.state='dirty';card.saveState.textContent='AI result not saved';});
+                queueAutoSave();
+            }catch(error){
+                console.warn('Background AI extraction failed.',error);
+            }
+        };
         function labels(){
-            let data;try{data=JSON.parse(editor.value);}catch{throw new Error('Labels must be valid JSON.');}
-            if(!Array.isArray(data)||data.length>500||data.some(l=>!l||typeof l.labelName!=='string'||!l.labelName.trim()||l.labelName.length>150||!(l.labelValue==null||typeof l.labelValue==='string')||(l.labelValue?.length||0)>20000||!Number.isInteger(l.sourcePage)||l.sourcePage<1||(pdfPageCount&&l.sourcePage>pdfPageCount)||!(l.confidence==null||typeof l.confidence==='number'&&l.confidence>=0&&l.confidence<=1)))throw new Error(`Each field requires a name, value, source page from 1${pdfPageCount?`-${pdfPageCount}`:''} and confidence from 0 to 1 (or null); maximum 500 fields.`);
+            let data;try{data=JSON.parse(editor.value);}catch{throw new Error('Nhãn phải là JSON hợp lệ.');}
+            if(!Array.isArray(data)||data.length>500||data.some(l=>!l||typeof l.labelName!=='string'||!l.labelName.trim()||l.labelName.length>150||!(l.labelValue==null||typeof l.labelValue==='string')||(l.labelValue?.length||0)>20000||!Number.isInteger(l.sourcePage)||l.sourcePage<1||(pdfPageCount&&l.sourcePage>pdfPageCount)||!(l.confidence==null||typeof l.confidence==='number'&&l.confidence>=0&&l.confidence<=1)))throw new Error(`Mỗi chỉ tiêu cần tên, giá trị, trang nguồn từ 1${pdfPageCount?`-${pdfPageCount}`:''} và confidence từ 0 đến 1 (hoặc null); tối đa 500 chỉ tiêu.`);
             return data;
         }
-        let manualSaveButton=null;
+        const manualSaveButton=$('#manualSaveButton')||$('#aiSaveButton');
         const save=async(showNotice=true,track=true,refreshAfter=true)=>{
             const data=labels();
             if(['PENDING','REJECTED'].includes(task.status)){await request(`/tasks/${task.id}/start`,{method:'POST'});task.status='IN_PROGRESS';}
@@ -1467,11 +1619,10 @@
             if(track&&workTimer)await workTimer.stop('SAVE',true);
             if(showNotice)notice('Data saved successfully.');
         };
-        if(labeler && panel && !aiContent){
-            const saveWrap=document.createElement('div');saveWrap.className='annotation-panel-save';
-            manualSaveButton=document.createElement('button');manualSaveButton.type='button';manualSaveButton.textContent='Save';manualSaveButton.disabled=true;manualSaveButton.className='annotation-save-button';manualSaveButton.setAttribute('aria-label','Save');
-            saveWrap.append(manualSaveButton);panel.append(saveWrap);
-            manualSaveButton.onclick=async()=>{if(manualSaveButton.disabled)return;manualSaveButton.disabled=true;manualSaveButton.textContent='Saving…';try{await save();setDocumentSaveState(task.id,'saved');cards.forEach(card=>{card.dirty=false;card.saved=true;card.saveState.dataset.state='saved';card.saveState.textContent='Saved';});window.location.reload();}catch(error){manualSaveButton.disabled=false;manualSaveButton.textContent='Save';throw error;}manualSaveButton.textContent='Save';};
+        if(manualSaveButton){
+            manualSaveButton.disabled=true;
+            manualSaveButton.setAttribute('aria-label','Save');
+            bind(manualSaveButton,async()=>{manualSaveButton.disabled=true;manualSaveButton.textContent='Saving…';try{await save();setDocumentSaveState(task.id,'saved');cards.forEach(card=>{card.dirty=false;card.saved=true;card.saveState.dataset.state='saved';card.saveState.textContent='Saved';});window.location.reload();}catch(error){manualSaveButton.disabled=false;manualSaveButton.textContent='Save';throw error;}manualSaveButton.textContent='Save';});
         }
         let autoSaveTimer=null,autoSavePromise=Promise.resolve();
         const setSaveState=(state,message)=>cards.filter(card=>card.dirty).forEach(card=>{card.saveState.dataset.state=state;card.saveState.textContent=message;});
@@ -1495,12 +1646,13 @@
             if(aiContent)return;
             autoSaveTimer=setTimeout(()=>{autoSaveTimer=null;autoSavePromise=autoSavePromise.then(performAutoSave,performAutoSave);},1000);
         };
+        if(normalizedRole==='MANUAL_LABELER')void runAiSilently();
         bindText(/^(Submit Task|Nộp bài)$/,async()=>{if(!labels().length)throw new Error('Add at least one field before submitting.');await flushAutoSave();if(['PENDING','REJECTED'].includes(task.status))await save(false,false,false);if(completionGuard&&!await completionGuard.ensure('Unable to submit the task'))return;await request(`/tasks/${task.id}/submit`,{method:'POST'});if(workTimer)await workTimer.stop('SUBMIT');await refresh();if(completionGuard)await completionGuard.refresh();notice('Task submitted successfully.');});
         if(labeler){
             const saveDock=panel.querySelector('.annotation-panel-save');
             if(saveDock) panel.append(saveDock);
         }
-        if(aiContent){
+        if(aiContent && !manualSaveButton){
             const topHeader=$$('header')[1];
             buttons(/^Edit$/,topHeader).forEach(button=>button.remove());
             const saveWrap=document.createElement('div');
@@ -1522,12 +1674,12 @@
             }
         }
         bindText(/Approve Review/,async()=>{
-            const answer=prompt('Enter APPROVED to approve or REJECTED to request changes:','APPROVED');if(answer===null)return;
-            const decision=answer.trim().toUpperCase();if(!['APPROVED','REJECTED'].includes(decision))throw new Error('Decision must be APPROVED or REJECTED.');
-            const feedback=prompt(decision==='REJECTED'?'Reason for requesting changes (required):':'Feedback (optional):','');if(feedback===null)return;
-            await request(`/tasks/${task.id}/review`,{method:'POST',json:{decision,feedback}});await refresh();notice(`Review result saved: ${decision}.`);
+            const answer=prompt('Nhập APPROVED để duyệt hoặc REJECTED để yêu cầu sửa:','APPROVED');if(answer===null)return;
+            const decision=answer.trim().toUpperCase();if(!['APPROVED','REJECTED'].includes(decision))throw new Error('Quyết định phải là APPROVED hoặc REJECTED.');
+            const feedback=prompt(decision==='REJECTED'?'Lý do yêu cầu sửa (bắt buộc):':'Nhận xét (không bắt buộc):','');if(feedback===null)return;
+            await request(`/tasks/${task.id}/review`,{method:'POST',json:{decision,feedback}});await refresh();notice(`Đã lưu kết quả: ${decision}.`);
         });
-        bindText(/^Analyze$/,()=>{exportJson({taskId:task.id,status:task.status,labels:task.labels,reviews:task.reviews},`task-${task.id}-analysis.json`);notice(`Exported ${task.labels.length} labels and ${task.reviews.length} review decisions.`);});
+        bindText(/^Analyze$/,()=>{exportJson({taskId:task.id,status:task.status,labels:task.labels,reviews:task.reviews},`task-${task.id}-analysis.json`);notice(`Đã xuất ${task.labels.length} nhãn và ${task.reviews.length} quyết định kiểm duyệt.`);});
         notice(`${task.document_title} — ${task.status}`);
     }
     async function logsPage() {
@@ -1547,7 +1699,7 @@
             const filtered=rows.filter(r=>Object.values(r).join(' ').toLowerCase().includes(query)&&filters.every((s,i)=>!s.value||r[i===0?'resource_type':'action']===s.value));
             table($('table'),columns,filtered,r=>[action('View',()=>show(r))]);
             previous.disabled=pageIndex===0;next.disabled=rows.length<100;
-            $$('p,span').filter(p=>p.children.length===0&&/^Showing/.test(text(p))).forEach(p=>p.textContent=`Page ${pageIndex+1}: ${filtered.length} records`);
+            $$('p,span').filter(p=>p.children.length===0&&/^Showing/.test(text(p))).forEach(p=>p.textContent=`Trang ${pageIndex+1}: ${filtered.length} bản ghi`);
         };
         const configureFilters=()=>filters.forEach((s,i)=>options(s,[...new Set(rows.map(r=>r[i===0?'resource_type':'action']))].sort(),true));
         configureFilters();search.addEventListener('input',render);filters.forEach(s=>s.addEventListener('change',render));
@@ -1639,15 +1791,15 @@
         bind(saveButton,async()=>{
             if(user.role!=='ADMIN'||!snapshot)return;
             const permissions=[...changes.values()];
-            if(!permissions.length){notice('No permission changes.');return;}
+            if(!permissions.length){notice('Không có thay đổi permission.');return;}
             const data=await request(`/permissions/${selectedRole}`,{method:'PUT',json:{permissions}});
-            renderSnapshot(data); notice('Permission changes saved.');
+            renderSnapshot(data); notice('Đã lưu thay đổi permission.');
         });
         await selectRole(selectedRole);
     }
     async function dashboardPage() {
         if (user.role === 'TERMINOLOGY' && window.AAIRTerminologyDashboardPage) {
-            return window.AAIRTerminologyDashboardPage({request});
+            return window.AAIRTerminologyDashboardPage({request,user});
         }
         const data=await request('/dashboard');
         const role=user.role;
@@ -1663,7 +1815,11 @@
             $('#pendingTasksValue').textContent=String(pending);
             $('#completedTasksValue').textContent=String(completed);
             $('#overallProgressValue').textContent=`${percent}%`;
-            $('#overallProgressRing')?.style.setProperty('--dashboard-progress',`${percent}%`);
+            $('#overallProgressBar')?.style.setProperty('width',`${percent}%`);
+            const taskStatusLabels={PENDING:'Pending',IN_PROGRESS:'In progress',SUBMITTED:'Submitted',APPROVED:'Approved',REJECTED:'Rejected'};
+            const taskStatusClasses={PENDING:'pending',IN_PROGRESS:'progress',SUBMITTED:'submitted',APPROVED:'approved',REJECTED:'rejected'};
+            const relativeTaskTime=value=>{const parsed=new Date(value||'');if(Number.isNaN(parsed.getTime()))return '—';const seconds=Math.max(0,Math.round((Date.now()-parsed.getTime())/1000));if(seconds<60)return 'Just now';if(seconds<3600)return `${Math.floor(seconds/60)} min ago`;if(seconds<86400)return `${Math.floor(seconds/3600)} hr ago`;return `${Math.floor(seconds/86400)} days ago`;};
+            const tasksBody=$('#myTasksBody');if(tasksBody){tasksBody.innerHTML=rows.slice(0,5).map(row=>{const status=String(row.status||'PENDING').toUpperCase();const updated=row.updated_at||row.created_at||row.updatedAt;return `<tr class="my-task-row" tabindex="0" data-task-id="${row.id||''}"><td>${row.document_title||'Untitled document'}</td><td>${row.session_name||'Unassigned session'}</td><td><span class="my-task-status my-task-status--${taskStatusClasses[status]||'pending'}">${taskStatusLabels[status]||'Pending'}</span></td><td title="${updated||''}">${relativeTaskTime(updated)}</td><td><a href="Task.html?id=${row.id||''}" class="text-primary font-semibold hover:underline">Continue</a></td></tr>`;}).join('')||'<tr><td colspan="5">No tasks assigned.</td></tr>';tasksBody.querySelectorAll('.my-task-row').forEach(row=>{const open=()=>go(`Task.html?id=${row.dataset.taskId}`);row.addEventListener('click',event=>{if(event.target.closest('a'))return;open();});row.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();open();}});});}
             bind($('#continueLastSession'),()=>go(rows[0]?`Task.html?id=${rows[0].id}`:'ViewAll.html'));
             bind($('#refreshDashboard'),()=>location.reload());
             return;
@@ -1671,19 +1827,69 @@
         // All dashboard designs have their KPI cards in the first grid.
         const grid=$('main .grid');
         if(grid){
-            const entries=Object.entries(data);
-            [...grid.children].forEach((card,index)=>{
+            if(role==='ADMIN' && grid.children[2]){
+                const auditCard=grid.children[2];
+                if(!auditCard.querySelector('.admin-audit-icon')){
+                    const auditHeader=auditCard.querySelector('.flex.justify-between.items-start');
+                    if(auditHeader){
+                        const auditIcon=document.createElement('div');
+                        auditIcon.className='p-2 bg-secondary-container/20 rounded-lg text-secondary admin-audit-icon';
+                        auditIcon.innerHTML='<span class="material-symbols-outlined">list_alt</span>';
+                        auditHeader.prepend(auditIcon);
+                    }
+                }
+            }
+                const entries=Object.entries(data);
+                const managerKpiLabels=['Total Tasks','Pending Review','Approved','In Progress'];
+            [...grid.children].forEach((card,index)=>{card.classList.add('admin-kpi-card');
                 const value=$('h3[class*="32px"],h3[class*="headline"],p[class*="headline-md"],p[class*="text-3xl"],span[class*="text-3xl"]',card)
                     || $$('h3,p',card).find(e=>/^\d/.test(text(e)));
                 if(!value)return;
-                const entry=entries[index];value.textContent=entry?String(entry[1]):'—';
-                const label=value.previousElementSibling;if(label)label.textContent=entry?entry[0]:'No data available';
-                $$('svg',card).forEach(s=>s.hidden=true);
-                $$('span,p,div',card).filter(e=>e!==value&&e!==label&&!e.contains(value)&&!e.contains(label)&&/\+\d|%|STABLE|Critical|Action Required|Last 7 Days|^add\s+\d/i.test(text(e))).forEach(e=>e.textContent='');
+                const entry=entries[index];value.textContent=entry?String(entry[1]):'—';value.classList.add('admin-kpi-value');
+                const label=value.previousElementSibling;if(label){const adminLabels=['Total Accounts','Active Accounts','Audit Events','Security Alerts'];label.textContent=role==='ADMIN'?(adminLabels[index]||'No data available.'):role==='MANAGER'?(managerKpiLabels[index]||'No data available'):entry?entry[0]:'No data available';label.classList.add('admin-kpi-label');}
+                $$('svg',card).filter(s=>!s.classList.contains('admin-security-svg')).forEach(s=>s.hidden=true);
+                if(role==='ADMIN' && index===2){card.querySelectorAll('svg,.absolute').forEach(element=>element.remove());}
+                $$('span,p,div',card).filter(e=>e!==value&&e!==label&&!e.contains(value)&&!e.contains(label)&&!e.querySelector('.admin-audit-icon')&&/\+\d|%|STABLE|Critical|Action Required|Last 7 Days|^add\s+\d/i.test(text(e))).forEach(e=>e.textContent='');
             });
         }
         if(role==='ADMIN'){
-            table($('table'),[['Time',r=>date(r.created_at)],['User','username'],['Resource','resource_type'],['ID','resource_id'],['Action','action']],rows.slice(0,3));
+            const adminGrid=$('main .grid');
+            $$('main .admin-mini-chart h3').forEach(heading=>replacePanel(heading,['No data available.']));
+            const securityCard=adminGrid?.children[3];
+            const detailText=(row,action)=>{const raw=String(row.details||row.description||'').trim();const generic=(action||'Activity').replaceAll('_',' ').toLowerCase()+' event';if(raw&&raw.toLowerCase()!==generic)return raw;return ({CREATE:'Created a new record',UPDATE:'Updated record details',RESOLVE_FIELD:'Resolved a review field',DELETE:'Deleted a record',LOGIN_FAILED:'Failed login attempt',LOCK:'Account locked',LOGIN:'Signed in',LOGOUT:'Signed out',EXPORT:'Exported audit data',IMPORT:'Imported data',SAVE_LABELS:'Saved label updates',START:'Started a labeling task'}[action]||'Recorded audit activity');};
+            const auditRows=rows.map((row,index)=>({
+                id:row.id??index,
+                time:row.created_at||row.timestamp||row.logged_at||row.updated_at,
+                user:row.username||row.user||'Unknown',
+                role:({ADMIN:'Admin',MANAGER:'Manager',REVIEWER:'Reviewer',LABELER:'Labeler',MANUAL_LABELER:'Labeler',ANALYST:'Analyst',RESULT_ANALYST:'Analyst'}[row.role||row.user_role]||row.role||'User'),
+                resource:row.resource_type||row.resource||'SYSTEM',
+                resourceId:row.resource_id??row.id??'—',
+                action:String(row.action||'UNKNOWN').toUpperCase(),
+                details:detailText(row,String(row.action||'UNKNOWN').toUpperCase())
+            }));
+            const actionTone=action=>({CREATE:'create',UPDATE:'update',RESOLVE_FIELD:'update',DELETE:'delete',LOGIN_FAILED:'security',LOCK:'security',LOGIN:'login',LOGOUT:'login',EXPORT:'export',IMPORT:'export'}[action]||'neutral');
+            const timeValue=value=>{const date=new Date(value);return Number.isNaN(date.getTime())?null:date;};
+            const fullTime=value=>{const date=timeValue(value);return date?new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(date):'Timestamp unavailable';};
+            const relativeTime=value=>{const date=timeValue(value);if(!date)return '—';const seconds=Math.max(0,Math.round((Date.now()-date.getTime())/1000));if(seconds<60)return 'Just now';if(seconds<3600)return `${Math.floor(seconds/60)} min ago`;if(seconds<86400)return `${Math.floor(seconds/3600)} hr ago`;return `${Math.floor(seconds/86400)} days ago`;};
+            const renderAdminAudit=()=>{
+                const searchValue=($('#adminAuditSearch')?.value||'').toLowerCase();
+                const selectedUser=$('#adminAuditUser')?.value||'all';
+                const selectedAction=$('#adminAuditAction')?.value||'all';
+                const selectedPeriod=$('#adminTimeFilter')?.value||'all';
+                const limit={today:1,'7d':7,'30d':30,all:Infinity}[selectedPeriod];
+                const now=Date.now();
+                const filtered=auditRows.filter(row=>{
+                    const date=timeValue(row.time);const inPeriod=!date||limit===Infinity||(now-date.getTime())/86400000<=limit;
+                    const matchesSearch=!searchValue||[row.user,row.role,row.resource,row.action,row.details].join(' ').toLowerCase().includes(searchValue);
+                    return inPeriod&&matchesSearch&&(selectedUser==='all'||row.user===selectedUser)&&(selectedAction==='all'||row.action===selectedAction);
+                });
+                                const tableEl=$('table',document);const body=tableEl?.querySelector('tbody');const head=tableEl?.querySelector('thead tr');if(!body||!head)return;
+                tableEl.classList.add('admin-audit-table');head.innerHTML='<th>Time</th><th>User</th><th>Resource</th><th>Action</th><th>Details</th>';body.replaceChildren();
+                filtered.slice(0,8).forEach(row=>{const tr=document.createElement('tr');tr.className='admin-audit-row';tr.tabIndex=0;const timeCell=document.createElement('td');timeCell.className='admin-audit-time';const time=document.createElement('time');time.dateTime=row.time||'';time.title=fullTime(row.time);time.textContent=relativeTime(row.time);timeCell.append(time);tr.append(timeCell);const userCell=document.createElement('td');userCell.innerHTML=`<span class="admin-audit-user"><i class="admin-audit-avatar">${row.user.slice(0,2).toUpperCase()}</i><span><strong>${row.user}</strong><span class="admin-role-badge">${row.role}</span></span></span>`;tr.append(userCell);const resourceCell=document.createElement('td');resourceCell.innerHTML=`<a class="admin-resource-link" href="#${row.resource}-${row.resourceId}">${row.resource} #${row.resourceId}</a>`;tr.append(resourceCell);const actionCell=document.createElement('td');actionCell.innerHTML=`<span class="admin-action-badge admin-action--${actionTone(row.action)}">${row.action.replaceAll('_',' ')}</span>`;tr.append(actionCell);const detailCell=document.createElement('td');detailCell.textContent=row.details;tr.append(detailCell);body.append(tr);});
+                const alertCount=auditRows.filter(row=>['LOGIN_FAILED','LOCK'].includes(row.action)).length;const count=securityCard?.querySelector('[data-security-count]');if(count)count.textContent=String(alertCount);if(securityCard){securityCard.classList.toggle('admin-security-card--alert',alertCount>0);const state=securityCard.querySelector('.admin-security-state');const trend=securityCard.querySelector('.admin-kpi-trend');if(state){state.textContent=alertCount?'Action required':'All clear';const securityIcon=securityCard.querySelector('.admin-security-svg');if(securityIcon)securityIcon.innerHTML=alertCount?'<path d="M12 3 5 6v5c0 4.55 2.84 8.74 7 10 4.16-1.26 7-5.45 7-10V6l-7-3Z"></path><path d="M12 8v4M12 16h.01"></path>':'<path d="M12 3 5 6v5c0 4.55 2.84 8.74 7 10 4.16-1.26 7-5.45 7-10V6l-7-3Z"></path><path d="m9 12 2 2 4-4"></path>';}if(trend){trend.textContent=alertCount?`${alertCount} security event${alertCount===1?'':'s'} in 24 hours`:'All clear';}}
+            };
+            const userSelect=$('#adminAuditUser'),actionSelect=$('#adminAuditAction');[...new Set(auditRows.map(row=>row.user))].forEach(userName=>userSelect?.append(new Option(userName,userName)));[...new Set(auditRows.map(row=>row.action))].forEach(action=>actionSelect?.append(new Option(action,action)));['adminAuditSearch','adminAuditUser','adminAuditAction','adminTimeFilter'].forEach(id=>{const element=$(`#${id}`);element?.addEventListener(element.tagName==='SELECT'?'change':'input',renderAdminAudit);});
+            renderAdminAudit();
             bindText(/View Full Audit/,()=>go('LogView.html'));
         }else if(role==='TERMINOLOGY'){
             table($('table'),[['Term','term'],['Category','category'],['Date',r=>date(r.updated_at)],['Status','status']],rows.slice(0,10));
@@ -1691,11 +1897,42 @@
             const heading=$$('h3').find(h=>text(h)==='Category Distribution');
             if(heading)replacePanel(heading,Object.entries(rows.reduce((groups,r)=>{groups[r.category||'Other']=(groups[r.category||'Other']||0)+1;return groups;},{})).map(([k,v])=>`${k}: ${v}`));
         }else if(role==='MANAGER'){
-            const tables=$$('table');
-            table(tables[0],[['Document','document_title'],['Assigned To','assignee'],['Status','status'],['Created',r=>date(r.created_at)]],rows.slice(0,10));
-            const title=$$('h3').find(h=>text(h)==='AI Model Status');if(title)title.textContent='Task Status';
-            const team=await request('/assignees');table(tables[1],[['Username','username'],['Role','role']],team);
-            bindText(/View All/,()=>go('UserManagement.html'));bindText(/View Detailed Logs/,()=>go('Session.html'));
+            const managerTable=$('#managerTaskTable')||$('table');
+            const managerFilter=$('#managerTimeFilter');
+            const statusLabels={PENDING:'Pending',IN_PROGRESS:'In progress',SUBMITTED:'Submitted',APPROVED:'Approved',REJECTED:'Rejected',pending:'Pending',in_progress:'In progress',submitted:'Submitted',approved:'Approved',rejected:'Rejected'};
+            const statusClasses={PENDING:'pending',IN_PROGRESS:'progress',SUBMITTED:'submitted',APPROVED:'approved',REJECTED:'rejected',pending:'pending',in_progress:'progress',submitted:'submitted',approved:'approved',rejected:'rejected'};
+            const managerDate=value=>{const date=new Date(value);return Number.isNaN(date.getTime())?null:date;};
+            const managerRelative=value=>{const date=managerDate(value);if(!date)return 'Date unavailable';const days=Math.max(0,Math.floor((Date.now()-date.getTime())/86400000));return days===0?'Today':days===1?'1 day ago':days+' days ago';};
+            const managerFullDate=value=>{const date=managerDate(value);return date?new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(date):'Timestamp unavailable';};
+            const managerInitials=name=>String(name||'User').slice(0,2).toUpperCase();
+            const managerPeriodLimit=value=>({today:1,'7d':7,'30d':30,all:Infinity}[value]??30);
+            const renderManagerDashboard=()=>{['Total Tasks','Pending Review','Approved','In Progress'].forEach((label,index)=>{const node=document.querySelectorAll('.manager-kpi-label')[index];if(node)node.textContent=label;});
+                const limit=managerPeriodLimit(managerFilter?.value||'30d');
+                const visible=rows.filter(row=>{const date=managerDate(row.created_at||row.createdAt||row.updated_at);return !date||limit===Infinity||(Date.now()-date.getTime())/86400000<=limit;});
+                const counts={total:visible.length,pending:visible.filter(row=>String(row.status||'').toUpperCase()==='PENDING').length,progress:visible.filter(row=>String(row.status||'').toUpperCase()==='IN_PROGRESS').length,submitted:visible.filter(row=>String(row.status||'').toUpperCase()==='SUBMITTED').length,approved:visible.filter(row=>String(row.status||'').toUpperCase()==='APPROVED').length};
+                Object.entries({total:counts.total,pending:counts.pending,progress:counts.progress,approved:counts.approved}).forEach(([key,value])=>{const node=document.querySelector('[data-manager-stat="'+key+'"]');if(node)node.textContent=String(value);});
+                const approvedSub=document.querySelector('.manager-kpi-card:nth-child(3) .manager-kpi-sub strong');if(approvedSub)approvedSub.textContent=(counts.total?Math.round(counts.approved/counts.total*100):0)+'% of total tasks';
+                if(managerTable){
+                    const body=managerTable.querySelector('tbody');
+                    if(body)body.innerHTML=visible.slice(0,10).map(row=>{const status=String(row.status||'PENDING');const assignee=row.assignee||row.assigned_to||'Unassigned';const role=String(assignee).toLowerCase().includes('ai')?'AI Labeler':'Manual Labeler';const id=row.id??'';return '<tr tabindex="0" data-task-id="'+id+'"><td><span class="manager-document" title="'+(row.document_title||'Untitled document')+'">'+(row.document_title||'Untitled document')+'</span></td><td><span class="manager-assignee"><i class="manager-avatar">'+managerInitials(assignee)+'</i><span><span class="manager-user-name">'+assignee+'</span><span class="manager-role">'+role+'</span></span></span></td><td><span class="manager-status manager-status--'+(statusClasses[status]||'pending')+'">'+(statusLabels[status]||'Pending')+'</span></td><td><time class="manager-created" title="'+managerFullDate(row.created_at||row.createdAt||row.updated_at)+'">'+managerRelative(row.created_at||row.createdAt||row.updated_at)+'</time></td></tr>';}).join('')||'<tr><td colspan="4" style="text-align:center;color:#64748b">No tasks in this period.</td></tr>';
+                    body.querySelectorAll('tr[data-task-id]').forEach(row=>{row.addEventListener('click',()=>go('Task.html?id='+encodeURIComponent(row.dataset.taskId)));row.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();row.click();}});});
+                }
+                const distribution=[counts.pending,counts.progress,counts.submitted,counts.approved];document.querySelectorAll('.manager-role-line').forEach((line,index)=>{const value=distribution[index]||0;const label=line.querySelector('b');const bar=line.querySelector('i');if(label)label.textContent=String(value);if(bar)bar.style.width=(counts.total?Math.round(value/counts.total*100):0)+'%';});
+            };
+            managerFilter?.addEventListener('change',renderManagerDashboard);
+            bind($('#managerRefresh'),()=>{renderManagerDashboard();});
+            renderManagerDashboard();
+            bindText(/View Detailed Logs/,()=>go('Session.html'));
+        }else if(role==='AI_LABELER'){
+            const statusLabels={PENDING:'Pending Review',IN_PROGRESS:'In progress',SUBMITTED:'Submitted',APPROVED:'Approved',REJECTED:'Rejected'};
+            const statusClasses={PENDING:'pending',IN_PROGRESS:'progress',SUBMITTED:'submitted',APPROVED:'approved',REJECTED:'rejected'};
+            const relative=value=>{const parsed=new Date(value||'');if(Number.isNaN(parsed.getTime()))return 'Recently';const seconds=Math.max(0,Math.round((Date.now()-parsed.getTime())/1000));if(seconds<3600)return 'Less than an hour ago';if(seconds<86400)return `${Math.floor(seconds/3600)} hours ago`;return `${Math.floor(seconds/86400)} days ago`;};
+            const kpiGrid=$('main .grid');
+            if(kpiGrid){kpiGrid.className='ai-kpi-grid';const daily=rows.length,pending=rows.filter(row=>['PENDING','IN_PROGRESS'].includes(String(row.status||'').toUpperCase())).length,approved=rows.filter(row=>String(row.status||'').toUpperCase()==='APPROVED').length,urgent=rows.filter(row=>{const due=new Date(row.due_at||'');return !Number.isNaN(due.getTime())&&due<new Date()&&!['APPROVED','SUBMITTED'].includes(String(row.status||'').toUpperCase());}).length;const cards=[['assignment','Daily Tasks',daily,'Assigned today'],['task_alt','Pending Review',pending,'All pending items'],['check_circle','Approved',approved,'Approved tasks'],['priority_high','Urgent Tasks',urgent,urgent?'Needs attention':'Nothing urgent']];kpiGrid.replaceChildren(...cards.map(([icon,label,value,sub])=>{const card=document.createElement('article');card.className='ai-kpi-card';card.innerHTML=`<div class="ai-kpi-card__icon"><span class="material-symbols-outlined">${icon}</span></div><p class="ai-kpi-card__label">${label}</p><strong class="ai-kpi-card__value">${value}</strong><p class="ai-kpi-card__sub">${sub}</p>`;return card;}));}
+            const sessions=$$('h2,h3').find(h=>text(h)==='Current AI Labeling Sessions');
+            if(sessions){const section=sessions.parentElement.parentElement;const cards=$('.grid',section);if(cards){cards.className='ai-session-list';cards.replaceChildren(...rows.slice(0,4).map(row=>{const card=document.createElement('article');const status=String(row.status||'PENDING').toUpperCase();const completed=Number(row.completed_sections||row.labeled_sections||0),total=Number(row.total_sections||row.sections_total||0),percent=total?Math.round(completed/total*100):0;const stage=row.stage||row.task_stage||(row.assistance_mode==='AI_ASSISTED'?'AI-assisted':'AI labeling');card.className='ai-session-card';card.innerHTML=`<div class="ai-session-card__top"><h3>${row.document_title||'Untitled document'}</h3><span class="ai-badge ai-badge--${statusClasses[status]||'pending'}">${statusLabels[status]||'Pending Review'}</span></div><div class="ai-session-card__meta"><div><span>Session</span><strong>${row.session_name||'—'}</strong></div><div><span>Status</span><strong><span class="ai-badge ai-badge--${statusClasses[status]||'pending'}">${statusLabels[status]||'Pending Review'}</span></strong></div><div><span>Stage</span><strong>${stage}</strong></div></div><div class="ai-session-card__progress"><div class="ai-session-card__progress-head"><span>Progress</span><span>${completed}/${total||0} sections · ${percent}%</span></div><div class="ai-session-card__bar"><span style="width:${percent}%"></span></div></div><a class="ai-session-card__action" href="Task.html?id=${row.id}">Continue</a>`;return card;}));}}
+            const recentHeading=$$('h3,h4').find(h=>text(h)==='Recent Activity');
+            if(recentHeading){replacePanel(recentHeading,[]);const container=recentHeading.parentElement.parentElement;const content=container.lastElementChild;if(content){content.className='ai-recent-list';content.innerHTML=rows.slice(0,5).map(row=>{const status=String(row.status||'PENDING').toUpperCase();return `<div class="ai-recent-item"><span class="ai-recent-document">${row.document_title||'Untitled document'} ${status.toLowerCase()}</span><span class="ai-badge ai-badge--${statusClasses[status]||'pending'}">${statusLabels[status]||'Pending Review'}</span><time>${relative(row.updated_at||row.created_at)}</time></div>`;}).join('')||'<p class="ai-empty">No recent activity.</p>';}}
         }else{
             $$('table').forEach(t=>table(t,[['Document','document_title'],['Assignee','assignee'],['Status','status'],['Action','$actions']],rows.slice(0,10),r=>[action('Open',()=>go(`Task.html?id=${r.id}`))]));
             bindText(/View All|Full Comparison|Full Audit/,()=>go('ViewAll.html'));
@@ -1709,9 +1946,9 @@
                     bindText(/Continue/,()=>go(`Task.html?id=${row.id}`),card);cards.append(card);}
             }}
             $$('h3,h4').filter(h=>['Recent Activity','Top Reviewers','Recent Analysis Summary','Recent Error Overview'].includes(text(h))).forEach(h=>replacePanel(h,rows.slice(0,5).map(r=>`${r.document_title} — ${r.status}`)));
-            $$('h3,h4').filter(h=>['Accuracy Trend','Annotation Distribution','Agreement Performance','Error Trend','Review Progress'].includes(text(h))).forEach(h=>replacePanel(h,['No data available for this metric.']));
+            $$('h3,h4').filter(h=>['Accuracy Trend','Annotation Distribution','Agreement Performance','Error Trend','Review Progress'].includes(text(h))).forEach(h=>replacePanel(h,['Chưa có dữ liệu cho chỉ số này.']));
         }
-        buttons(/Last 30 Days/).forEach(b=>{b.textContent='All Time';unavailable(b,'Dashboard API currently returns all-time metrics.');});
+        buttons(/Last 30 Days/).forEach(b=>{b.textContent='All Time';unavailable(b,'API dashboard hiện trả số liệu toàn thời gian.');});
     }
     function replacePanel(heading,lines) {
         let container=heading.parentElement;
@@ -1719,21 +1956,44 @@
         const keep=[...container.children].find(c=>c===heading||c.contains(heading));
         [...container.children].filter(c=>c!==keep).forEach(c=>c.remove());
         const content=document.createElement('div');content.className='p-4 text-sm space-y-2';
-        for(const line of lines.length?lines:['No data available.']){const p=document.createElement('p');p.textContent=line;content.append(p);}container.append(content);
+        for(const line of lines.length?lines:['Chưa có dữ liệu.']){const p=document.createElement('p');p.textContent=line;content.append(p);}container.append(content);
+    }
+    function statsIcon(name,size=22){
+        const paths={
+            assignment:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 3.5h8M8 9h8M8 13h8M8 17h5"/>',
+            task_alt:'<circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/>',
+            view_week:'<rect x="4" y="5" width="4" height="14" rx="1"/><rect x="10" y="5" width="4" height="14" rx="1"/><rect x="16" y="5" width="4" height="14" rx="1"/>',
+            warning:'<path d="m12 4 8 15H4L12 4Z"/><path d="M12 9v4M12 16h.01"/>',
+            download:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
+            compare_arrows:'<path d="M4 8h13M13 4l4 4-4 4M20 16H7M11 12l-4 4 4 4"/>'
+        };
+        return `<svg class="stats-inline-icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||paths.assignment}</svg>`;
     }
     async function statisticsPage() {
+        const statisticsRoot=$('main');
+        if(statisticsRoot){
+            statisticsRoot.replaceChildren();
+            const loading=document.createElement('p');
+            loading.className='workspace-api-loading';
+            loading.textContent='Loading data…';
+            statisticsRoot.append(loading);
+        }
         const [data,tasks,assignees,sessions]=await Promise.all([request('/statistics'),request('/tasks'),request('/assignees'),request('/sessions')]);
         const main=$('main');
         main.className='manager-workflow';
-        main.innerHTML=`<section class="manager-workflow__head"><div><p>WORKFLOW CONTROL</p><h2>Labeling and Review Progress</h2></div><div class="manager-filters"><label>Session<select id="statsSession"><option value="">All sessions</option></select></label><label>AI assistance<select id="statsMode"><option value="">All modes</option><option value="NONE">NONE</option><option value="AI_ASSISTED">AI_ASSISTED</option></select></label></div></section><section id="statsKpis" class="manager-kpis"></section><section class="manager-grid"><div class="manager-panel manager-panel--wide"><div class="manager-panel__head"><div><span>TEAM DELIVERY</span><h3>Progress by member and section</h3></div><button id="exportStatistics" class="manager-icon-button" type="button" title="Export data"><span class="material-symbols-outlined">download</span></button></div><div class="manager-table-wrap"><table><thead><tr><th>Assignee</th><th>Task</th><th>Section</th><th>Progress</th><th>Overdue</th></tr></thead><tbody id="productivityBody"></tbody></table></div></div><div class="manager-panel"><div class="manager-panel__head"><div><span>TIME STUDY</span><h3>AI-assisted vs Manual</h3></div></div><div id="timeComparison" class="time-comparison"></div></div><div class="manager-panel manager-panel--wide"><div class="manager-panel__head"><div><span>DEADLINES</span><h3>Tasks requiring attention</h3></div><span id="overdueCount" class="danger-count"></span></div><div class="manager-table-wrap"><table><thead><tr><th>Document</th><th>Assignee</th><th>Mode</th><th>Status</th><th>Deadline</th></tr></thead><tbody id="overdueBody"></tbody></table></div></div><div class="manager-panel"><div class="manager-panel__head"><div><span>PAIR REVIEW</span><h3>Create review case</h3></div></div><form id="reviewCaseForm" class="review-case-form"><label>Source A<select id="reviewLeft" required></select></label><label>Source B<select id="reviewRight" required></select></label><label>Reviewer<select id="reviewerSelect" required></select></label><label>Deadline<input id="reviewDue" type="datetime-local" required></label><button type="submit"><span class="material-symbols-outlined">compare_arrows</span>Create review case</button><p id="reviewCaseMessage"></p></form></div></section>`;
+        main.innerHTML=`<section class="manager-workflow__head"><div><h2>Statistics</h2><small>Labeling and review performance overview</small></div><div class="manager-filters"><label>Session<select id="statsSession"><option value="">All sessions</option></select></label><label>Assistance mode<select id="statsMode"><option value="">All modes</option><option value="NONE">Manual</option><option value="AI_ASSISTED">AI-assisted</option></select></label></div></section><section id="statsKpis" class="manager-kpis"></section><section class="manager-grid"><div class="manager-panel manager-panel--wide"><div class="manager-panel__head"><div><span>TEAM DELIVERY</span><h3>Progress by user and section</h3></div><button id="exportStatistics" class="manager-icon-button" type="button" title="Export statistics" aria-label="Export statistics">${statsIcon('download',18)}</button></div><div class="manager-table-wrap"><table><thead><tr><th>Assignee</th><th>Tasks</th><th>Sections</th><th>Progress</th><th>Overdue</th></tr></thead><tbody id="productivityBody"></tbody></table></div></div><div class="manager-panel"><div class="manager-panel__head"><div><span>TIME STUDY</span><h3>AI-assisted vs. manual</h3></div></div><div id="timeComparison" class="time-comparison"></div></div><div class="manager-panel manager-panel--wide"><div class="manager-panel__head"><div><span>DEADLINES</span><h3>Tasks requiring attention</h3></div><span id="overdueCount" class="danger-count"></span></div><div class="manager-table-wrap"><table><thead><tr><th>Document</th><th>Assignee</th><th>Mode</th><th>Status</th><th>Due date</th></tr></thead><tbody id="overdueBody"></tbody></table></div></div><div class="manager-panel"><div class="manager-panel__head"><div><span>PAIR REVIEW</span><h3>Create review case</h3></div></div><form id="reviewCaseForm" class="review-case-form"><label>Source A<select id="reviewLeft" required></select></label><label>Source B<select id="reviewRight" required></select></label><label>Reviewer<select id="reviewerSelect" required></select></label><label>Deadline<input id="reviewDue" lang="en-GB" type="datetime-local" required></label><button type="submit">${statsIcon('compare_arrows',18)}Create review case</button><p id="reviewCaseMessage"></p></form></div></section>`;
         const sessionSelect=$('#statsSession'),modeSelect=$('#statsMode');
         sessions.forEach(row=>sessionSelect.add(new Option(row.name,String(row.id))));
-        const eligible=tasks.filter(row=>['SUBMITTED','APPROVED'].includes(row.status));
+        const submittedManual=tasks.filter(row=>row.task_type==='MANUAL'&&row.session_id&&['SUBMITTED','APPROVED'].includes(row.status));
+        const pairGroups=new Map();
+        submittedManual.forEach(row=>{const key=`${row.session_id}:${row.document_id}`;const group=pairGroups.get(key)||[];group.push(row);pairGroups.set(key,group);});
+        const eligible=submittedManual.filter(row=>new Set((pairGroups.get(`${row.session_id}:${row.document_id}`)||[]).map(item=>item.assigned_to)).size===2);
         const taskLabel=row=>`${row.document_title} · ${row.assignee||'Unassigned'} · #${row.id}`;
         const fillTaskSelect=(select,rows)=>select.replaceChildren(new Option('Select task',''),...rows.map(row=>new Option(taskLabel(row),String(row.id))));
+        const sessionReviewers=new Map(sessions.map(session=>[String(session.id),(session.members||[]).filter(member=>member.role==='REVIEWER')]));
         fillTaskSelect($('#reviewLeft'),eligible);fillTaskSelect($('#reviewRight'),eligible);
-        assignees.filter(row=>row.role==='REVIEWER').forEach(row=>$('#reviewerSelect').add(new Option(row.username,String(row.id))));
-        $('#reviewLeft').addEventListener('change',event=>{const left=eligible.find(row=>String(row.id)===event.target.value);fillTaskSelect($('#reviewRight'),left?eligible.filter(row=>row.id!==left.id&&row.document_id===left.document_id):eligible);});
+        const populateReviewers=sessionId=>{const select=$('#reviewerSelect');select.replaceChildren(new Option('Select reviewer',''),...(sessionReviewers.get(String(sessionId))||[]).map(row=>new Option(row.username,String(row.id))));};
+        $('#reviewLeft').addEventListener('change',event=>{const left=eligible.find(row=>String(row.id)===event.target.value);fillTaskSelect($('#reviewRight'),left?eligible.filter(row=>row.id!==left.id&&row.document_id===left.document_id&&String(row.session_id)===String(left.session_id)):eligible);populateReviewers(left?.session_id);});
         const statusTotals=Object.fromEntries(data.statuses.map(row=>[row.status,Number(row.total)]));
         const render=()=>{
             const sessionId=sessionSelect.value,mode=modeSelect.value;
@@ -1741,28 +2001,36 @@
             const taskIds=new Set(sections.map(row=>row.task_id));
             const people=(data.userProductivity||[]).filter(row=>!sessionId||sections.some(section=>section.username===row.username));
             const reviewed=sections.filter(row=>row.section_status==='REVIEWED').length,totalSections=sections.filter(row=>row.field_key).length;
-            $('#statsKpis').innerHTML=[['Total tasks',taskIds.size||data.statuses.reduce((n,row)=>n+Number(row.total),0),'assignment'],['Approved',statusTotals.APPROVED||0,'task_alt'],['Sections completed',`${reviewed}/${totalSections}`,'view_week'],['Overdue tasks',(data.overdueTasks||[]).length,'warning']].map(([label,value,icon])=>`<article><span class="material-symbols-outlined">${icon}</span><small>${label}</small><strong>${value}</strong></article>`).join('');
-            $('#productivityBody').innerHTML=people.length?people.map(row=>{const total=Number(row.saved_sections||0)+Number(row.submitted_sections||0)+Number(row.reviewed_sections||0),done=Number(row.reviewed_sections||0),percent=total?Math.round(done/total*100):0;return `<tr><td><b>${row.username||'Unassigned'}</b></td><td>${row.completed_tasks}/${row.assigned_tasks}</td><td>${done}/${total}</td><td><div class="progress-cell"><span style="width:${percent}%"></span></div><small>${percent}%</small></td><td><span class="${Number(row.overdue_tasks)?'status-overdue':'status-ok'}">${row.overdue_tasks||0}</span></td></tr>`;}).join(''):'<tr><td colspan="5">No matching data.</td></tr>';
+            $('#statsKpis').innerHTML=[['Total Tasks',taskIds.size||data.statuses.reduce((n,row)=>n+Number(row.total),0),'assignment','All tracked tasks'],['Approved',statusTotals.APPROVED||0,'task_alt','Tasks approved'],['Sections Completed',`${reviewed}/${totalSections}`,'view_week','Reviewed sections'],['Overdue Tasks',(data.overdueTasks||[]).length,'warning','Needs attention']].map(([label,value,icon,sub])=>`<article class="${label==='Overdue Tasks'&&Number(value)>0?'kpi-alert':''}"><span class="stats-icon">${statsIcon(icon,22)}</span><small>${label}</small><strong>${value}</strong><em>${sub}</em></article>`).join('');
+            $('#productivityBody').innerHTML=people.length?people.map(row=>{const total=Number(row.saved_sections||0)+Number(row.submitted_sections||0)+Number(row.reviewed_sections||0),done=Number(row.reviewed_sections||0),percent=total?Math.round(done/total*100):0;return `<tr><td><b class="stats-person-name">${row.username||'Unassigned'}</b></td><td>${row.completed_tasks}/${row.assigned_tasks}</td><td>${done}/${total}</td><td><div class="progress-cell"><span style="width:${percent}%"></span></div><small>${percent}%</small></td><td><span class="${Number(row.overdue_tasks)?'status-overdue':'status-ok'}">${row.overdue_tasks||0}</span></td></tr>`;}).join(''):'<tr><td colspan="5">No matching data.</td></tr>';
         };
         const comparisons=data.timeComparison||[];const maxTime=Math.max(1,...comparisons.map(row=>Number(row.average_seconds)||0));
-        $('#timeComparison').innerHTML=comparisons.length?comparisons.map(row=>`<div><header><b>${row.assistance_mode}</b><span>${Math.round(Number(row.average_seconds||0)/60)} min avg · n=${row.sample_size}</span></header><span class="time-bar"><i style="width:${Number(row.average_seconds||0)/maxTime*100}%"></i></span><small>Median ${Math.round(Number(row.median_seconds||0)/60)} min</small></div>`).join(''):'<p>Not enough completed tasks for time comparison.</p>';
-        const overdue=data.overdueTasks||[];$('#overdueCount').textContent=`${overdue.length} overdue`;$('#overdueBody').innerHTML=overdue.length?overdue.map(row=>`<tr><td>${row.document_title}</td><td>${row.username||'—'}</td><td>${row.assistance_mode}</td><td><span class="status-overdue">${row.status}</span></td><td>${date(row.due_at)}</td></tr>`).join(''):'<tr><td colspan="5"><span class="status-ok">No overdue tasks.</span></td></tr>';
+        const modeLabel=mode=>mode==='AI_ASSISTED'?'AI-assisted':'Manual';
+        const formatStatsDate=value=>{if(!value)return '—';const parsed=new Date(value);if(Number.isNaN(parsed.getTime()))return '—';const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];const pad=number=>String(number).padStart(2,'0');return `${parsed.getDate()} ${months[parsed.getMonth()]} ${parsed.getFullYear()}, ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;};
+        const statusLabel={PENDING:'Pending',IN_PROGRESS:'In progress',SUBMITTED:'Submitted',APPROVED:'Approved',REJECTED:'Rejected'};
+        const statusClass={PENDING:'pending',IN_PROGRESS:'progress',SUBMITTED:'submitted',APPROVED:'approved',REJECTED:'rejected'};
+        const comparisonModes=['NONE','AI_ASSISTED'];const comparisonByMode=Object.fromEntries(comparisons.map(row=>[row.assistance_mode,row]));
+        const availableComparisonModes=comparisonModes.filter(mode=>comparisonByMode[mode]);
+        $('#timeComparison').innerHTML=availableComparisonModes.length?availableComparisonModes.map(mode=>{const row=comparisonByMode[mode];const seconds=Number(row.average_seconds||0);return `<div><header><b>${modeLabel(mode)}</b><span>${Math.round(seconds/60)} min avg · n=${Number(row.sample_size||0)}</span></header><span class="time-bar"><i style="width:${seconds/maxTime*100}%"></i></span><small>Median ${Math.round(Number(row.median_seconds||0)/60)} min</small></div>`;}).join(''):'<p class="manager-empty">No data available.</p>';
+        const overdue=data.overdueTasks||[];$('#overdueCount').textContent=overdue.length?`${overdue.length} overdue`:'None overdue';$('#overdueBody').innerHTML=overdue.length?overdue.map(row=>`<tr><td><span class="stats-document-name">${row.document_title||'Untitled document'}</span></td><td><span class="stats-person-name">${row.username||'—'}</span></td><td><span class="mode-badge">${modeLabel(row.assistance_mode)}</span></td><td><span class="task-status task-status--${statusClass[row.status]||'pending'}">${statusLabel[row.status]||'Pending'}</span></td><td class="due-date">${formatStatsDate(row.due_at)}</td></tr>`).join(''):'<tr><td colspan="5"><span class="status-ok">No overdue tasks.</span></td></tr>';
         sessionSelect.addEventListener('change',render);modeSelect.addEventListener('change',render);render();
         bind($('#exportStatistics'),()=>exportJson(data,'aair-manager-statistics.json'));
-        $('#reviewCaseForm').addEventListener('submit',event=>{event.preventDefault();run(event.submitter,async()=>{const leftId=Number($('#reviewLeft').value),rightId=Number($('#reviewRight').value),assignedTo=Number($('#reviewerSelect').value),due=$('#reviewDue').value;if(!leftId||!rightId||!assignedTo||!due)throw new Error('Please select both sources, Reviewer and deadline.');await request('/review-cases',{method:'POST',json:{leftTaskId:leftId,rightTaskId:rightId,assignedTo,dueAt:`${due}:00`}});$('#reviewCaseMessage').textContent='Review case created and assigned to Reviewer.';});});
+        $('#reviewCaseForm').addEventListener('submit',event=>{event.preventDefault();run(event.submitter,async()=>{const leftId=Number($('#reviewLeft').value),rightId=Number($('#reviewRight').value),assignedTo=Number($('#reviewerSelect').value),due=$('#reviewDue').value;if(!leftId||!rightId||!assignedTo||!due)throw new Error('Select both sources, a reviewer, and a deadline.');await request('/review-cases',{method:'POST',json:{leftTaskId:leftId,rightTaskId:rightId,assignedTo,dueAt:`${due}:00`}});$('#reviewCaseMessage').textContent='Review case created and assigned to the reviewer.';});});
     }
     async function monitoringPage() {
         const logs=await request('/audit-logs');
         table($('table'),[['Timestamp',r=>date(r.created_at)],['User','username'],['Resource','resource_type'],['Action','action']],logs.slice(0,10));
-        $$('main h3,main h4').filter(h=>['CPU & Memory Usage (24h)','API Latency vs GPU Load'].includes(text(h))).forEach(h=>replacePanel(h,['No monitoring API available.']));
-        buttons(/^Restart$|^Logs$|filter_list/).forEach(b=>unavailable(b,'No service management API available.'));
+        $$('main h3,main h4').filter(h=>['CPU & Memory Usage (24h)','API Latency vs GPU Load'].includes(text(h))).forEach(h=>replacePanel(h,['Chưa có API cung cấp số liệu giám sát.']));
+        buttons(/^Restart$|^Logs$|filter_list/).forEach(b=>unavailable(b,'Chưa có API quản lý dịch vụ.'));
         bindText(/View All Full Logs/,()=>go('LogView.html'));
         $$('main h3').filter(h=>['RTMPose','Model Server','REST API','Database','Storage Service'].includes(text(h))).forEach(h=>{
             const card=h.closest('.bg-white')||h.parentElement.parentElement;
             $$('p,span',card).filter(e=>!e.classList.contains('material-symbols-outlined')).forEach(e=>{if(e.children.length===0)e.textContent='—';});
         });
-        notice('API is responding. Monitoring API for CPU/GPU, models and services is not yet available.');
+        notice('API đang phản hồi. Chưa có API giám sát CPU/GPU, mô hình và dịch vụ.');
     }
+    let main;
+    let loadingOverlay;
     try {
         // System Monitoring is retired; remove its navigation entry everywhere,
         // including static admin pages that still contain the old template link.
@@ -1771,10 +2039,14 @@
             if (separator?.classList.contains('w-[1px]')) separator.remove();
             link.remove();
         });
-        const main=$('main');if(main)main.style.visibility='hidden';
+        main=$('main');if(main)main.style.visibility='hidden';
+        loadingOverlay=document.createElement('div');
+        loadingOverlay.className='workspace-api-loading';
+        loadingOverlay.textContent='Loading data…';
+        document.body.append(loadingOverlay);
         // Clear sample rows immediately so network failures never look like real data.
         $$('tbody').forEach(body=>{const el=body.closest('table');tableStyles.set(el,$$('tr:first-child td',body).map(c=>c.className));const columns=$$('thead th',el).length;body.replaceChildren();const td=body.insertRow().insertCell();td.colSpan=columns||1;td.className='p-4';td.textContent='Loading data…';});
-        user=await AAIR.guard();if(!user)return;window.AAIRGuidelineModal?.init();
+        user=await AAIR.guard();if(!user){loadingOverlay.remove();if(main)main.style.visibility='visible';return;}window.AAIRGuidelineModal?.init();
         const profile=$('header .hidden.md\\:block');
         if(profile){const ps=$$('p',profile);const roleNames={ADMIN:'Administrator',MANAGER:'Manager',ANALYST:'Analyst',RESULT_ANALYST:'Analyst',AI_LABELER:'AI Labeler',MANUAL_LABELER:'Manual Labeler',REVIEWER:'Reviewer'};if(ps[0])ps[0].textContent=user.username;if(ps[1])ps[1].textContent=roleNames[user.role]||user.role;
             const avatar=profile.previousElementSibling;if(avatar){avatar.replaceChildren();const node=avatarNode(user,'w-full h-full');avatar.append(node);}
@@ -1799,9 +2071,33 @@
         else if(page==='Dashboard.html')await dashboardPage();
         else if(page==='Statistics.html')await statisticsPage();
         else if(page==='SystemMonitoring.html')await monitoringPage();
-        if(main)main.style.visibility='';
+        if(main)main.style.visibility='visible';
+        loadingOverlay?.remove();
     }catch(error){
-        $$('tbody').forEach(body=>{if(text(body)==='Loading data…'||text(body)==='Đang tải dữ liệu…')$('td',body).textContent='Failed to load data. Please try again.';});
+        loadingOverlay?.remove();
+        if(main){
+            main.replaceChildren();
+            const state=document.createElement('section');state.className='workspace-api-error';
+            const message=document.createElement('p');message.textContent=error.message||'Unable to load data.';
+            const retry=document.createElement('button');retry.type='button';retry.textContent='Retry';retry.onclick=()=>location.reload();
+            state.append(message,retry);main.append(state);main.style.visibility='visible';
+        }
         notice(error.message,true);
     }
 })();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

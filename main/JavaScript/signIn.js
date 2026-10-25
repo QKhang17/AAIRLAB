@@ -1,34 +1,12 @@
 function togglePassword() {
     const passwordInput = document.getElementById('password');
-    const passwordIcon = document.getElementById('passwordIcon');
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        passwordIcon.innerText = 'visibility_off';
-    } else {
-        passwordInput.type = 'password';
-        passwordIcon.innerText = 'visibility';
-    }
+    const toggle = document.getElementById('passwordToggle');
+    const visible = passwordInput.type === 'password';
+    passwordInput.type = visible ? 'text' : 'password';
+    toggle.textContent = visible ? 'Hide' : 'Show';
+    toggle.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
+    toggle.setAttribute('aria-pressed', String(visible));
 }
-
-// Ripple Effect Implementation
-document.querySelectorAll('.ripple-effect').forEach(button => {
-    button.addEventListener('click', function (e) {
-        const rect = button.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        const ripple = document.createElement('span');
-        ripple.classList.add('ripple');
-        ripple.style.left = `${x}px`;
-        ripple.style.top = `${y}px`;
-
-        this.appendChild(ripple);
-
-        setTimeout(() => {
-            ripple.remove();
-        }, 600);
-    });
-});
 
 // Authenticate the existing sign-in form against Spring Boot.
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -37,7 +15,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     const originalContent = btn.innerHTML;
 
     btn.disabled = true;
-    btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-[18px]" data-icon="sync">sync</span> Authenticating...`;
+    btn.textContent = 'Signing in…';
+    e.target.setAttribute('aria-busy', 'true');
     btn.classList.add('opacity-80');
 
     let error = document.getElementById('loginError');
@@ -67,6 +46,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         error.textContent = reason.message;
     } finally {
         btn.disabled = false;
+        e.target.removeAttribute('aria-busy');
         btn.innerHTML = originalContent;
         btn.classList.remove('opacity-80');
     }

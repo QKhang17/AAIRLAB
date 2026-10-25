@@ -1,0 +1,24 @@
+/* Shared interaction states for the original HTML workspaces. */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+.aa-decision-dialog { width: min(480px, calc(100% - 32px)); max-height: calc(100dvh - 32px); margin: auto; padding: 28px; overflow: auto; border: 1px solid #c8d4df; border-radius: 12px; color: #172031; background: #fff; font: 14px/1.5 Inter, system-ui, sans-serif; box-shadow: 0 20px 64px #17203133; }
+.aa-decision-dialog::backdrop { background: #17203180; }
+.aa-decision-dialog form { display: grid; gap: 12px; }
+.aa-decision-dialog h2 { margin: 0; font-size: 22px; font-weight: 700; }
+.aa-decision-dialog p { margin: 0 0 8px; color: #5f7082; }
+.aa-decision-dialog label { font-weight: 600; }
+.aa-decision-dialog label span { color: #5f7082; font-weight: 400; }
+.aa-decision-dialog :is(select, textarea) { width: 100%; min-height: 44px; padding: 10px; border: 1px solid #aebdcb; border-radius: 7px; background: #fff; color: inherit; font: inherit; }
+.aa-decision-dialog textarea { resize: vertical; }
+.aa-dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.aa-dialog-actions button { min-height: 44px; padding: 0 16px; border: 1px solid #aebdcb; border-radius: 7px; background: #fff; color: #172031; font: inherit; cursor: pointer; }
+.aa-dialog-actions .aa-dialog-primary { color: #fff; background: #087da7; border-color: #087da7; }
+.annotation-save-state { font-size: 12px; }
+.annotation-save-state[data-state="error"] { color: #b91c1c; font-weight: 700; }
+.annotation-save-state[data-state="saved"] { color: #137b57; }
+.annotation-save-state[data-state="dirty"] { color: #925d09; }
+.workspace-save-status { align-self: center; margin-right: auto; padding-right: 12px; color: #5f7082; font: 13px/1.5 Inter, system-ui, sans-serif; }
+.workspace-save-status[data-state="saved"] { color: #137b57; }
+.workspace-save-status[data-state="dirty"] { color: #925d09; }
+.workspace-save-status[data-state="error"] { color: #b91c1c; }
+@media (max-width: 760px) { #apiNotice { max-width: calc(100vw - 32px); overflow-wrap: anywhere; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
