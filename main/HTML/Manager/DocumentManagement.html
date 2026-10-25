@@ -27,37 +27,161 @@
 
     <!-- Custom CSS -->
     <link href="../../Style/basic.css" rel="stylesheet" />
-    <link href="../../Style/navbar.css" rel="stylesheet" />
-</head>
+<style>
+.document-search{height:36px!important}.document-page-heading{display:flex;align-items:end;justify-content:space-between;margin-bottom:18px}.document-page-heading h2{margin:0;color:#0f172a;font-size:22px;font-weight:600}.document-page-heading p{margin:0;color:#64748b;font-size:13px}.folder-card{min-height:98px!important;padding:18px!important;border-radius:12px!important;box-shadow:0 5px 16px #17384710}.folder-card h3{font-size:18px!important;font-weight:600!important}.folder-card p{font-size:13px!important}.document-category{min-width:120px;padding-right:28px!important;height:36px}.document-table{table-layout:fixed}.document-table th,.document-table td{padding-left:16px!important;padding-right:16px!important}.document-table th:first-child,.document-table td:first-child{width:6%;padding-left:16px!important}.document-table th:nth-child(2),.document-table td:nth-child(2){width:34%}.document-table th:nth-child(3),.document-table td:nth-child(3){width:24%}.document-table th:nth-child(4),.document-table td:nth-child(4){width:10%}.document-table th:nth-child(5),.document-table td:nth-child(5){width:18%}.document-table th:last-child,.document-table td:last-child{width:10%;padding-right:16px!important}.document-table thead th{height:48px!important;padding-top:0!important;padding-bottom:0!important;font-size:12px!important;font-weight:600!important;letter-spacing:.04em!important}.document-table tbody td{height:52px!important;padding-top:8px!important;padding-bottom:8px!important;font-size:13px!important}.document-table .document-name{display:block;overflow:hidden;color:#0f172a;font-size:14px;font-weight:500;text-overflow:ellipsis;white-space:nowrap}.document-table .document-secondary{display:block;overflow:hidden;color:#64748b;font-size:12px;font-weight:400;text-overflow:ellipsis;white-space:nowrap}.document-table .document-type,.document-table .document-status{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:600}.document-table .document-type{color:#64748b;background:#eef2f5}.document-table .document-status:before{width:6px;height:6px;border-radius:50%;background:currentColor;content:""}.document-table .document-status--new{color:#1764a8;background:#e8f1ff}.document-table .document-status--assigned{color:#7047a8;background:#f0eaff}.document-table .document-status--approved{color:#15805b;background:#e5f6ed}.document-table .document-status--processing{color:#a76208;background:#fff1d9}.document-table .document-status--rejected{color:#b23842;background:#fdebee}.document-table .document-uploader{display:flex;align-items:center;gap:8px;color:#64748b;font-size:13px}.document-table .document-avatar{display:grid;width:28px;height:28px;place-items:center;border-radius:50%;color:#075b92;background:#dff4f8;font-size:11px;font-weight:600;font-style:normal}.document-table .document-date{color:#64748b;font-size:13px}.document-table .document-action{color:#64748b!important}.document-table .document-action:hover{color:#0b5ed7!important;background:#eff6ff!important}.document-table .document-action.document-delete:hover{color:#b23842!important;background:#fdebee!important}
+</style></head>
 
 <body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
 
-    <!-- Unified Navbar Mount -->
-    <div data-aair-navbar-mount></div>
+    <!-- Fixed Header -->
+    <header
+        class="fixed top-0 left-0 right-0 h-[50px] bg-normal border-b border-outline-variant flex items-center px-2 z-50">
+
+        <!-- AAIR Logo -->
+        <div class="flex items-center gap-2 mr-6">
+            <img src="/resource/icon/logo_remove_BG.png" alt="AAIR Lab Logo" class="h-8 w-auto">
+
+            <h1 class="font-headline-sm text-[14px] font-bold text-primary">
+                AAIR Lab
+            </h1>
+        </div>
+
+        <div class="h-12 w-[1px] bg-outline-variant ms-2"></div>
+
+        <nav class="flex items-center h-full">
+
+            <a href="../../HTML/Manager/Dashboard.html" class="flex items-center gap-2 px-4 h-full
+                   text-on-surface-variant
+                   hover:text-text-hover
+                   hover:bg-button-hover
+                   transition-colors duration-200">
+
+                <span class="material-symbols-outlined">
+                    dashboard
+                </span>
+
+                <span class="font-body-md text-[12px]">
+                    Dashboard
+                </span>
+            </a>
+
+            <div class="h-12 w-[1px] bg-outline-variant"></div>
+
+            <a href="../../HTML/Manager/UserManagement.html" class="flex items-center gap-2 px-4 h-full
+                   text-on-surface-variant
+                   hover:text-text-hover
+                   hover:bg-button-hover
+                   transition-colors duration-200">
+
+                <span class="material-symbols-outlined">
+                    group
+                </span>
+
+                <span class="font-body-md  text-[12px]">
+                    User
+                </span>
+            </a>
+
+            <div class="h-12 w-[1px] bg-outline-variant"></div>
+
+            <a href="../../HTML/Manager/DocumentManagement.html" class="flex items-center gap-2 px-4 h-full
+                   text-text-active
+                   bg-button-active
+                   transition-colors duration-200">
+
+                <span class="material-symbols-outlined">
+                    description
+                </span>
+
+                <span class="font-body-md  text-[12px]">
+                    Document
+                </span>
+            </a>
+
+            <div class="h-12 w-[1px] bg-outline-variant"></div>
+
+            <a href="../../HTML/Manager/Session.html" class="flex items-center gap-2 px-4 h-full
+                   text-on-surface-variant
+                   hover:text-text-hover
+                   hover:bg-button-hover
+                   transition-colors duration-200">
+
+                <span class="material-symbols-outlined">
+                    smart_toy
+                </span>
+
+                <span class="font-body-md  text-[12px]">
+                    Session
+                </span>
+            </a>
+
+            <div class="h-12 w-[1px] bg-outline-variant"></div>
+
+            <a href="../../HTML/Manager/Statistics.html" class="flex items-center gap-2 px-4 h-full
+                   text-on-surface-variant
+                   hover:text-text-hover
+                   hover:bg-button-hover
+                   transition-colors duration-200">
+
+                <span class="material-symbols-outlined">
+                    monitoring
+                </span>
+
+                <span class="font-body-md  text-[12px]">
+                    Statistics
+                </span>
+            </a>
+
+            <div class="h-12 w-[1px] bg-outline-variant"></div>
+
+        </nav>
+
+        <!-- User Profile -->
+        <div class="ml-auto flex items-center gap-3">
+
+            <div class="w-7 h-7 rounded-full
+                   bg-primary-container/10
+                   flex items-center justify-center
+                   text-primary font-bold">
+                A
+            </div>
+
+            <div class="hidden md:block">
+                <p class="text-[12px] font-bold text-on-surface">
+                    NV. A
+                </p>
+                <p class="text-[11px] text-on-surface-variant uppercase tracking-wider">
+                    Manager
+                </p>
+            </div>
+
+        </div>
+
+    </header>
 
     <!-- TopNavBar -->
     <header class="w-full h-12
            flex items-center gap-3 px-lg
            bg-text-active border-b border-outline-variant
-           shadow-sm sticky top-[58px] z-30 mb-6">
+           shadow-sm sticky top-[50px] z-30 mb-6">
 
         <div class="relative flex-1 min-w-[240px] ">
             <span
                 class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">filter_list</span>
-            <input class="w-[500px] bg-white border border-outline-variant/60 rounded-lg
+            <input class="document-search w-[500px] bg-white border border-outline-variant/60 rounded-lg
                           py-2 pl-10 pr-4 text-body-sm
                           focus:outline-none focus:ring-0 
                           focus:border-outline-variant/60
-                          transition-colors" placeholder="Search.." type="text">
+                          transition-colors" placeholder="Search documents…" type="text">
         </div>
 
         <!-- Buttons -->
         <div class="ml-auto flex items-center gap-2">
 
             <div class="flex items-center gap-2">
-                <label class="text-label-md text-on-surface-variant">Category:</label>
+                <label class="text-[13px] font-medium text-on-surface-variant">Category:</label>
                 <select
-                    class="bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
+                    class="document-category bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-[13px] font-medium focus:outline-none focus:ring-1 focus:ring-primary">
                     <option>All</option>
                     <option>Active</option>
                     <option>Disabled</option>
@@ -96,7 +220,7 @@
     <main class="w-full min-h-[calc(100vh-98px)] bg-surface pt-6">
         <!-- Top Header & Search Bar Area -->
 
-        <div class="w-full px-6 py-6">
+        <div class="w-full px-6 py-6"><div class="document-page-heading"><h2>Documents</h2><p data-document-count>0 files uploaded</p></div>
 
             <!-- Folder Cards Section -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -169,7 +293,7 @@
 
             <!-- Document Table -->
             <div class="rounded-2xl border border-outline-variant/50 shadow-sm overflow-hidden">
-                <div class="overflow-x-auto custom-scrollbar max-h-[600px]">
+                <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead class="bg-text-active sticky-header">
                             <tr class="border-b border-outline-variant/50">
@@ -213,10 +337,10 @@
                                     <div class="flex items-center gap-3">
                                         <span class="material-symbols-outlined text-red-500">picture_as_pdf</span>
                                         <span
-                                            class="text-sm font-semibold text-on-surface group-hover:text-primary transition-colors cursor-pointer">Apple_Annual_2024.pdf</span>
+                                            class="text-sm font-semibold text-on-surface group-hover:text-primary transition-colors cursor-pointer">—</span>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 text-sm text-on-surface font-medium">Apple Inc.</td>
+                                <td class="px-6 py-4 text-sm text-on-surface font-medium">—</td>
                                 <td class="px-6 py-4 text-sm text-on-surface-variant">2024</td>
 
                                 <td class="px-6 py-4 text-sm text-on-surface-variant">Dr. Aris Thorne</td>
@@ -254,10 +378,10 @@
                                     <div class="flex items-center gap-3">
                                         <span class="material-symbols-outlined text-blue-500">description</span>
                                         <span
-                                            class="text-sm font-semibold text-on-surface group-hover:text-primary transition-colors cursor-pointer">Microsoft_ESG_2025.docx</span>
+                                            class="text-sm font-semibold text-on-surface group-hover:text-primary transition-colors cursor-pointer">—</span>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 text-sm text-on-surface font-medium">Microsoft Corp.</td>
+                                <td class="px-6 py-4 text-sm text-on-surface font-medium">—</td>
                                 <td class="px-6 py-4 text-sm text-on-surface-variant">2025</td>
 
                                 <td class="px-6 py-4 text-sm text-on-surface-variant">Marcus Wu</td>
@@ -292,10 +416,10 @@
                                     <div class="flex items-center gap-3">
                                         <span class="material-symbols-outlined text-red-500">picture_as_pdf</span>
                                         <span
-                                            class="text-sm font-semibold text-on-surface group-hover:text-primary transition-colors cursor-pointer">Tesla_Q2_2024.pdf</span>
+                                            class="text-sm font-semibold text-on-surface group-hover:text-primary transition-colors cursor-pointer">—</span>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 text-sm text-on-surface font-medium">Tesla Inc.</td>
+                                <td class="px-6 py-4 text-sm text-on-surface font-medium">—</td>
                                 <td class="px-6 py-4 text-sm text-on-surface-variant">2024</td>
 
                                 <td class="px-6 py-4 text-sm text-on-surface-variant">Sarah Jenkins</td>
@@ -518,8 +642,9 @@
     </main>
 
     <script src="../../JavaScript/api.js"></script>
-    <script src="../../JavaScript/navbar.js"></script>
     <script src="../../JavaScript/workspace.js"></script>
 </body>
 
 </html>
+
+

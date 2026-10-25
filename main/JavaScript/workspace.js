@@ -530,14 +530,8 @@
     }
     async function promptsPage() {
         let editing = null;
-        let systemPrompt = '';
-        const loadSystemPrompt = async () => {
-            const value = await request('/prompts/system-default');
-            systemPrompt = typeof value === 'string' ? value : String(value?.content || '');
-            return systemPrompt;
-        };
+        const systemPrompt = await request('/prompts/system-default').catch(() => '');
         const modal = $('#modalContent'), name = $('input', modal), [description, content] = $$('textarea', modal), [active, model] = $$('select', modal);
-        content.wrap = 'off'; content.maxLength = 30000; content.classList.add('aair-prompt-editor');
         fieldLabel(active, 'Status'); options(active, [['true','ACTIVE'],['false','INACTIVE']]);
         const save = buttons(/^Create Prompt$/, modal)[0];
         const reset = () => { editing = null; name.value = ''; description.value = ''; content.value = systemPrompt; active.value = 'true'; model.selectedIndex = 0; save.textContent = 'Create Prompt'; };
@@ -552,17 +546,7 @@
             action('edit',()=>edit(row)), action(row.is_active ? 'Disable' : 'Enable', async()=>{ await request(`/prompts/${row.id}`,{method:'PUT',json:{name:row.name,description:row.description,content:row.content,model:row.model,active:!row.is_active}}); await refresh(); }),
             action('delete',async()=>{if(confirm(`Xóa prompt “${row.name}”?`)){await request(`/prompts/${row.id}`,{method:'DELETE'});await refresh();}}),
         ], [status]);
-        bindText(/New Prompt/, async () => {
-            try {
-                await loadSystemPrompt();
-                reset();
-                modalOpen();
-            } catch (error) {
-                reset();
-                modalOpen();
-                notice(`Không tải được prompt mặc định: ${error.message}`);
-            }
-        });
+        bindText(/New Prompt/, () => { reset(); modalOpen(); });
         bind(save, async () => {
             await request(editing ? `/prompts/${editing}` : '/prompts', {method: editing ? 'PUT':'POST', json:{name:required(name,'tên prompt'),description:description.value,content:required(content,'nội dung prompt'),model:model.selectedIndex ? model.value : '',active:active.value==='true'}});
             modalClose(); reset(); await refresh(); notice('Đã lưu prompt.');
@@ -1567,6 +1551,7 @@
         const runAiButton=buttons(/Run AI|Chạy AI/)[0];
         if(runAiButton && ['AI_LABELER','MANUAL_LABELER'].includes(user.role)){ runAiButton.setAttribute('aria-label','Run AI');
             if(normalizedRole==='MANUAL_LABELER'){
+                runAiButton.hidden=true;
                 if(modelSelect)modelSelect.value='Gemini';
                 modelSelect?.closest('div')?.querySelector('label[for="manualAiModel"]')?.setAttribute('hidden','');
             }
@@ -1610,7 +1595,7 @@
             if(!Array.isArray(data)||data.length>500||data.some(l=>!l||typeof l.labelName!=='string'||!l.labelName.trim()||l.labelName.length>150||!(l.labelValue==null||typeof l.labelValue==='string')||(l.labelValue?.length||0)>20000||!Number.isInteger(l.sourcePage)||l.sourcePage<1||(pdfPageCount&&l.sourcePage>pdfPageCount)||!(l.confidence==null||typeof l.confidence==='number'&&l.confidence>=0&&l.confidence<=1)))throw new Error(`Mỗi chỉ tiêu cần tên, giá trị, trang nguồn từ 1${pdfPageCount?`-${pdfPageCount}`:''} và confidence từ 0 đến 1 (hoặc null); tối đa 500 chỉ tiêu.`);
             return data;
         }
-        const manualSaveButton=$('#manualSaveButton')||$('#aiSaveButton');
+        let manualSaveButton=null;
         const save=async(showNotice=true,track=true,refreshAfter=true)=>{
             const data=labels();
             if(['PENDING','REJECTED'].includes(task.status)){await request(`/tasks/${task.id}/start`,{method:'POST'});task.status='IN_PROGRESS';}
@@ -1619,10 +1604,11 @@
             if(track&&workTimer)await workTimer.stop('SAVE',true);
             if(showNotice)notice('Data saved successfully.');
         };
-        if(manualSaveButton){
-            manualSaveButton.disabled=true;
-            manualSaveButton.setAttribute('aria-label','Save');
-            bind(manualSaveButton,async()=>{manualSaveButton.disabled=true;manualSaveButton.textContent='Saving…';try{await save();setDocumentSaveState(task.id,'saved');cards.forEach(card=>{card.dirty=false;card.saved=true;card.saveState.dataset.state='saved';card.saveState.textContent='Saved';});window.location.reload();}catch(error){manualSaveButton.disabled=false;manualSaveButton.textContent='Save';throw error;}manualSaveButton.textContent='Save';});
+        if(labeler && panel && !aiContent){
+            const saveWrap=document.createElement('div');saveWrap.className='annotation-panel-save';
+            manualSaveButton=document.createElement('button');manualSaveButton.type='button';manualSaveButton.textContent='Save';manualSaveButton.disabled=true;manualSaveButton.className='annotation-save-button';manualSaveButton.setAttribute('aria-label','Save');
+            saveWrap.append(manualSaveButton);panel.append(saveWrap);
+            manualSaveButton.onclick=async()=>{if(manualSaveButton.disabled)return;manualSaveButton.disabled=true;manualSaveButton.textContent='Saving…';try{await save();setDocumentSaveState(task.id,'saved');cards.forEach(card=>{card.dirty=false;card.saved=true;card.saveState.dataset.state='saved';card.saveState.textContent='Saved';});window.location.reload();}catch(error){manualSaveButton.disabled=false;manualSaveButton.textContent='Save';throw error;}manualSaveButton.textContent='Save';};
         }
         let autoSaveTimer=null,autoSavePromise=Promise.resolve();
         const setSaveState=(state,message)=>cards.filter(card=>card.dirty).forEach(card=>{card.saveState.dataset.state=state;card.saveState.textContent=message;});
@@ -1652,7 +1638,7 @@
             const saveDock=panel.querySelector('.annotation-panel-save');
             if(saveDock) panel.append(saveDock);
         }
-        if(aiContent && !manualSaveButton){
+        if(aiContent){
             const topHeader=$$('header')[1];
             buttons(/^Edit$/,topHeader).forEach(button=>button.remove());
             const saveWrap=document.createElement('div');
@@ -1839,14 +1825,13 @@
                     }
                 }
             }
-                const entries=Object.entries(data);
-                const managerKpiLabels=['Total Tasks','Pending Review','Approved','In Progress'];
+            const entries=Object.entries(data);
             [...grid.children].forEach((card,index)=>{card.classList.add('admin-kpi-card');
                 const value=$('h3[class*="32px"],h3[class*="headline"],p[class*="headline-md"],p[class*="text-3xl"],span[class*="text-3xl"]',card)
                     || $$('h3,p',card).find(e=>/^\d/.test(text(e)));
                 if(!value)return;
                 const entry=entries[index];value.textContent=entry?String(entry[1]):'—';value.classList.add('admin-kpi-value');
-                const label=value.previousElementSibling;if(label){const adminLabels=['Total Accounts','Active Accounts','Audit Events','Security Alerts'];label.textContent=role==='ADMIN'?(adminLabels[index]||'No data available.'):role==='MANAGER'?(managerKpiLabels[index]||'No data available'):entry?entry[0]:'No data available';label.classList.add('admin-kpi-label');}
+                const label=value.previousElementSibling;if(label){const adminLabels=['Total Accounts','Active Accounts','Audit Events','Security Alerts'];label.textContent=role==='ADMIN'?(adminLabels[index]||'No data available.'):entry?entry[0]:'No data available';label.classList.add('admin-kpi-label');}
                 $$('svg',card).filter(s=>!s.classList.contains('admin-security-svg')).forEach(s=>s.hidden=true);
                 if(role==='ADMIN' && index===2){card.querySelectorAll('svg,.absolute').forEach(element=>element.remove());}
                 $$('span,p,div',card).filter(e=>e!==value&&e!==label&&!e.contains(value)&&!e.contains(label)&&!e.querySelector('.admin-audit-icon')&&/\+\d|%|STABLE|Critical|Action Required|Last 7 Days|^add\s+\d/i.test(text(e))).forEach(e=>e.textContent='');

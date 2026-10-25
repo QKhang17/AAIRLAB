@@ -26,15 +26,137 @@
   <link href="../../Style/managerStatistic.css" rel="stylesheet">
 
   <link href="../../Style/basic.css" rel="stylesheet">
-  <link href="../../Style/navbar.css" rel="stylesheet">
   <link href="../../Style/managerWorkflow.css" rel="stylesheet">
   
 </head>
 
 <body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
 
-    <!-- Unified Navbar Mount -->
-    <div data-aair-navbar-mount></div>
+  
+    <!-- Fixed Header -->
+    <header class="fixed top-0 left-0 right-0 h-[50px] bg-normal border-b border-outline-variant flex items-center px-2 z-50">
+
+        <!-- AAIR Logo -->
+        <div class="flex items-center gap-2 mr-6">
+            <img src="/resource/icon/logo_remove_BG.png" alt="AAIR Lab Logo" class="h-8 w-auto">
+
+            <h1 class="font-headline-sm text-[14px] font-bold text-primary">
+                AAIR Lab
+            </h1>
+        </div>
+
+        <div class="h-12 w-[1px] bg-outline-variant ms-2"></div>
+
+        <nav class="flex items-center h-full">
+
+            <a href="../../HTML/Manager/Dashboard.html" class="flex items-center gap-2 px-4 h-full
+                   text-on-surface-variant
+                   hover:text-text-hover
+                   hover:bg-button-hover
+                   transition-colors duration-200">
+
+                <span class="material-symbols-outlined">
+                    dashboard
+                </span>
+
+                <span class="font-body-md text-[12px]">
+                    Dashboard
+                </span>
+            </a>
+
+            <div class="h-12 w-[1px] bg-outline-variant"></div>
+
+            <a href="../../HTML/Manager/UserManagement.html" class="flex items-center gap-2 px-4 h-full
+                   text-on-surface-variant
+                   hover:text-text-hover
+                   hover:bg-button-hover
+                   transition-colors duration-200">
+
+                <span class="material-symbols-outlined">
+                    group
+                </span>
+
+                <span class="font-body-md  text-[12px]">
+                    User
+                </span>
+            </a>
+
+            <div class="h-12 w-[1px] bg-outline-variant"></div>
+            
+            <a href="../../HTML/Manager/DocumentManagement.html" class="flex items-center gap-2 px-4 h-full
+                   text-on-surface-variant
+                   hover:text-text-hover
+                   hover:bg-button-hover
+                   transition-colors duration-200">
+
+                <span class="material-symbols-outlined">
+                    description
+                </span>
+
+                <span class="font-body-md  text-[12px]">
+                    Document
+                </span>
+            </a>
+
+            <div class="h-12 w-[1px] bg-outline-variant"></div>
+
+            <a href="../../HTML/Manager/Session.html" class="flex items-center gap-2 px-4 h-full
+                   text-on-surface-variant
+                   hover:text-text-hover
+                   hover:bg-button-hover
+                   transition-colors duration-200">
+
+                <span class="material-symbols-outlined">
+                    smart_toy
+                </span>
+
+                <span class="font-body-md  text-[12px]">
+                    Session
+                </span>
+            </a>
+
+            <div class="h-12 w-[1px] bg-outline-variant"></div>
+
+            <a href="../../HTML/Manager/Statistics.html" class="flex items-center gap-2 px-4 h-full
+                   text-text-active
+                   bg-button-active
+                   transition-colors duration-200">
+
+                <span class="material-symbols-outlined">
+                    monitoring
+                </span>
+
+                <span class="font-body-md  text-[12px]">
+                    Statistics
+                </span>
+            </a>
+
+            <div class="h-12 w-[1px] bg-outline-variant"></div>
+
+        </nav>
+
+        <!-- User Profile -->
+        <div class="ml-auto flex items-center gap-3">
+
+            <div class="w-7 h-7 rounded-full
+                   bg-primary-container/10
+                   flex items-center justify-center
+                   text-primary font-bold">
+                A
+            </div>
+
+            <div class="hidden md:block">
+                <p class="text-[12px] font-bold text-on-surface">
+                    NV. A
+                </p>
+                <p class="text-[11px] text-on-surface-variant uppercase tracking-wider">
+                    Manager
+                </p>
+            </div>
+
+        </div>
+
+    </header>
 
     <!-- TopNavBar -->
     <header class="w-full h-12
@@ -43,9 +165,7 @@
            shadow-sm sticky top-[58px] z-30 mb-6">
 
         <div class="flex items-center">
-            <h2 class="text-lg font-bold text-on-surface" data-greeting>
-                Good Morning, 
-            </h2>
+            <h2 class="sr-only" data-greeting>Statistics</h2>
         </div>
         <!-- Buttons -->
         <div class="ml-auto flex items-center gap-2">
@@ -63,7 +183,7 @@
                     calendar_today
                 </span>
 
-                Last 30 Days
+                Last 30 days
             </button>
 
             <button type="butotn"
@@ -89,7 +209,7 @@
     </header>
 
   <!-- Main Content Area -->
-  <main class="w-full min-h-[calc(100vh-106px)] bg-surface pt-6">
+  <main style="visibility: hidden" class="w-full min-h-[calc(100vh-106px)] bg-surface pt-6">
     <!-- Header Section -->
     <div class="w-full px-6 py-6">
 
@@ -105,11 +225,11 @@
             </div>
             <span class="text-tertiary font-label-md flex items-center gap-xs">
               <span class="material-symbols-outlined text-xs">trending_up</span>
-              12%
+              —
             </span>
           </div>
           <div class="text-on-surface-variant font-label-md mb-xs">Tasks Completed</div>
-          <div class="font-headline-md text-headline-md">12,458</div>
+          <div class="font-headline-md text-headline-md">—</div>
           <div
             class="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-primary to-secondary scale-x-0 group-hover:scale-x-100 transition-transform origin-left">
           </div>
@@ -177,7 +297,7 @@
             <button class="text-primary font-label-md hover:underline">View All</button>
           </div>
           <div class="h-64 w-full relative">
-            <!-- SVG Line Chart Mockup -->
+            <!-- Chart populated from the statistics API -->
             <svg class="w-full h-full overflow-visible" viewBox="0 0 400 150">
               <defs>
                 <linearGradient id="lineGrad" x1="0" x2="0" y1="0" y2="1">
@@ -330,7 +450,7 @@
         </div>
         <div class="overflow-x-auto pb-md">
           <div class="inline-grid grid-rows-7 grid-flow-col gap-1 min-w-full">
-            <!-- Generate dummy heatmap cells with script for performance -->
+            <!-- Heatmap populated from the statistics API -->
             <script>
               const container = document.currentScript.parentElement;
               const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -1447,8 +1567,8 @@
     </div>
   </main>
   <!-- Floating Action Button (Limited to Home/Dashboards as per policy, Stats is a dashboard) -->
-  <button
-    class="fixed bottom-lg right-lg w-14 h-14 bg-primary text-on-primary rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-50">
+  <button aria-hidden="true"
+    class="hidden fixed bottom-lg right-lg w-14 h-14 bg-primary text-on-primary rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-50">
     <span class="material-symbols-outlined">analytics</span>
   </button>
 
@@ -1458,7 +1578,6 @@
 
 
     <script src="../../JavaScript/api.js"></script>
-    <script src="../../JavaScript/navbar.js"></script>
     <script src="../../JavaScript/greeting.js"></script>
     <script src="../../JavaScript/workspace.js"></script>
 </body>
