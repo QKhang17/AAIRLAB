@@ -137,6 +137,16 @@ body > header.fixed.top-0 > div:last-child p:last-child {
  /* Manual Labeler and Reviewer use the same header metrics and colors. */
  .manual-navbar,
  .review-topbar {
+     position: fixed;
+     top: 0;
+     left: 0;
+     right: 0;
+     z-index: 50;
+     display: flex;
+     align-items: center;
+     width: 100%;
+     padding: 0 !important;
+     box-sizing: border-box;
      height: 58px !important;
      min-height: 58px !important;
      background: #079bc5 !important;
@@ -146,6 +156,12 @@ body > header.fixed.top-0 > div:last-child p:last-child {
 
  .manual-navbar__brand,
  .review-brand {
+     display: flex;
+     align-items: center;
+     height: 100%;
+     min-width: 155px;
+     overflow: hidden;
+     white-space: nowrap;
      width: 155px;
      flex: 0 0 155px;
      gap: 8px;
@@ -156,8 +172,74 @@ body > header.fixed.top-0 > div:last-child p:last-child {
 
  .manual-navbar__brand img,
  .review-brand img {
+     display: block;
+     width: auto;
+     height: 28px;
+     max-width: 32px;
+     object-fit: contain;
      filter: brightness(0) invert(1);
  }
+
+ .manual-navbar__brand strong,
+ .review-brand strong {
+     display: block;
+     overflow: hidden;
+     text-overflow: ellipsis;
+     white-space: nowrap;
+     line-height: 1;
+ }
+
+ .review-nav {
+     display: flex;
+     align-items: center;
+     height: 100%;
+ }
+
+ .review-nav a {
+     display: flex;
+     align-items: center;
+     height: 100%;
+     white-space: nowrap;
+ }
+
+ .review-account {
+     display: flex;
+     align-items: center;
+     gap: 8px;
+     margin-left: auto;
+     padding: 0 18px;
+     white-space: nowrap;
+ }
+
+ .review-account > .review-avatar {
+     display: grid;
+     place-items: center;
+     width: 28px;
+     height: 28px;
+     flex: 0 0 28px;
+     border-radius: 50%;
+     font-size: 11px;
+     font-weight: 700;
+ }
+
+ .review-account > .review-identity {
+     display: flex;
+     flex-direction: column;
+     justify-content: center;
+     min-width: 82px;
+     line-height: 1.15;
+ }
+
+ .review-identity b,
+ .review-identity small {
+     display: block;
+     overflow: hidden;
+     text-overflow: ellipsis;
+     white-space: nowrap;
+ }
+
+ .review-identity b { font-size: 12px; font-weight: 700; }
+ .review-identity small { font-size: 10px; font-weight: 600; letter-spacing: .06em; }
 
  .manual-navbar__nav a,
  .review-nav a {
@@ -208,6 +290,60 @@ body > header.fixed.top-0 > div:last-child p:last-child {
      border-color: rgba(255,255,255,.75);
      color: #fff;
      background: rgba(0,90,128,.18);
+     min-height: 32px;
+     padding: 0 12px;
+     border: 1px solid rgba(255,255,255,.8);
+     border-radius: 6px;
+ }
+
+ /* Reviewer header uses the same metrics as the Analyst shared navbar. */
+ .review-topbar .review-brand {
+     width: auto;
+     min-width: 0;
+     flex: 0 0 auto;
+     padding: 0 18px;
+     font-size: 15px;
+ }
+
+ .review-topbar .review-nav a {
+     font-size: 13px;
+     font-weight: 600;
+ }
+
+ .review-topbar .review-account {
+     gap: 8px;
+     padding: 0 12px;
+ }
+
+ .review-topbar .review-avatar {
+     width: 30px;
+     height: 30px;
+     flex-basis: 30px;
+     font-size: 12px;
+     font-weight: 800;
+ }
+
+ .review-topbar .review-identity {
+     min-width: 0;
+     line-height: 1.15;
+ }
+
+ .review-topbar .review-identity b {
+     max-width: 130px;
+     font-size: 13px;
+ }
+
+ .review-topbar .review-identity small {
+     margin-top: 2px;
+     font-size: 12px;
+     letter-spacing: .02em;
+ }
+
+ .review-topbar .review-account .outline-button {
+     min-height: 34px;
+     padding: 0 11px;
+     border-radius: 7px;
+     font: 600 12px Inter, Arial, sans-serif;
  }
 
  /* Custom scrollbar for data-dense interfaces */

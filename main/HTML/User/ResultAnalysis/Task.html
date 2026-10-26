@@ -16,25 +16,25 @@
     <link href="../../../Style/resultAnalysisTask.css" rel="stylesheet">
 </head>
 <body class="result-analysis-page">
-    <header class="ra-topbar">
-        <a class="ra-brand" href="Dashboard.html">
+    <header class="aair-navbar ra-topbar">
+        <a class="aair-navbar__brand ra-brand" href="Dashboard.html" aria-label="AAIR Lab - Dashboard">
             <img src="/resource/icon/logo_remove_BG.png" alt="">
             <strong>AAIR Lab</strong>
         </a>
 
-        <nav>
+        <nav class="aair-navbar__nav" aria-label="Main navigation">
             <a href="Dashboard.html">Dashboard</a>
             <a href="ViewAll.html">Task List</a>
-            <a class="active" href="Task.html">Analysis</a>
+            <a class="is-active" href="Task.html">Analysis</a>
         </nav>
 
-        <div class="ra-account">
-            <span id="raAvatar">AN</span>
-            <div>
+        <div class="aair-navbar__account ra-account">
+            <span class="aair-navbar__avatar" id="raAvatar">AN</span>
+            <div class="aair-navbar__identity">
                 <b id="raUsername">analyst</b>
                 <small>RESULT ANALYST</small>
             </div>
-            <button id="raLogout" aria-label="Log out" type="button">Log out</button>
+            <button class="aair-navbar__logout" id="raLogout" aria-label="Log out" type="button">Log out</button>
         </div>
     </header>
 

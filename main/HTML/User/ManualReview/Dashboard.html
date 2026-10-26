@@ -31,86 +31,27 @@
 
 <body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
 
-    <!-- Fixed Header -->
-    <header
-        class="fixed top-0 left-0 right-0 h-[50px] bg-normal border-b border-outline-variant flex items-center px-2 z-50">
-
-        <!-- AAIR Logo -->
-        <div class="flex items-center gap-2 mr-6">
-            <img src="/resource/icon/logo_remove_BG.png" alt="AAIR Lab Logo" class="h-8 w-auto">
-
-            <h1 class="font-headline-sm text-[14px] font-bold text-primary">
-                AAIR Lab
-            </h1>
-        </div>
-
-        <div class="h-12 w-[1px] bg-outline-variant ms-2"></div>
-
-        <!-- Navigation -->
-        <nav class="flex items-center h-full">
-
-            <a class="flex items-center gap-2 px-4 h-full
-                    text-text-active
-                   bg-button-active
-                   transition-colors duration-200" href="../../User/ManualReview/Dashboard.html">
-                <span class=" material-symbols-outlined" data-icon="dashboard">dashboard</span>
-                <span class="font-body-md text-[12px]">Dashboard</span>
-            </a>
-
-            <div class="h-12 w-[1px] bg-outline-variant"></div>
-
-            <a class="flex items-center gap-2 px-4 h-full
-                   text-on-surface-variant
-                   hover:text-text-hover
-                   hover:bg-button-hover
-                   transition-colors duration-200" href="../../User/ManualReview/ViewAll.html">
-                <span class="material-symbols-outlined">list_alt </span>
-                <span class="font-body-md text-[12px]">Review Queue</span>
-            </a>
-
-            <div class="h-12 w-[1px] bg-outline-variant"></div>
-
-            <a class="flex items-center gap-2 px-4 h-full
-                   text-on-surface-variant
-                   hover:text-text-hover
-                   hover:bg-button-hover
-                   transition-colors duration-200" href="../../User/ManualReview/Task.html">
-                <span class="material-symbols-outlined">fact_check</span>
-                <span class="font-body-md text-[12px]">Review</span>
-            </a>
-
-            <div class="h-12 w-[1px] bg-outline-variant"></div>
-
+    <header class="manual-navbar review-topbar">
+        <a class="manual-navbar__brand review-brand" href="Dashboard.html" aria-label="AAIR Lab - Dashboard">
+            <img src="/resource/icon/logo_remove_BG.png" alt="" />
+            <strong>AAIR Lab</strong>
+        </a>
+        <nav class="manual-navbar__nav review-nav" aria-label="Navigation">
+            <a class="is-active" href="Dashboard.html" aria-current="page"><span class="material-symbols-outlined">dashboard</span><span>Dashboard</span></a>
+            <a href="ViewAll.html"><span class="material-symbols-outlined">list_alt</span><span>Review Queue</span></a>
         </nav>
-
-        <!-- User Profile -->
-        <div class="ml-auto flex items-center gap-3">
-
-            <div class="w-7 h-7 rounded-full
-                   bg-primary-container/10
-                   flex items-center justify-center
-                   text-primary font-bold">
-                C
-            </div>
-
-            <div class="hidden md:block">
-                <p class="text-[12px] font-bold text-on-surface">
-                    NV. C
-                </p>
-                <p class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">
-                    Manual Review
-                </p>
-            </div>
-
+        <div class="manual-navbar__account review-account">
+            <span class="manual-navbar__avatar review-avatar">RE</span>
+            <span class="manual-navbar__identity review-identity"><b>reviewer01</b><small>REVIEWER</small></span>
+            <button class="manual-navbar__logout outline-button" type="button" title="Log out of the system">Log out</button>
         </div>
-
     </header>
 
     <!-- TopNavBar -->
-    <header class="w-full h-12
+    <header class="mt-[58px] w-full h-12
            flex items-center px-lg
            bg-text-active border-b border-outline-variant
-           shadow-sm sticky top-[50px] z-30 mb-6">
+           shadow-sm sticky top-[58px] z-30 mb-6">
 
         <div class="flex items-center">
             <h2 class="text-lg font-bold text-on-surface" data-greeting>Good Morning,</h2>
