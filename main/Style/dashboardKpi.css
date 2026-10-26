@@ -1,0 +1,121 @@
+/* Shared compact KPI layout: icon, value and label remain on one horizontal row. */
+.dashboard-kpi-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 14px !important;
+    min-height: 112px;
+}
+.dashboard-kpi-row > div:first-child {
+    flex: 0 0 auto;
+    margin: 0 !important;
+}
+.dashboard-kpi-row > div:first-child > :not(:first-child) {
+    display: none !important;
+}
+.dashboard-kpi-row > div:last-child {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 10px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+.dashboard-kpi-row > div:last-child > h3,
+.dashboard-kpi-row > div:last-child > p[id] {
+    order: 1;
+    margin: 0 !important;
+    white-space: nowrap;
+}
+.dashboard-kpi-row > div:last-child > p:not([id]),
+.dashboard-kpi-row > div:last-child > h3:first-child {
+    order: 2;
+    margin: 0 !important;
+    min-width: 0;
+}
+.ai-kpi-grid .dashboard-kpi-row > div:last-child > p { order: 1; }
+.ai-kpi-grid .dashboard-kpi-row > div:last-child > h3 { order: 2; }
+.dashboard-kpi-row .admin-kpi-subtext,
+.dashboard-kpi-row .admin-kpi-trend,
+.dashboard-kpi-row > div:last-child > small {
+    display: block !important;
+    flex: 0 0 100%;
+    order: 3;
+    margin-top: 8px;
+}
+
+.manager-dashboard .manager-kpi-card {
+    display: flex !important;
+    align-items: center;
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    gap: 12px;
+    min-height: 112px !important;
+}
+.manager-dashboard .manager-kpi-icon { flex: 0 0 auto; }
+.manager-dashboard .manager-kpi-value { order: 1; margin: 0 !important; white-space: nowrap; }
+.manager-dashboard .manager-kpi-label { order: 2; margin: 0 !important; }
+.manager-dashboard .manager-kpi-sub { flex-basis: 100%; order: 3; margin: 0 !important; }
+
+.terminology-kpi-card {
+    display: flex !important;
+    align-items: center !important;
+    flex-direction: row !important;
+    gap: 14px !important;
+    min-height: 112px;
+}
+.terminology-kpi-card > div:first-child { flex: 0 0 auto; margin: 0 !important; }
+.terminology-kpi-card > div:last-child { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.terminology-kpi-card > div:last-child > p[id] { order: 1; margin: 0 !important; white-space: nowrap; }
+.terminology-kpi-card > div:last-child > p:not([id]):first-child { order: 2; margin: 0 !important; }
+.terminology-kpi-card .terminology-kpi-subtitle { display: block; flex: 0 0 100%; order: 3; margin: 8px 0 0 !important; }
+
+.statistics-kpi {
+    display: flex !important;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    min-height: 128px;
+}
+.statistics-kpi > div:first-child { display: contents; }
+.statistics-kpi > div:first-child > div { flex: 0 0 auto; }
+.statistics-kpi > div:first-child > div:not(:first-child) { display: none !important; }
+.statistics-kpi > div:first-child > :not(div) { display: none !important; }
+.statistics-kpi > .font-headline-md { order: 2; margin: 0 !important; white-space: nowrap; }
+.statistics-kpi > .font-label-md { order: 3; margin: 0 !important; white-space: nowrap; }
+.statistics-kpi > .mt-sm { flex: 0 0 100%; order: 4; margin: 4px 0 0 !important; }
+
+.manual-stat-card {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap;
+    column-gap: 12px;
+    row-gap: 6px;
+}
+.manual-stat-icon { position: static !important; flex: 0 0 auto; margin: 0 !important; }
+.manual-stat-value { order: 1; margin: 0 !important; white-space: nowrap; }
+.manual-stat-label { order: 2; margin: 0 !important; padding: 0 !important; min-width: 0; }
+.manual-stat-sub, .manual-progress { flex-basis: 100%; order: 3; margin: 0 !important; }
+
+.review-dashboard-kpi {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px;
+    min-height: 112px;
+}
+.review-dashboard-kpi > div:first-child { flex: 0 0 auto; margin: 0 !important; }
+.review-dashboard-kpi > div:first-child > :not(:first-child) { display: none !important; }
+.review-dashboard-kpi > p { order: 3; margin: 0 !important; }
+.review-dashboard-kpi > div:last-child { order: 2; display: flex; align-items: baseline; gap: 6px; }
+.review-dashboard-kpi > div:last-child h3 { margin: 0 !important; white-space: nowrap; }
+.review-dashboard-kpi > div:last-child > :not(h3) { display: none !important; }
+
+.analyst-kpi { align-items: center; }
+.analyst-kpi > div { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.analyst-kpi p { order: 2; white-space: nowrap; }
+.analyst-kpi strong { order: 1; display: inline; margin: 0; white-space: nowrap; }
+.analyst-kpi small { display: block; flex: 0 0 100%; order: 3; margin: 8px 0 0; }
+
+@media (max-width: 640px) {
+    .dashboard-kpi-row, .review-dashboard-kpi { min-height: 88px; }
+    .dashboard-kpi-row > div:last-child, .analyst-kpi > div { flex-wrap: wrap; gap: 4px 10px; }
+}

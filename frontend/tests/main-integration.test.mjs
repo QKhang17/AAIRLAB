@@ -171,7 +171,7 @@ test('manager session form creates manual session via single atomic POST /sessio
 
     c.w.document.querySelector('input[placeholder^="e.g."]').value='New Session'
     c.w.document.querySelector('input[name="documents"]').checked=true
-    c.w.document.querySelector('[aria-label="Session due date"]').value='31/12/2099'
+    c.w.document.querySelector('[aria-label="Session due date"]').value='2099-12-31'
 
     m1Select.value='4'
     m1Select.dispatchEvent(new c.w.Event('change'))
@@ -202,6 +202,21 @@ test('manager session form creates manual session via single atomic POST /sessio
     assert.equal(c.w.document.querySelector('#apiNotice'),null,'non-Save/Submit actions must not show a popup')
   } finally {c.dom.window.close()}
 })
+test('manager session due date uses a calendar and only allows future dates',async()=>{
+  const c=await setup('MANAGER','Session.html')
+  try {
+    ;[...c.w.document.querySelectorAll('button')].find(button=>button.textContent.includes('New Session')).click();await c.settle()
+    const dueInput=c.w.document.querySelector('[aria-label="Session due date"]')
+    const tomorrow=new Date()
+    tomorrow.setHours(0,0,0,0)
+    tomorrow.setDate(tomorrow.getDate()+1)
+    const expectedMin=`${tomorrow.getFullYear()}-${String(tomorrow.getMonth()+1).padStart(2,'0')}-${String(tomorrow.getDate()).padStart(2,'0')}`
+
+    assert.equal(dueInput.type,'date')
+    assert.equal(dueInput.min,expectedMin)
+    assert.equal(dueInput.required,true)
+  } finally {c.dom.window.close()}
+})
 test('manager session form creates manual session with 2 manual labelers and validates requirements',async()=>{
   const c=await setup('MANAGER','Session.html',{
     '/assignees': [
@@ -217,7 +232,7 @@ test('manager session form creates manual session with 2 manual labelers and val
 
     c.w.document.querySelector('input[placeholder^="e.g."]').value='Dual Labeler Session'
     c.w.document.querySelector('input[name="documents"]').checked=true
-    c.w.document.querySelector('[aria-label="Session due date"]').value='31/12/2099'
+    c.w.document.querySelector('[aria-label="Session due date"]').value='2099-12-31'
 
     // Block when reviewer missing
     m1Select.value='4'
@@ -266,7 +281,7 @@ test('manager session form creates AI session via single atomic POST /sessions a
     // Fill common session fields
     c.w.document.querySelector('input[placeholder^="e.g."]').value='AI Annotation Session'
     c.w.document.querySelector('input[name="documents"]').checked=true
-    c.w.document.querySelector('[aria-label="Session due date"]').value='31/12/2099'
+    c.w.document.querySelector('[aria-label="Session due date"]').value='2099-12-31'
 
     // CASE B: Missing AI Labeler
     c.button('Create Session').click();await c.settle()
@@ -359,7 +374,7 @@ test('manager create session API error keeps modal open, preserves data, and per
     const revSelect=c.w.document.querySelector('#manualReviewer')
 
     nameInput.value='Audit Error Session'
-    dueInput.value='31/12/2099'
+    dueInput.value='2099-12-31'
     c.w.document.querySelector('input[name="documents"]').checked=true
     m1Select.value='4'
     m1Select.dispatchEvent(new c.w.Event('change'))
@@ -376,7 +391,7 @@ test('manager create session API error keeps modal open, preserves data, and per
 
     // Form inputs must be preserved
     assert.equal(nameInput.value,'Audit Error Session')
-    assert.equal(dueInput.value,'31/12/2099')
+    assert.equal(dueInput.value,'2099-12-31')
     assert.equal(m1Select.value,'4')
     assert.equal(revSelect.value,'5')
 
@@ -450,14 +465,21 @@ test('clicking an assigned document loads its authenticated PDF at page 1 and 10
 })
 test('result analyst loads saved database labels and the matching PDF from task detail',async()=>{
   const taskSummary={...task,labels:undefined}
-  const c=await setup('RESULT_ANALYST','Task.html',{'/tasks':[taskSummary],'/tasks/31':task,'/tasks/31/ai-results':[]})
+  const analysisTask={...task,labels:task.labels.map(label=>({...label,source_page:10}))}
+  const c=await setup('RESULT_ANALYST','Task.html',{'/tasks':[taskSummary],'/tasks/31':analysisTask,'/tasks/31/ai-results':[]})
   try {
     assert.ok(c.calls.some(x=>x.path==='/tasks/31'))
     assert.ok(c.calls.some(x=>x.path==='/documents/11/file'&&x.blob))
     assert.ok(c.w.document.body.textContent.includes('<b>100</b>'))
     assert.ok(c.w.document.body.textContent.includes('Manual Labeler'))
-    assert.equal(c.w.document.querySelector('#raPdf').getAttribute('src'),'blob:test#page=1&zoom=100&toolbar=0')
+    const pdf=c.w.document.querySelector('#raPdf')
+    assert.equal(pdf.getAttribute('src'),'/resource/pdfjs/viewer.html?file=blob%3Atest#page=1&zoom=page-width')
     assert.equal(c.w.document.querySelector('#raPdfEmpty').hidden,true)
+    const goToPage=[...c.w.document.querySelectorAll('.ra-source')].find(button=>button.textContent.includes('Go to page'))
+    assert.ok(goToPage)
+    goToPage.click();await c.settle()
+    assert.equal(c.w.document.querySelector('#raPageLabel').textContent,'Page 10 / —')
+    assert.equal(pdf.getAttribute('src'),'/resource/pdfjs/viewer.html?file=blob%3Atest#page=10&zoom=page-width')
   } finally {c.dom.window.close()}
 })
 test('AI labeler must choose one supported provider before running',async()=>{
@@ -609,7 +631,7 @@ test('manager session workflow populates assignees from /api/assignees and refre
     // Submit a valid session creation
     c.w.document.querySelector('input[placeholder^="e.g."]').value='Refresh Test Session'
     c.w.document.querySelector('input[name="documents"]').checked=true
-    c.w.document.querySelector('[aria-label="Session due date"]').value='31/12/2099'
+    c.w.document.querySelector('[aria-label="Session due date"]').value='2099-12-31'
     m1Select.value='101'
     m1Select.dispatchEvent(new c.w.Event('change'))
     revSelect.value='201'
@@ -737,7 +759,7 @@ test('create session dropdowns display user status correctly (CASES 1-5)', async
     // Form submission still submits numeric id
     c.w.document.querySelector('input[placeholder^="e.g."]').value = 'Status Test Session'
     c.w.document.querySelector('input[name="documents"]').checked = true
-    c.w.document.querySelector('[aria-label="Session due date"]').value = '31/12/2099'
+    c.w.document.querySelector('[aria-label="Session due date"]').value = '2099-12-31'
     m1Select.value = '1'
     m1Select.dispatchEvent(new c.w.Event('change'))
     revSelect.value = '7'

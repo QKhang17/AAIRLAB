@@ -12,6 +12,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = './pdf.worker.min.mjs';
 
 const params = new URLSearchParams(location.search);
 const file = params.get('file');
+const hashParams = new URLSearchParams(location.hash.slice(1));
+const requestedPage = Math.max(1, Number(hashParams.get('page')) || 1);
 const title = params.get('title') || 'Tài liệu PDF';
 const container = document.querySelector('#viewerContainer');
 const viewerElement = document.querySelector('#viewer');
@@ -53,7 +55,7 @@ const setScale = scale => {
 
 eventBus.on('pagesinit', () => {
     setScale(1);
-    pdfViewer.currentPageNumber = 1;
+    pdfViewer.currentPageNumber = Math.min(requestedPage, pdfViewer.pagesCount || requestedPage);
     message.hidden = true;
 });
 eventBus.on('pagesloaded', ({ pagesCount }) => {

@@ -85,10 +85,10 @@
             sourceLabel,
         };
     }
-    function viDateToIso(value) {
-        const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim());
-        if (!match) throw new Error('Ngày hết hạn phải theo định dạng dd/mm/yyyy.');
-        const [, day, month, year] = match;
+    function dueDateToIso(value) {
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+        if (!match) throw new Error('Vui lòng chọn ngày hết hạn hợp lệ.');
+        const [, year, month, day] = match;
         const parsed = new Date(Number(year), Number(month) - 1, Number(day), 23, 59, 0);
         if (parsed.getFullYear() !== Number(year) || parsed.getMonth() !== Number(month) - 1 || parsed.getDate() !== Number(day))
             throw new Error('Ngày hết hạn không hợp lệ.');
@@ -899,14 +899,17 @@
         const startDate=$('#sessionStartDate',modal), dueDate=$('#sessionDueDate',modal);
         startDate.closest('[class~="space-y-1.5"]').hidden=true;
         dueDate.setAttribute('aria-label','Session due date');dueDate.required=true;
-        dueDate.pattern='\\d{2}/\\d{2}/\\d{4}';
-        dueDate.addEventListener('input',()=>{
-            const digits=dueDate.value.replace(/\D/g,'').slice(0,8);
-            dueDate.value=[digits.slice(0,2),digits.slice(2,4),digits.slice(4,8)].filter(Boolean).join('/');
-        });
+        const setDueDateMinimum=()=>{
+            const tomorrow=new Date();
+            tomorrow.setHours(0,0,0,0);
+            tomorrow.setDate(tomorrow.getDate()+1);
+            const month=String(tomorrow.getMonth()+1).padStart(2,'0');
+            const day=String(tomorrow.getDate()).padStart(2,'0');
+            dueDate.min=`${tomorrow.getFullYear()}-${month}-${day}`;
+        };
         const dueLabel=$('label',dueDate.parentElement.parentElement);if(dueLabel)dueLabel.textContent='Session Due Date *';
         const reset=()=>{
-            editing=null;name.value='';description.value='';dueDate.value='';name.disabled=false;description.disabled=false;
+            editing=null;name.value='';description.value='';dueDate.value='';setDueDateMinimum();name.disabled=false;description.disabled=false;
             $$('input',documentList).forEach(i=>i.checked=false);$$('input',memberList).forEach(i=>i.checked=false);
             documentList.parentElement.hidden=false;typeList.parentElement.hidden=false;dueDate.parentElement.parentElement.hidden=false;
             m1Select.value='';m2Select.value='';reviewerSelect.value='';
@@ -951,7 +954,8 @@
             if(type==='MANUAL'){
                 required(name,'tên phiên');
                 required(dueDate,'ngày hết hạn');
-                const sessionDue=viDateToIso(dueDate.value);
+                if(dueDate.value<dueDate.min)throw new Error('Ngày hết hạn phải ở tương lai.');
+                const sessionDue=dueDateToIso(dueDate.value);
                 if(sessionDue.parsed<=new Date())throw new Error('Ngày hết hạn phải ở tương lai.');
                 if(!docIds.length)throw new Error('Vui lòng chọn ít nhất một tài liệu PDF.');
 
@@ -996,7 +1000,8 @@
             if(type==='AI'){
                 required(name,'tên phiên');
                 required(dueDate,'ngày hết hạn');
-                const sessionDue=viDateToIso(dueDate.value);
+                if(dueDate.value<dueDate.min)throw new Error('Ngày hết hạn phải ở tương lai.');
+                const sessionDue=dueDateToIso(dueDate.value);
                 if(sessionDue.parsed<=new Date())throw new Error('Ngày hết hạn phải ở tương lai.');
                 if(!docIds.length)throw new Error('Vui lòng chọn ít nhất một tài liệu PDF.');
 
@@ -1246,25 +1251,33 @@
         const renderResults=()=>{
             const a=rowsFor(state.modelA),b=rowsFor(state.modelB);
             const selectedA=state.models.find(model=>model.key===state.modelA),selectedB=state.models.find(model=>model.key===state.modelB);
-            $('#raModelAMeta').textContent=selectedA?`${selectedA.provider} · ${selectedA.model}`:'';$('#raModelBMeta').textContent=selectedB?`${selectedB.provider} · ${selectedB.model}`:'';
+            const metaA=$('#raModelAMeta'),metaB=$('#raModelBMeta');if(metaA)metaA.textContent=selectedA?`${selectedA.provider} · ${selectedA.model}`:'';if(metaB)metaB.textContent=selectedB?`${selectedB.provider} · ${selectedB.model}`:'';
             draw(resultsA,a,b,'A');draw(resultsB,b,a,'B');
             const all=[...new Set([...a,...b].map(key).filter(Boolean))];
             const differences=state.analyzed?all.filter(indicator=>{const left=rowFor(a,indicator),right=rowFor(b,indicator);return !left||!right||String(value(left))!==String(value(right));}):[];
-            $('#raDifferenceCount').textContent=String(differences.length);
+            const differenceCount=$('#raDifferenceCount');if(differenceCount)differenceCount.textContent=String(differences.length);
             $('.ra-footer')?.classList.toggle('has-differences',differences.length>0);
         };
+        const pdfViewerUrl=page=>`/resource/pdfjs/viewer.html?file=${encodeURIComponent(state.pdfUrl)}#page=${page}&zoom=page-width`;
         const openPage=page=>{
             const next=Number(page);if(!Number.isInteger(next)||next<1)return;
+            if(!state.pdfUrl){setMessage('The PDF is still loading. Please try again.');return;}
             state.page=next;
             $('#raPageLabel').textContent=`Page ${next} / ${pageCount(state.task)}`;
-            if(state.pdfUrl)pdf.src=`${state.pdfUrl}#page=${next}`;
+            let moved=false;
+            try{
+                const viewer=pdf.contentWindow?.AAIRPdfViewer||pdf.contentWindow?.PDFViewerApplication?.pdfViewer;
+                if(viewer){viewer.currentPageNumber=next;moved=true;}
+            }catch{}
+            if(!moved)pdf.src=pdfViewerUrl(next);
+            pdf.scrollIntoView?.({block:'nearest',inline:'nearest'});
         };
         const loadPdf=async()=>{
             if(state.pdfUrl)URL.revokeObjectURL(state.pdfUrl);state.pdfUrl=null;
             pdf.removeAttribute('src');pdf.hidden=true;pdfEmpty.hidden=false;
             if(!state.task?.document_id)return;
             const blob=await request(`/documents/${state.task.document_id}/file`,{blob:true});
-            state.pdfUrl=URL.createObjectURL(blob);pdf.src=`${state.pdfUrl}#page=${state.page}&zoom=100&toolbar=0`;pdf.hidden=false;pdfEmpty.hidden=true;
+            state.pdfUrl=URL.createObjectURL(blob);pdf.src=pdfViewerUrl(state.page);pdf.hidden=false;pdfEmpty.hidden=true;
         };
         const loadTaskResults=async()=>{
             const taskId=state.task.id;
