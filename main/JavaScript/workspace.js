@@ -337,15 +337,12 @@
         if (!el?.classList.contains('document-table')) return;
         $$('tbody tr', el).forEach(tr => {
             const cells = $$('td', tr);
-            if (cells.length < 6) return;
+            if (cells.length < 4) return;
             cells[0].classList.add('document-id');
             const fileName = cells[1].textContent.trim();
-            const original = cells[2].textContent.trim();
             const name = document.createElement('span'); name.className = 'document-name'; name.title = fileName; name.textContent = fileName; cells[1].replaceChildren(name);
-            const originalText = document.createElement('span'); originalText.className = 'document-secondary'; originalText.textContent = original && original !== fileName ? original : '—'; cells[2].replaceChildren(originalText);
-            const type = document.createElement('span'); type.className = 'document-type'; type.textContent = cells[3].textContent.trim() || '—'; cells[3].replaceChildren(type);
-            cells[4].classList.add('document-date');
-            $$('button',cells[5]).forEach(button => {button.classList.add('document-action');const icon=text(button);const label=icon==='visibility'?'View':icon==='edit'?'Edit':icon==='delete'?'Delete':icon;button.title=label;button.setAttribute('aria-label',label);if(label==='Delete')button.classList.add('document-delete');});
+            cells[2].classList.add('document-date');
+            $$('button',cells[3]).forEach(button => {button.classList.add('document-action');const icon=text(button);const label=icon==='visibility'?'View':icon==='edit'?'Edit':icon==='delete'?'Delete':icon;button.title=label;button.setAttribute('aria-label',label);if(label==='Delete')button.classList.add('document-delete');});
         });
     }
     function formatSessionDate(value) {
@@ -403,7 +400,7 @@
         const filterOptions = spec => Array.isArray(spec) && spec[1]
             ? spec[1]
             : [...new Set(rows.map(r => filterValue(spec, r)).filter(Boolean))].sort();
-        let current = 0, folderFilter = '', sortIndex = config.defaultSortIndex ?? -1, sortDirection = 1;
+        let current = 0, folderFilter = '', sortIndex = config.defaultSortIndex ?? -1, sortDirection = config.defaultSortDirection ?? 1;
         selects.forEach((select, index) => {
             const field = filterFields[index];
             if (field) options(select, filterOptions(field), true);
@@ -447,6 +444,7 @@
             if(config.sortable)$$('thead th',el).forEach((th,index)=>{
                 if(!config.sortKeys?.[index])return;
                 th.style.cursor='pointer';th.title='Sắp xếp cột này';th.setAttribute('aria-sort',sortIndex===index?(sortDirection===1?'ascending':'descending'):'none');
+                const indicator=document.createElement('span');indicator.className='table-sort-indicator material-symbols-outlined';indicator.textContent=sortIndex===index?(sortDirection===1?'arrow_upward':'arrow_downward'):'unfold_more';th.append(indicator);
                 th.onclick=()=>{sortDirection=sortIndex===index?-sortDirection:1;sortIndex=index;current=0;render();};
             });
             pagers.forEach(b => {
@@ -593,27 +591,29 @@
         const documentDate=value=>{if(!value)return 'Date unavailable';const parsed=new Date(value);return Number.isNaN(parsed.getTime())?'Date unavailable':new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(parsed);};
         let pendingFiles=[];
         const refresh = async()=>list.reload([...pendingFiles.map((file,index)=>({id:-(index+1),title:file.name,original_name:file.name,document_type:'PDF',uploaded_by_username:user.username,created_at:new Date().toISOString(),status:'NEW',pending:true})),...await request('/documents')]);
-        const list=listTable(await request('/documents'),[['ID','id'],['File Name','title'],['Original File','original_name'],['Type','document_type'],['Upload Date',r=>documentDate(r.created_at)],['Actions','$actions']],row=>row.pending?[]:[
+        const list=listTable(await request('/documents'),[['ID','id'],['File Name','title'],['Upload Date',r=>documentDate(r.created_at)],['Actions','$actions']],row=>row.pending?[]:[
             action('visibility',()=>documentFile(row)),action('edit',async()=>{
                 const title=prompt('Tên tài liệu',row.title);if(title===null)return;if(!title.trim())throw new Error('Tên tài liệu không được trống.');
                 await request(`/documents/${row.id}`,{method:'PUT',json:{title:title.trim(),documentType:row.document_type}});await refresh();
             }),action('delete',async()=>{if(confirm(`Xóa tài liệu “${row.title}”?`)){await request(`/documents/${row.id}`,{method:'DELETE'});await refresh();}}),
-        ],['document_type'],{table:documentTable});
+        ],['document_type'],{table:documentTable,sortable:true,sortKeys:[null,'title',r=>r.created_at,null],defaultSortIndex:2,defaultSortDirection:-1,paginationContainer:$('#documentPagination')});
         const input=$('#documentInput');input.accept='.pdf,application/pdf';input.multiple=true;
+        const saveButton=$('#saveDocumentsButton');
+        const syncSaveState=()=>{saveButton.disabled=!pendingFiles.length;saveButton.setAttribute('aria-disabled',String(saveButton.disabled));saveButton.classList.toggle('opacity-50',saveButton.disabled);saveButton.classList.toggle('cursor-not-allowed',saveButton.disabled);};
+        syncSaveState();
         input.addEventListener('change',()=>run(input,async()=>{
             const files=[...input.files];if(!files.length)return;
             try {
                 const invalid=files.find(file=>!/\.pdf$/i.test(file.name)||file.size===0||file.size>50*1024*1024);
                 if(invalid)throw new Error(`File “${invalid.name}” không hợp lệ. Chỉ chọn PDF có nội dung, tối đa 50 MB mỗi file.`);
-                pendingFiles.push(...files); await refresh();
+                pendingFiles.push(...files);syncSaveState();await refresh();
             } finally {input.value='';}
         }));
-        const saveButton=$('#saveDocumentsButton');
         bind(saveButton,async()=>{
             if(!pendingFiles.length)return;
             const files=[...pendingFiles];let uploaded=0;
             for(const file of files){const data=new FormData();data.append('file',file);data.append('metadata',new Blob([JSON.stringify({title:file.name,documentType:'PDF'})],{type:'application/json'}));await request('/documents',{method:'POST',body:data});uploaded++;}
-            pendingFiles=[];await refresh();notice(`Đã lưu ${uploaded} tài liệu vào cơ sở dữ liệu.`);
+            pendingFiles=[];syncSaveState();await refresh();notice(`Đã lưu ${uploaded} tài liệu vào cơ sở dữ liệu.`);
         });
         window.addEventListener('beforeunload',event=>{if(!pendingFiles.length)return;event.preventDefault();event.returnValue='Xác nhận lưu thay đổi?';});
     }
@@ -1046,6 +1046,50 @@
                 [detail.left_task_id,detail.right_task_id].filter(Boolean).forEach(taskId=>conflictCounts.set(String(taskId),count));
             }));
             rows.forEach(row=>{if(row.conflict_count==null)row.conflict_count=conflictCounts.get(String(row.id))??0;});
+        }
+        if(isLabeler && page==='ViewAll.html'){
+            const tableTarget=$('#taskTable'), body=$('#taskRows'), search=$('#taskSearch'), sessionSelect=$('#taskSessionFilter'), pagination=$('#taskPagination')?.parentElement;
+            const statusLabels={PENDING:'Pending',IN_PROGRESS:'In progress',SUBMITTED:'Awaiting review',APPROVED:'Approved',REJECTED:'Returned'};
+            const statusPriority={PENDING:0,IN_PROGRESS:1,REJECTED:2,SUBMITTED:3,APPROVED:4};
+            const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+            const dateValue=value=>{const parsed=new Date(value||'');return Number.isNaN(parsed.getTime())?null:parsed;};
+            const formatDate=value=>{const parsed=dateValue(value);if(!parsed)return 'No due date';return new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(parsed);};
+            const statusOf=row=>String(row.status||'PENDING').toUpperCase();
+            const isOverdue=row=>{const due=dateValue(row.due_at);return Boolean(due&&due.getTime()<Date.now()&&statusOf(row)!=='APPROVED');};
+            const sessionKey=row=>String(row.session_id??row.session_name??'unassigned');
+            const sessionName=row=>row.session_name||'Unassigned session';
+            const actionFor=status=>status==='PENDING'?['Start','task-action--start']:['Continue','task-action--continue'];
+            const renderAction=(row)=>{const status=statusOf(row);if(status==='SUBMITTED')return ['Review','task-action--review'];if(status==='APPROVED')return ['View','task-action--view'];if(status==='PENDING')return ['Start','task-action--start'];return ['Continue','task-action--continue'];};
+            const populateSessions=()=>{const current=sessionSelect?.value||'';if(!sessionSelect)return;const options=[...new Map(rows.map(row=>[sessionKey(row),sessionName(row)])).entries()].sort((a,b)=>a[1].localeCompare(b[1],'en',{sensitivity:'base'}));sessionSelect.replaceChildren(new Option('All',''),...options.map(([value,label])=>new Option(label,value)));sessionSelect.value=options.some(([value])=>value===current)?current:'';};
+            const setActive=(selector,attribute,value)=>$$(selector).forEach(button=>{button.classList.toggle('is-active',button.dataset[attribute]===value);});
+            let statusFilter='',dueFilter='',sortMode='priority';
+            populateSessions();
+            const render=()=>{
+                const query=(search?.value||'').trim().toLocaleLowerCase();
+                const filtered=rows.filter(row=>{
+                    const status=statusOf(row),dueMatch=!dueFilter||(dueFilter==='OVERDUE'?isOverdue(row):!isOverdue(row));
+                    const sessionMatch=!sessionSelect?.value||sessionKey(row)===sessionSelect.value;
+                    const text=[row.document_title,row.session_name,row.assignee,statusLabels[status]].filter(Boolean).join(' ').toLocaleLowerCase();
+                    return (!statusFilter||status===statusFilter)&&dueMatch&&sessionMatch&&(!query||text.includes(query));
+                });
+                const groups=new Map();filtered.forEach(row=>{const key=sessionKey(row);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row);});
+                const groupItems=[...groups.entries()].map(([key,items])=>{const due=items.map(row=>dateValue(row.due_at)).filter(Boolean).sort((a,b)=>a-b)[0]||null;const completed=items.filter(row=>statusOf(row)==='APPROVED').length;const overdue=Boolean(due&&due.getTime()<Date.now()&&completed<items.length);const itemPriority=Math.min(...items.map(row=>statusPriority[statusOf(row)]??5));return {key,items,due,completed,overdue,itemPriority};});
+                groupItems.sort((a,b)=>{if(sortMode==='due')return (a.due?.getTime()??Infinity)-(b.due?.getTime()??Infinity);if(sortMode==='status')return a.itemPriority-b.itemPriority;const overdueOrder=Number(b.overdue)-Number(a.overdue);return overdueOrder||a.itemPriority-b.itemPriority||(a.due?.getTime()??Infinity)-(b.due?.getTime()??Infinity);});
+                body.replaceChildren();
+                groupItems.forEach(group=>{
+                    const header=body.insertRow();header.className='task-session-header';const cell=header.insertCell();cell.colSpan=3;const unfinished=group.items.filter(row=>statusOf(row)!=='APPROVED');const statusText=group.completed===group.items.length?'Completed':group.overdue?'Overdue':unfinished.length&&unfinished.every(row=>statusOf(row)==='SUBMITTED')?'Awaiting review':'In progress';const statusClass=statusText==='Completed'?'task-session-header__meta--complete':statusText==='Overdue'?'task-session-header__meta--overdue':'';const percent=group.items.length?Math.round(group.completed/group.items.length*100):0;cell.innerHTML=`<div class="task-session-header__top"><span class="task-session-header__name">${escapeHtml(sessionName(group.items[0]))}</span><span class="task-session-header__meta ${statusClass}">Due ${escapeHtml(formatDate(group.due))} · ${statusText} · ${group.completed}/${group.items.length} files completed</span></div><div class="task-session-progress" aria-label="${group.completed} of ${group.items.length} files completed"><span style="width:${percent}%"></span></div>`;
+                    group.items.sort((a,b)=>{const priority=(statusPriority[statusOf(a)]??5)-(statusPriority[statusOf(b)]??5);if(priority)return priority;return (dateValue(b.updated_at||b.created_at)?.getTime()??0)-(dateValue(a.updated_at||a.created_at)?.getTime()??0);}).forEach(row=>{const tr=body.insertRow();tr.className='task-session-file';const status=statusOf(row),action=renderAction(row),documentCell=tr.insertCell(),statusCell=tr.insertCell(),actionCell=tr.insertCell();const link=document.createElement('a');link.className='cell-primary';link.href=`Task.html?id=${encodeURIComponent(row.id)}`;link.textContent=row.document_title||'Untitled document';link.title=link.textContent;documentCell.append(link);const badge=document.createElement('span');badge.className=`task-status task-status--${status==='SUBMITTED'?'awaiting-review':status==='REJECTED'?'returned':status.toLowerCase()}`;badge.textContent=statusLabels[status]||statusLabels.PENDING;statusCell.append(badge);const actionLink=document.createElement('a');actionLink.className=`task-action ${action[1]}`;actionLink.href=link.href;actionLink.textContent=action[0];actionCell.className='task-action-cell';actionCell.append(actionLink);});
+                });
+                if(!groupItems.length){const row=body.insertRow(),cell=row.insertCell();cell.colSpan=3;cell.className='task-empty-state';cell.textContent='No tasks match the selected filters.';}
+                if(pagination)pagination.hidden=true;
+                const count=$('[data-task-count]');if(count)count.textContent=`${filtered.length} task${filtered.length===1?'':'s'} assigned to you`;
+            };
+            $$('[data-task-status]').forEach(button=>button.addEventListener('click',()=>{statusFilter=button.dataset.taskStatus||'';setActive('[data-task-status]','taskStatus',statusFilter);render();}));
+            $$('[data-task-due]').forEach(button=>button.addEventListener('click',()=>{dueFilter=button.dataset.taskDue||'';setActive('[data-task-due]','taskDue',dueFilter);render();}));
+            search?.addEventListener('input',render);sessionSelect?.addEventListener('change',render);$('#taskSortSelect')?.addEventListener('change',event=>{sortMode=event.target.value;render();});
+            $('#clearTaskFilters')?.addEventListener('click',()=>{if(search)search.value='';if(sessionSelect)sessionSelect.value='';statusFilter='';dueFilter='';sortMode='priority';const sort=$('#taskSortSelect');if(sort)sort.value=sortMode;setActive('[data-task-status]','taskStatus','');setActive('[data-task-due]','taskDue','');render();});
+            render();
+            return;
         }
         const formatTaskDate=value=>{if(!value)return '—';const parsed=new Date(value);if(Number.isNaN(parsed.getTime()))return '—';const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];const pad=number=>String(number).padStart(2,'0');return `${parsed.getDate()} ${months[parsed.getMonth()]} ${parsed.getFullYear()}, ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;};
         const tableTarget=$('#taskTable');
@@ -1533,7 +1577,7 @@
                 button:submitTaskButton,
                 loadStatus:()=>request(`/session-completion${task?.session_id?`?sessionId=${task.session_id}`:''}`),
                 findItem:documentStatus=>documentButtons.get(Number(documentStatus.id)),
-                blockedTitle:status=>`Còn ${(status.missingItems||[]).length} tài liệu chưa hoàn tất`,
+                blockedTitle:status=>{const documents=Array.isArray(status.documents)?status.documents:[],total=documents.length||tasks.filter(item=>String(item.session_id)===String(task?.session_id)).length,done=documents.filter(item=>item.status==='done'||['SUBMITTED','APPROVED','COMPLETED'].includes(String(item.status||'').toUpperCase())).length;return total?`Cần lưu cả ${total} tài liệu (đã lưu ${done}/${total})`:`Còn ${(status.missingItems||[]).length} tài liệu chưa hoàn tất`;},
                 onStatus:status=>{
                     const reported=status.documents||[];
                     const sessionTasks=reported.length?reported:tasks.filter(item=>String(item.session_id)===String(task?.session_id));
@@ -1550,36 +1594,38 @@
         window.addEventListener('pagehide',()=>{if(fileUrl)URL.revokeObjectURL(fileUrl);});
         const runAiButton=buttons(/Run AI|Chạy AI/)[0];
         if(runAiButton && ['AI_LABELER','MANUAL_LABELER'].includes(user.role)){ runAiButton.setAttribute('aria-label','Run AI');
-            if(normalizedRole==='MANUAL_LABELER'){
-                runAiButton.hidden=true;
-                if(modelSelect)modelSelect.value='Gemini';
-                modelSelect?.closest('div')?.querySelector('label[for="manualAiModel"]')?.setAttribute('hidden','');
-            }
+            // Manual labelers can explicitly run the background Gemini extraction.
+            // Keep the model fixed so this action does not depend on assistance_mode
+            // or expose a model choice that is not supported by the manual workflow.
+            if(normalizedRole==='MANUAL_LABELER' && modelSelect)modelSelect.value='Gemini';
             const updateRunAiState=()=>{
-                const blocked=task?.task_type==='MANUAL'&&task?.assistance_mode==='NONE';
+                const blocked=['SUBMITTED','APPROVED'].includes(String(task?.status||'').toUpperCase());
                 runAiButton.disabled=blocked||!modelSelect?.value;
                 runAiButton.style.opacity=runAiButton.disabled?'0.5':'';
-                runAiButton.title=blocked?'This task is configured without AI assistance.':runAiButton.disabled?'Select a model before running AI.':'';
+                runAiButton.title=blocked?'This task is read-only.':runAiButton.disabled?'Select a model before running AI.':'';
             };
             modelSelect?.addEventListener('change',updateRunAiState);updateRunAiState();
             bind(runAiButton,async()=>{
                 if(!modelSelect?.value)throw new Error('Select a model before running AI.');
+                if(cards.some(card=>card.dirty)&&!window.confirm('Run AI sẽ thay thế dữ liệu chưa lưu. Bạn có muốn tiếp tục không?'))return;
                 const oldMarkup=runAiButton.innerHTML;
-                runAiButton.textContent='Running AI...';
+                runAiButton.disabled=true;runAiButton.classList.add('is-running');runAiButton.innerHTML='<span class="task-button-label">Running AI…</span>';
                 try{
                     const selectedPrompt=prompts.find(item=>String(item.id)===promptSelect?.value);
                     const prompt=selectedPrompt?.content||systemPrompt;
-                    const result=await request(`/tasks/${task.id}/run-ai`,{method:'POST',json:{provider:modelSelect.value,prompt:prompt||null}});
+                    const provider=normalizedRole==='MANUAL_LABELER'?'Gemini':modelSelect.value;
+                    const result=await request(`/tasks/${task.id}/run-ai`,{method:'POST',json:{provider,prompt:prompt||null}});
                     editor.value=JSON.stringify(result.labels||[]);editor.readOnly=false;
                     setDocumentSaveState(task.id,'ai-pending');
                     cards.forEach(card=>{card.dirty=true;card.saveState.dataset.state='dirty';card.saveState.textContent='Unsaved';});
+                    if(toolbarSaveButton){toolbarSaveButton.disabled=false;toolbarSaveButton.classList.add('is-dirty');}
                     queueAutoSave();
                     notice(`Extracted ${result.labels?.length||0} fields using ${result.provider}. Review them and click Save.`);
-                }finally{runAiButton.innerHTML=oldMarkup;}
+                }finally{runAiButton.innerHTML=oldMarkup;runAiButton.disabled=false;runAiButton.classList.remove('is-running');updateRunAiState();}
             });
         }else if(runAiButton)unavailable(runAiButton,'Chỉ AI Labeler được chạy mô hình AI.');
         const runAiSilently=async()=>{
-            if(normalizedRole!=='MANUAL_LABELER'||task?.assistance_mode==='NONE'||task?.labels?.length)return;
+            if(normalizedRole!=='MANUAL_LABELER'||task?.labels?.length)return;
             try{
                 const result=await request(`/tasks/${task.id}/run-ai`,{method:'POST',json:{provider:'Gemini',prompt:systemPrompt||null}});
                 editor.value=JSON.stringify(result.labels||[]);editor.readOnly=false;
@@ -1596,6 +1642,8 @@
             return data;
         }
         let manualSaveButton=null;
+        const toolbarSaveButton=$('#taskSaveButton');
+        const setButtonLabel=(button,label)=>{const target=button?.querySelector('.task-button-label');if(target)target.textContent=label;else if(button)button.textContent=label;};
         const save=async(showNotice=true,track=true,refreshAfter=true)=>{
             const data=labels();
             if(['PENDING','REJECTED'].includes(task.status)){await request(`/tasks/${task.id}/start`,{method:'POST'});task.status='IN_PROGRESS';}
@@ -1605,10 +1653,9 @@
             if(showNotice)notice('Data saved successfully.');
         };
         if(labeler && panel && !aiContent){
-            const saveWrap=document.createElement('div');saveWrap.className='annotation-panel-save';
-            manualSaveButton=document.createElement('button');manualSaveButton.type='button';manualSaveButton.textContent='Save';manualSaveButton.disabled=true;manualSaveButton.className='annotation-save-button';manualSaveButton.setAttribute('aria-label','Save');
-            saveWrap.append(manualSaveButton);panel.append(saveWrap);
-            manualSaveButton.onclick=async()=>{if(manualSaveButton.disabled)return;manualSaveButton.disabled=true;manualSaveButton.textContent='Saving…';try{await save();setDocumentSaveState(task.id,'saved');cards.forEach(card=>{card.dirty=false;card.saved=true;card.saveState.dataset.state='saved';card.saveState.textContent='Saved';});window.location.reload();}catch(error){manualSaveButton.disabled=false;manualSaveButton.textContent='Save';throw error;}manualSaveButton.textContent='Save';};
+            manualSaveButton=toolbarSaveButton||document.createElement('button');
+            if(!toolbarSaveButton){const saveWrap=document.createElement('div');saveWrap.className='annotation-panel-save';manualSaveButton.type='button';manualSaveButton.textContent='Save';manualSaveButton.className='annotation-save-button';manualSaveButton.setAttribute('aria-label','Save');saveWrap.append(manualSaveButton);panel.append(saveWrap);}
+            manualSaveButton.onclick=async()=>{if(manualSaveButton.disabled)return;manualSaveButton.disabled=true;manualSaveButton.classList.remove('is-dirty');setButtonLabel(manualSaveButton,'Saving…');try{await save();setDocumentSaveState(task.id,'saved');cards.forEach(card=>{card.dirty=false;card.saved=true;card.saveState.dataset.state='saved';card.saveState.textContent='Saved';});}catch(error){manualSaveButton.disabled=false;manualSaveButton.classList.add('is-dirty');setButtonLabel(manualSaveButton,'Save');throw error;}setButtonLabel(manualSaveButton,'Save');};
         }
         let autoSaveTimer=null,autoSavePromise=Promise.resolve();
         const setSaveState=(state,message)=>cards.filter(card=>card.dirty).forEach(card=>{card.saveState.dataset.state=state;card.saveState.textContent=message;});
@@ -1628,8 +1675,8 @@
         };
         queueAutoSave=()=>{
             if(autoSaveTimer)clearTimeout(autoSaveTimer);
-            if(manualSaveButton){manualSaveButton.disabled=false;return;}
-            if(aiContent)return;
+            if(manualSaveButton){manualSaveButton.disabled=false;manualSaveButton.classList.add('is-dirty');return;}
+            if(aiContent){if(toolbarSaveButton){toolbarSaveButton.disabled=false;toolbarSaveButton.classList.add('is-dirty');}return;}
             autoSaveTimer=setTimeout(()=>{autoSaveTimer=null;autoSavePromise=autoSavePromise.then(performAutoSave,performAutoSave);},1000);
         };
         if(normalizedRole==='MANUAL_LABELER')void runAiSilently();
@@ -1641,15 +1688,9 @@
         if(aiContent){
             const topHeader=$$('header')[1];
             buttons(/^Edit$/,topHeader).forEach(button=>button.remove());
-            const saveWrap=document.createElement('div');
-            saveWrap.className='annotation-panel-save';
-            const saveButton=document.createElement('button');
-            saveButton.type='button';
-            saveButton.className='annotation-save-button ai-save-results';
-            saveButton.textContent='Save'; saveButton.setAttribute('aria-label','Save');
-            saveWrap.append(saveButton);
-            aiContent.append(saveWrap);
-            bind(saveButton,async()=>{saveButton.disabled=true;try{await save();setDocumentSaveState(task.id,'saved');if(user.role==='MANUAL_LABELER')exportJson(labels(),`task-${task.id}-labels.json`);window.location.reload();}finally{saveButton.disabled=false;}});
+            const saveButton=toolbarSaveButton||document.createElement('button');
+            if(!toolbarSaveButton){const saveWrap=document.createElement('div');saveWrap.className='annotation-panel-save';saveButton.type='button';saveButton.className='annotation-save-button ai-save-results';saveButton.textContent='Save';saveButton.setAttribute('aria-label','Save');saveWrap.append(saveButton);aiContent.append(saveWrap);}
+            bind(saveButton,async()=>{saveButton.disabled=true;saveButton.classList.remove('is-dirty');setButtonLabel(saveButton,'Saving…');try{await save();setDocumentSaveState(task.id,'saved');if(user.role==='MANUAL_LABELER')exportJson(labels(),`task-${task.id}-labels.json`);}finally{setButtonLabel(saveButton,'Save');saveButton.disabled=false;}});
         }
         if(reviewBodies.length){
             const firstHeader=reviewBodies[0].previousElementSibling;if(firstHeader)firstHeader.textContent=`${initial.assignee||'Annotator'} — ${task.task_type}`;
@@ -1790,15 +1831,19 @@
         const data=await request('/dashboard');
         const role=user.role;
         const greeting=$$('header h2').find(h=>/^Good (Morning|Afternoon|Evening)/.test(text(h)));if(greeting){const currentGreeting=window.AAIRGreeting?.getGreeting?.(new Date())||'Good Morning,';greeting.textContent=`${currentGreeting} ${user.username}`;}
-        const rows=await request(role==='ADMIN'?'/audit-logs':role==='TERMINOLOGY'?'/terms':'/tasks');
+        let rows=await request(role==='ADMIN'?'/audit-logs':role==='TERMINOLOGY'?'/terms':'/tasks');
         if(document.body.classList.contains('manual-labeling-dashboard')){
+            const taskPriority={PENDING:0,IN_PROGRESS:1,REJECTED:2,SUBMITTED:3,APPROVED:4};
+            rows=[...rows].sort((left,right)=>{const a=String(left.status||'PENDING').toUpperCase(),b=String(right.status||'PENDING').toUpperCase();const priority=(taskPriority[a]??5)-(taskPriority[b]??5);if(priority)return priority;const leftDate=new Date(left.updated_at||left.created_at||left.updatedAt||0).getTime(),rightDate=new Date(right.updated_at||right.created_at||right.updatedAt||0).getTime();return rightDate-leftDate;});
             const total=rows.length;
-            const pending=rows.filter(row=>['PENDING','IN_PROGRESS'].includes(row.status)).length;
-            const completed=rows.filter(row=>row.status==='APPROVED').length;
+            const pending=rows.filter(row=>['PENDING','IN_PROGRESS','REJECTED'].includes(String(row.status||'').toUpperCase())).length;
+            const submitted=rows.filter(row=>String(row.status||'').toUpperCase()==='SUBMITTED').length;
+            const completed=rows.filter(row=>String(row.status||'').toUpperCase()==='APPROVED').length;
             const assignedSessions=new Set(rows.map(row=>row.session_id).filter(value=>value!=null)).size;
             const percent=total?Math.round(completed/total*100):0;
             $('#assignedSessionsValue').textContent=String(assignedSessions);
             $('#pendingTasksValue').textContent=String(pending);
+            $('#submittedTasksValue').textContent=String(submitted);
             $('#completedTasksValue').textContent=String(completed);
             $('#overallProgressValue').textContent=`${percent}%`;
             $('#overallProgressBar')?.style.setProperty('width',`${percent}%`);
@@ -1806,7 +1851,8 @@
             const taskStatusClasses={PENDING:'pending',IN_PROGRESS:'progress',SUBMITTED:'submitted',APPROVED:'approved',REJECTED:'rejected'};
             const relativeTaskTime=value=>{const parsed=new Date(value||'');if(Number.isNaN(parsed.getTime()))return '—';const seconds=Math.max(0,Math.round((Date.now()-parsed.getTime())/1000));if(seconds<60)return 'Just now';if(seconds<3600)return `${Math.floor(seconds/60)} min ago`;if(seconds<86400)return `${Math.floor(seconds/3600)} hr ago`;return `${Math.floor(seconds/86400)} days ago`;};
             const tasksBody=$('#myTasksBody');if(tasksBody){tasksBody.innerHTML=rows.slice(0,5).map(row=>{const status=String(row.status||'PENDING').toUpperCase();const updated=row.updated_at||row.created_at||row.updatedAt;return `<tr class="my-task-row" tabindex="0" data-task-id="${row.id||''}"><td>${row.document_title||'Untitled document'}</td><td>${row.session_name||'Unassigned session'}</td><td><span class="my-task-status my-task-status--${taskStatusClasses[status]||'pending'}">${taskStatusLabels[status]||'Pending'}</span></td><td title="${updated||''}">${relativeTaskTime(updated)}</td><td><a href="Task.html?id=${row.id||''}" class="text-primary font-semibold hover:underline">Continue</a></td></tr>`;}).join('')||'<tr><td colspan="5">No tasks assigned.</td></tr>';tasksBody.querySelectorAll('.my-task-row').forEach(row=>{const open=()=>go(`Task.html?id=${row.dataset.taskId}`);row.addEventListener('click',event=>{if(event.target.closest('a'))return;open();});row.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();open();}});});}
-            bind($('#continueLastSession'),()=>go(rows[0]?`Task.html?id=${rows[0].id}`:'ViewAll.html'));
+            tasksBody?.querySelectorAll('.my-task-row').forEach(rowElement=>{const item=rows.find(row=>String(row.id)===rowElement.dataset.taskId);if(!item)return;const status=String(item.status||'PENDING').toUpperCase();const actionLink=$('a',rowElement);const documentCell=$('td',rowElement);const updated=item.updated_at||item.created_at||item.updatedAt;if(documentCell){documentCell.classList.add('my-task-document-cell');documentCell.title=item.document_title||'Untitled document';}if(actionLink){const label=status==='APPROVED'||status==='SUBMITTED'?'View':status==='PENDING'?'Start':'Continue';actionLink.textContent=label;actionLink.classList.add('my-task-action');if(label==='View')actionLink.classList.add('my-task-action--view');}const updatedCell=$$('td',rowElement)[3];if(updatedCell){const parsed=new Date(updated);updatedCell.title=Number.isNaN(parsed.getTime())?'Exact time unavailable':new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(parsed);}});
+            bind($('#continueLastSession'),()=>go(rows.find(row=>['PENDING','IN_PROGRESS','REJECTED'].includes(String(row.status||'').toUpperCase()))?`Task.html?id=${rows.find(row=>['PENDING','IN_PROGRESS','REJECTED'].includes(String(row.status||'').toUpperCase())).id}`:rows[0]?`Task.html?id=${rows[0].id}`:'ViewAll.html'));
             bind($('#refreshDashboard'),()=>location.reload());
             return;
         }
@@ -1891,10 +1937,18 @@
             const managerFullDate=value=>{const date=managerDate(value);return date?new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(date):'Timestamp unavailable';};
             const managerInitials=name=>String(name||'User').slice(0,2).toUpperCase();
             const managerPeriodLimit=value=>({today:1,'7d':7,'30d':30,all:Infinity}[value]??30);
+            const renderManagerActivity=()=>{
+                const days=[...Array(7)].map((_,index)=>{const date=new Date();date.setHours(0,0,0,0);date.setDate(date.getDate()-(6-index));return date;});
+                const counts=days.map(day=>rows.filter(row=>{const created=managerDate(row.created_at||row.createdAt);if(!created)return false;const value=new Date(created);value.setHours(0,0,0,0);return value.getTime()===day.getTime();}).length);
+                const max=Math.max(1,...counts);
+                const activity=document.querySelectorAll('.manager-day');
+                activity.forEach((day,index)=>{const value=counts[index]||0;const label=day.querySelector('b');const bar=day.querySelector('i');const date=days[index];const dayName=new Intl.DateTimeFormat('en-US',{weekday:'short'}).format(date);if(label)label.textContent=String(value);if(bar)bar.style.height=(value?Math.max(12,Math.round(value/max*100)):0)+'%';const caption=day.querySelector('small');if(caption)caption.textContent=dayName;});
+                const range=document.querySelector('#managerActivityRange');if(range)range.textContent='Last 7 days';
+            };
             const renderManagerDashboard=()=>{['Total Tasks','Pending Review','Approved','In Progress'].forEach((label,index)=>{const node=document.querySelectorAll('.manager-kpi-label')[index];if(node)node.textContent=label;});
                 const limit=managerPeriodLimit(managerFilter?.value||'30d');
                 const visible=rows.filter(row=>{const date=managerDate(row.created_at||row.createdAt||row.updated_at);return !date||limit===Infinity||(Date.now()-date.getTime())/86400000<=limit;});
-                const counts={total:visible.length,pending:visible.filter(row=>String(row.status||'').toUpperCase()==='PENDING').length,progress:visible.filter(row=>String(row.status||'').toUpperCase()==='IN_PROGRESS').length,submitted:visible.filter(row=>String(row.status||'').toUpperCase()==='SUBMITTED').length,approved:visible.filter(row=>String(row.status||'').toUpperCase()==='APPROVED').length};
+                const counts={total:visible.length,pending:visible.filter(row=>String(row.status||'').toUpperCase()==='SUBMITTED').length,progress:visible.filter(row=>String(row.status||'').toUpperCase()==='IN_PROGRESS').length,approved:visible.filter(row=>String(row.status||'').toUpperCase()==='APPROVED').length};
                 Object.entries({total:counts.total,pending:counts.pending,progress:counts.progress,approved:counts.approved}).forEach(([key,value])=>{const node=document.querySelector('[data-manager-stat="'+key+'"]');if(node)node.textContent=String(value);});
                 const approvedSub=document.querySelector('.manager-kpi-card:nth-child(3) .manager-kpi-sub strong');if(approvedSub)approvedSub.textContent=(counts.total?Math.round(counts.approved/counts.total*100):0)+'% of total tasks';
                 if(managerTable){
@@ -1902,10 +1956,11 @@
                     if(body)body.innerHTML=visible.slice(0,10).map(row=>{const status=String(row.status||'PENDING');const assignee=row.assignee||row.assigned_to||'Unassigned';const role=String(assignee).toLowerCase().includes('ai')?'AI Labeler':'Manual Labeler';const id=row.id??'';return '<tr tabindex="0" data-task-id="'+id+'"><td><span class="manager-document" title="'+(row.document_title||'Untitled document')+'">'+(row.document_title||'Untitled document')+'</span></td><td><span class="manager-assignee"><i class="manager-avatar">'+managerInitials(assignee)+'</i><span><span class="manager-user-name">'+assignee+'</span><span class="manager-role">'+role+'</span></span></span></td><td><span class="manager-status manager-status--'+(statusClasses[status]||'pending')+'">'+(statusLabels[status]||'Pending')+'</span></td><td><time class="manager-created" title="'+managerFullDate(row.created_at||row.createdAt||row.updated_at)+'">'+managerRelative(row.created_at||row.createdAt||row.updated_at)+'</time></td></tr>';}).join('')||'<tr><td colspan="4" style="text-align:center;color:#64748b">No tasks in this period.</td></tr>';
                     body.querySelectorAll('tr[data-task-id]').forEach(row=>{row.addEventListener('click',()=>go('Task.html?id='+encodeURIComponent(row.dataset.taskId)));row.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();row.click();}});});
                 }
-                const distribution=[counts.pending,counts.progress,counts.submitted,counts.approved];document.querySelectorAll('.manager-role-line').forEach((line,index)=>{const value=distribution[index]||0;const label=line.querySelector('b');const bar=line.querySelector('i');if(label)label.textContent=String(value);if(bar)bar.style.width=(counts.total?Math.round(value/counts.total*100):0)+'%';});
+                const distribution=[visible.filter(row=>String(row.status||'').toUpperCase()==='PENDING').length,counts.progress,visible.filter(row=>String(row.status||'').toUpperCase()==='SUBMITTED').length,counts.approved];document.querySelectorAll('.manager-role-line').forEach((line,index)=>{const value=distribution[index]||0;const label=line.querySelector('b');const bar=line.querySelector('i');if(label)label.textContent=String(value);if(bar)bar.style.width=(counts.total?Math.round(value/counts.total*100):0)+'%';});
+                renderManagerActivity();
             };
             managerFilter?.addEventListener('change',renderManagerDashboard);
-            bind($('#managerRefresh'),()=>{renderManagerDashboard();});
+            bind($('#managerRefresh'),async()=>{try{rows=await request('/tasks');renderManagerDashboard();notice('Dashboard refreshed.');}catch(error){notice(error.message,true);}});
             renderManagerDashboard();
             bindText(/View Detailed Logs/,()=>go('Session.html'));
         }else if(role==='AI_LABELER'){

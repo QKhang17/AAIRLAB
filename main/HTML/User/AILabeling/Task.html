@@ -135,7 +135,7 @@
 
 
         <!-- Buttons -->
-        <div class="ml-auto flex items-center gap-2">
+        <div class="task-toolbar-actions ml-auto flex items-center gap-3">
 
             <div class="flex items-center gap-2">
                 <label class="text-label-md text-on-surface-variant">Model:</label>
@@ -151,28 +151,23 @@
 
             <div class="w-px h-6 bg-outline-variant mx-2"></div>
 
-            <button type="button" class="ai-submit-button px-4 py-2
-                       rounded-lg
-                       text-[12px]
-                       bg-button-active
-                       text-text-active
-                       hover:opacity-85
-                       transition-opacity
+            <button id="runAiButton" type="button" class="task-toolbar-button task-toolbar-button--run px-4 py-2
+                       rounded-lg text-[12px]
                        flex items-center gap-2 shadow-sm">
-                <span>Submit Task</span>
+                <span class="task-button-label">Run AI</span>
             </button>
 
-            <div class="w-px h-6 bg-outline-variant mx-2"></div>
+            <button id="taskSaveButton" type="button" class="task-toolbar-button task-toolbar-button--save px-4 py-2
+                       rounded-lg text-[12px]
+                       flex items-center gap-2 shadow-sm" aria-label="Save" disabled>
+                <span class="task-button-label">Save</span>
+            </button>
 
-            <button id="runAiButton" type="button" class="px-4 py-2
+            <button type="button" class="ai-submit-button task-toolbar-button task-toolbar-button--submit px-4 py-2
                        rounded-lg
                        text-[12px]
-                       bg-button-active
-                       text-text-active
-                       hover:opacity-85
-                       transition-opacity
                        flex items-center gap-2 shadow-sm">
-                <span>Run AI</span>
+                <span class="task-button-label">Submit Task</span>
             </button>
 
         </div>

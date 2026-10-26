@@ -11,10 +11,16 @@ window.AAIRNavbar = (() => {
   };
 
   const roleTabs = {
+    ADMIN: [
+      { label: 'Dashboard', href: 'Dashboard.html' },
+      { label: 'Manager Management', href: 'ManagerManagement.html' },
+      { label: 'Permissions', href: 'PermissionManagement.html' },
+      { label: 'Audit Logs', href: 'LogView.html' },
+    ],
     MANAGER: [
       { label: 'Dashboard', href: 'Dashboard.html' },
-      { label: 'User Management', href: 'UserManagement.html' },
-      { label: 'Document Management', href: 'DocumentManagement.html' },
+      { label: 'Users', href: 'UserManagement.html' },
+      { label: 'Documents', href: 'DocumentManagement.html' },
       { label: 'Session', href: 'Session.html' },
       { label: 'Statistics', href: 'Statistics.html' },
     ],

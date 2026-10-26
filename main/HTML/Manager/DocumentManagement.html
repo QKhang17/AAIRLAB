@@ -28,7 +28,7 @@
     <!-- Custom CSS -->
     <link href="../../Style/basic.css" rel="stylesheet" />
 <style>
-.document-search{height:36px!important}.document-page-heading{display:flex;align-items:end;justify-content:space-between;margin-bottom:18px}.document-page-heading h2{margin:0;color:#0f172a;font-size:22px;font-weight:600}.document-page-heading p{margin:0;color:#64748b;font-size:13px}.folder-card{min-height:98px!important;padding:18px!important;border-radius:12px!important;box-shadow:0 5px 16px #17384710}.folder-card h3{font-size:18px!important;font-weight:600!important}.folder-card p{font-size:13px!important}.document-category{min-width:120px;padding-right:28px!important;height:36px}.document-table{table-layout:fixed}.document-table th,.document-table td{padding-left:16px!important;padding-right:16px!important}.document-table th:first-child,.document-table td:first-child{width:6%;padding-left:16px!important}.document-table th:nth-child(2),.document-table td:nth-child(2){width:34%}.document-table th:nth-child(3),.document-table td:nth-child(3){width:24%}.document-table th:nth-child(4),.document-table td:nth-child(4){width:10%}.document-table th:nth-child(5),.document-table td:nth-child(5){width:18%}.document-table th:last-child,.document-table td:last-child{width:10%;padding-right:16px!important}.document-table thead th{height:48px!important;padding-top:0!important;padding-bottom:0!important;font-size:12px!important;font-weight:600!important;letter-spacing:.04em!important}.document-table tbody td{height:52px!important;padding-top:8px!important;padding-bottom:8px!important;font-size:13px!important}.document-table .document-name{display:block;overflow:hidden;color:#0f172a;font-size:14px;font-weight:500;text-overflow:ellipsis;white-space:nowrap}.document-table .document-secondary{display:block;overflow:hidden;color:#64748b;font-size:12px;font-weight:400;text-overflow:ellipsis;white-space:nowrap}.document-table .document-type,.document-table .document-status{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:600}.document-table .document-type{color:#64748b;background:#eef2f5}.document-table .document-status:before{width:6px;height:6px;border-radius:50%;background:currentColor;content:""}.document-table .document-status--new{color:#1764a8;background:#e8f1ff}.document-table .document-status--assigned{color:#7047a8;background:#f0eaff}.document-table .document-status--approved{color:#15805b;background:#e5f6ed}.document-table .document-status--processing{color:#a76208;background:#fff1d9}.document-table .document-status--rejected{color:#b23842;background:#fdebee}.document-table .document-uploader{display:flex;align-items:center;gap:8px;color:#64748b;font-size:13px}.document-table .document-avatar{display:grid;width:28px;height:28px;place-items:center;border-radius:50%;color:#075b92;background:#dff4f8;font-size:11px;font-weight:600;font-style:normal}.document-table .document-date{color:#64748b;font-size:13px}.document-table .document-action{color:#64748b!important}.document-table .document-action:hover{color:#0b5ed7!important;background:#eff6ff!important}.document-table .document-action.document-delete:hover{color:#b23842!important;background:#fdebee!important}
+.document-search{height:36px!important}.document-page-heading{display:flex;align-items:end;justify-content:space-between;margin-bottom:18px}.document-page-heading h2{margin:0;color:#0f172a;font-size:22px;font-weight:600}.document-page-heading p{margin:0;color:#64748b;font-size:13px}.folder-card{min-height:72px!important;padding:12px 16px!important;border-radius:12px!important;box-shadow:0 5px 16px #17384710}.folder-card h3{font-size:16px!important;font-weight:600!important}.folder-card p{font-size:12px!important}.document-category{min-width:120px;padding-right:28px!important;height:36px}.document-table{table-layout:fixed}.document-table th,.document-table td{padding-left:16px!important;padding-right:16px!important}.document-table th:first-child,.document-table td:first-child{width:7%;padding-left:16px!important}.document-table th:nth-child(2),.document-table td:nth-child(2){width:56%}.document-table th:nth-child(3),.document-table td:nth-child(3){width:22%}.document-table th:last-child,.document-table td:last-child{width:15%;padding-right:16px!important}.document-table thead th{height:48px!important;padding-top:0!important;padding-bottom:0!important;font-size:12px!important;font-weight:600!important;letter-spacing:.04em!important}.document-table tbody td{height:52px!important;padding-top:8px!important;padding-bottom:8px!important;font-size:13px!important}.document-table .document-name{display:block;overflow:hidden;color:#0f172a;font-size:14px;font-weight:500;text-overflow:ellipsis;white-space:nowrap}.document-table .document-date{color:#64748b;font-size:13px}.document-table .document-action{color:#64748b!important}.document-table .document-action:hover{color:#0b5ed7!important;background:#eff6ff!important}.document-table .document-action.document-delete{color:#b23842!important}.document-table .document-action.document-delete:hover{color:#991b1b!important;background:#fdebee!important}.table-sort-indicator{margin-left:5px;vertical-align:middle;font-size:15px!important}
 </style></head>
 
 <body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
@@ -165,19 +165,14 @@
            bg-text-active border-b border-outline-variant
            shadow-sm sticky top-[50px] z-30 mb-6">
 
-        <div class="relative flex-1 min-w-[240px] ">
+        <div class="document-filter-group flex items-center gap-3 flex-1 min-w-[240px]">
             <span
-                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">filter_list</span>
+                class="material-symbols-outlined text-outline text-[20px]">search</span>
             <input class="document-search w-[500px] bg-white border border-outline-variant/60 rounded-lg
-                          py-2 pl-10 pr-4 text-body-sm
+                          py-2 px-3 text-body-sm
                           focus:outline-none focus:ring-0 
                           focus:border-outline-variant/60
                           transition-colors" placeholder="Search documents…" type="text">
-        </div>
-
-        <!-- Buttons -->
-        <div class="ml-auto flex items-center gap-2">
-
             <div class="flex items-center gap-2">
                 <label class="text-[13px] font-medium text-on-surface-variant">Category:</label>
                 <select
@@ -187,6 +182,10 @@
                     <option>Disabled</option>
                 </select>
             </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="ml-auto flex items-center gap-2">
 
             <input type="file" id="documentInput" class="hidden" accept=".pdf,application/pdf" multiple>
 
@@ -205,9 +204,9 @@
                     upload_file
                 </span>
 
-                Choose Document
+                Upload Document
             </button>
-            <button type="button" id="saveDocumentsButton" class="px-4 py-2 rounded-lg text-[12px] bg-button-active text-text-active hover:opacity-85 transition-opacity flex items-center gap-2 shadow-sm">
+            <button type="button" id="saveDocumentsButton" disabled class="px-4 py-2 rounded-lg text-[12px] bg-button-active text-text-active hover:opacity-85 transition-opacity flex items-center gap-2 shadow-sm opacity-50 cursor-not-allowed">
                 <span class="material-symbols-outlined text-[18px]">save</span>
                 Save
             </button>
@@ -220,7 +219,7 @@
     <main class="w-full min-h-[calc(100vh-98px)] bg-surface pt-6">
         <!-- Top Header & Search Bar Area -->
 
-        <div class="w-full px-6 py-6"><div class="document-page-heading"><h2>Documents</h2><p data-document-count>0 files uploaded</p></div>
+        <div class="w-full px-6 py-6"><div class="document-page-heading"><h2>Documents</h2><p data-document-count hidden>0 files uploaded</p></div>
 
             <!-- Folder Cards Section -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -527,7 +526,7 @@
                 </div>
                 
                 <!-- Pagination -->
-                <div class="px-6 py-4
+                <div id="documentPagination" class="px-6 py-4
                         bg-text-active
                         border-t border-slate-200
                         flex items-center

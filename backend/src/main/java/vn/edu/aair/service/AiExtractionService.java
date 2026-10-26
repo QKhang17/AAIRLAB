@@ -65,9 +65,6 @@ public class AiExtractionService {
         var task = workspace.task(taskId);
         if (!Set.of("AI", "MANUAL").contains(String.valueOf(task.get("task_type"))))
             throw WorkspaceService.error(HttpStatus.BAD_REQUEST, "Loại tác vụ này không hỗ trợ chạy mô hình");
-        if ("MANUAL".equals(String.valueOf(task.get("task_type")))
-                && "NONE".equals(String.valueOf(task.get("assistance_mode"))))
-            throw WorkspaceService.error(HttpStatus.FORBIDDEN, "Tác vụ này được cấu hình không sử dụng AI hỗ trợ");
         if (List.of("SUBMITTED", "APPROVED").contains(String.valueOf(task.get("status"))))
             throw WorkspaceService.error(HttpStatus.CONFLICT, "Tác vụ đã nộp nên không thể chạy lại AI");
 

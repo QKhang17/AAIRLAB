@@ -55,15 +55,16 @@
 
 
         <!-- Buttons -->
-        <div class="ml-auto flex items-center gap-2">
+        <div class="task-toolbar-actions ml-auto flex items-center gap-3">
 
             <label class="text-xs text-on-surface-variant" for="manualAiModel">Model:</label>
             <select id="manualAiModel" class="w-[170px] px-4 py-2 rounded-lg border border-outline-variant bg-white text-xs">
                 <option value="Gemini">Gemini</option>
             </select>
 
-            <button type="button" class="manual-submit-button px-4 py-2 rounded-lg text-[12px] shadow-sm" title="Confirm all fields before submitting the task" aria-label="Submit Task">Submit Task</button>
-            <button type="button" class="manual-run-ai-button px-4 py-2 rounded-lg text-[12px] shadow-sm" aria-label="Run AI">Run AI</button>
+            <button type="button" class="manual-run-ai-button task-toolbar-button task-toolbar-button--run px-4 py-2 rounded-lg text-[12px] shadow-sm" aria-label="Run AI"><span class="task-button-label">Run AI</span></button>
+            <button id="taskSaveButton" type="button" class="task-toolbar-button task-toolbar-button--save px-4 py-2 rounded-lg text-[12px] shadow-sm" aria-label="Save" disabled><span class="task-button-label">Save</span></button>
+            <button type="button" class="manual-submit-button task-toolbar-button task-toolbar-button--submit px-4 py-2 rounded-lg text-[12px] shadow-sm" title="Confirm all fields before submitting the task" aria-label="Submit Task"><span class="task-button-label">Submit Task</span></button>
 
 
         </div>

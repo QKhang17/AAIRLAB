@@ -68,6 +68,42 @@
         .task-action:hover { border-color:#175cd3; color:#175cd3!important; background:#f8fbff; }
         .task-pagination { min-height:52px; }
         .task-pagination[hidden] { display:none; }
+        .task-page__heading { align-items:flex-start; gap:16px; }
+        .task-page__heading > div:first-child { flex:1; }
+        .task-controls { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:10px; }
+        .task-chip-group { display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
+        .task-chip-label { color:#667085; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+        .task-filter-chip { min-height:30px; padding:4px 10px; border:1px solid #cbd5e1; border-radius:999px; color:#475467; background:#fff; font-size:12px; font-weight:600; cursor:pointer; }
+        .task-filter-chip:hover,.task-filter-chip.is-active { border-color:#087fa8; color:#075985; background:#e6f7fb; }
+        .task-clear-filters { min-height:30px; padding:4px 10px; border:0; color:#175cd3; background:transparent; font-size:12px; font-weight:700; cursor:pointer; }
+        .task-sort-select { height:32px; padding:0 28px 0 10px; border:1px solid #cbd5e1; border-radius:7px; color:#344054; background:#fff; font-size:12px; font-weight:600; }
+        .task-table { min-width:720px; }
+        .task-table th:nth-child(1),.task-table td:nth-child(1) { width:65%; }
+        .task-table th:nth-child(2),.task-table td:nth-child(2) { width:20%; }
+        .task-table th:nth-child(3),.task-table td:nth-child(3) { width:15%; }
+        .task-table th:last-child,.task-table td:last-child { width:15%; }
+        .task-session-header td { padding:14px 16px 10px!important; border-top:1px solid #cbd5e1; border-bottom:0; background:#f0f8fa; }
+        .task-session-header:first-child td { border-top:0; }
+        .task-session-header__top { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+        .task-session-header__name { color:#101828; font-size:14px; font-weight:700; }
+        .task-session-header__meta { color:#475467; font-size:12px; }
+        .task-session-header__meta--overdue { color:#b42318; font-weight:700; }
+        .task-session-header__meta--complete { color:#067647; font-weight:700; }
+        .task-session-progress { height:6px; margin-top:8px; overflow:hidden; border-radius:999px; background:#dbe7eb; }
+        .task-session-progress span { display:block; height:100%; border-radius:inherit; background:#087fa8; }
+        .task-session-file td:first-child { padding-left:28px!important; }
+        .task-session-file .cell-primary { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .task-session-file .task-action-cell { padding-right:20px!important; text-align:right; }
+        .task-empty-state { padding:36px 16px!important; color:#667085!important; text-align:center; }
+        .task-status--pending { color:#9a6700; background:#fff4cc; }
+        .task-status--returned { color:#b42318; background:#fee4e2; }
+        .task-status--awaiting-review { color:#6941c6; background:#f4ebff; }
+        .task-action--start { border-color:#087fa8; color:#fff!important; background:#087fa8; }
+        .task-action--start:hover { border-color:#075985; color:#fff!important; background:#075985; }
+        .task-action--continue { border-color:#8ccbdc; color:#075985!important; background:#e6f7fb; }
+        .task-action--review,.task-action--view { border-color:#cbd5e1; color:#344054!important; background:#fff; }
+        .task-action--review:hover,.task-action--view:hover { border-color:#175cd3; color:#175cd3!important; background:#f8fbff; }
+        @media(max-width:1000px) { .task-page__heading { flex-direction:column; } .task-controls { justify-content:flex-start; } }
         @media(max-width:800px) { .task-page { padding:16px; } .task-search { width:100%!important; } .task-toolbar { height:auto; min-height:48px; flex-wrap:wrap; padding:8px 16px!important; } .task-table { min-width:760px; } }
     </style>
 
@@ -116,14 +152,6 @@
                 </select>
             </div>
 
-            <div class="flex items-center gap-2">
-                <label for="taskStatusFilter" class="text-label-md text-on-surface-variant">Status:</label>
-                <select id="taskStatusFilter"
-                    class="filter-select bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
-                    <option value="">All</option>
-                </select>
-            </div>
-
         </div>
 
     </header>
@@ -136,7 +164,7 @@
         <!-- ===================================================== -->
 
         <section class="task-page">
-            <div class="task-page__heading"><div><h1>My Tasks</h1><p data-task-count>Tasks assigned to you</p></div></div>
+            <div class="task-page__heading"><div><h1>My Tasks</h1><p data-task-count>Tasks assigned to you</p></div><div class="task-controls"><div id="taskStatusChips" class="task-chip-group"><span class="task-chip-label">Status</span><button type="button" class="task-filter-chip is-active" data-task-status="">All</button><button type="button" class="task-filter-chip" data-task-status="PENDING">Pending</button><button type="button" class="task-filter-chip" data-task-status="IN_PROGRESS">In progress</button><button type="button" class="task-filter-chip" data-task-status="SUBMITTED">Awaiting review</button><button type="button" class="task-filter-chip" data-task-status="APPROVED">Approved</button><button type="button" class="task-filter-chip" data-task-status="REJECTED">Returned</button></div><div id="taskDueChips" class="task-chip-group"><span class="task-chip-label">Due</span><button type="button" class="task-filter-chip is-active" data-task-due="">All</button><button type="button" class="task-filter-chip" data-task-due="OVERDUE">Overdue</button><button type="button" class="task-filter-chip" data-task-due="UPCOMING">Upcoming</button></div><label class="task-chip-group"><span class="task-chip-label">Sort</span><select id="taskSortSelect" class="task-sort-select"><option value="priority">Priority</option><option value="due">Due date</option><option value="status">Status</option></select></label><button id="clearTaskFilters" type="button" class="task-clear-filters">Clear filters</button></div></div>
 
             <!-- ================================================= -->
             <!-- SESSION TABLE -->
@@ -169,36 +197,7 @@
                                            text-left
                                            font-semibold
                                            text-slate-600">
-                                    Session
-                                </th>
-
-                                <th class="px-6 py-4
-                                           text-left
-                                           font-semibold
-                                           text-slate-600
-                                           min-w-[180px]">
-                                    Annotator
-                                </th>
-
-                                <th class="px-6 py-4
-                                           text-left
-                                           font-semibold
-                                           text-slate-600">
-                                    Type
-                                </th>
-
-                                <th class="px-6 py-4
-                                           text-left
-                                           font-semibold
-                                           text-slate-600">
                                     Status
-                                </th>
-
-                                <th class="px-6 py-4
-                                           text-left
-                                           font-semibold
-                                           text-slate-600">
-                                    Due
                                 </th>
 
                                 <th class="px-6 py-4

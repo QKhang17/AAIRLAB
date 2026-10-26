@@ -29,13 +29,13 @@
         .manual-labeling-dashboard { font-family: Inter, Arial, sans-serif; }
         .manual-labeling-dashboard :where(button, input, select, textarea, label, th, td) { font-family: inherit; }
         .manual-labeling-dashboard main { padding: 8px 24px 32px; }
-        .manual-stat-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:var(--gap-section); margin-bottom:var(--gap-section); }
-        .manual-stat-card { min-height:170px; padding:20px 24px; border:1px solid #cbd5e1; border-radius:12px; background:#fff; box-shadow:0 2px 8px rgba(16,24,40,.06); }
-        .manual-stat-icon { width:40px; height:40px; display:flex; align-items:center; justify-content:center; margin-bottom:16px; border-radius:10px; background:#f1f5f9; color:#005bd4; }
+        .manual-stat-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:var(--gap-section); margin-bottom:var(--gap-section); }
+        .manual-stat-card { position:relative; min-height:128px; padding:16px 18px; border:1px solid #cbd5e1; border-radius:12px; background:#fff; box-shadow:0 2px 8px rgba(16,24,40,.06); }
+        .manual-stat-icon { position:absolute; top:14px; right:16px; width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:9px; background:#f1f5f9; color:#005bd4; }
         .manual-stat-icon .material-symbols-outlined { font-size:22px; }
-        .manual-stat-label { margin:0; color:#475467; font-size:14px; line-height:20px; font-weight:500; }
-        .manual-stat-value { margin:2px 0 0; color:#101828; font-size:32px; line-height:38px; font-weight:700; }
-        .manual-stat-sub { margin:7px 0 0; color:#667085; font-size:13px; line-height:18px; font-style:normal; }
+        .manual-stat-label { margin:0; padding-right:42px; color:#344054; font-size:13px; line-height:18px; font-weight:600; }
+        .manual-stat-value { margin:6px 0 0; color:#101828; font-size:32px; line-height:36px; font-weight:800; font-variant-numeric:tabular-nums; }
+        .manual-stat-sub { margin:6px 0 0; color:#475467; font-size:12px; line-height:16px; font-style:normal; font-weight:500; }
         .manual-progress { height:6px; margin-top:10px; overflow:hidden; border-radius:999px; background:#e2e8f0; }
         .manual-progress span { display:block; width:0; height:100%; border-radius:inherit; background:#087fa8; transition:width .2s ease; }
         .my-tasks { border:1px solid #d5dee4; border-radius:12px; background:#fff; box-shadow:0 2px 8px rgba(16,24,40,.06); overflow:hidden; }
@@ -43,18 +43,32 @@
         .my-tasks__head h2 { margin:0; color:#101828; font-size:18px; line-height:24px; font-weight:600; }
         .my-tasks__head p { margin:3px 0 0; color:#667085; font-size:13px; }
         .my-tasks table { width:100%; border-collapse:collapse; table-layout:fixed; }
+        .my-tasks th:nth-child(1),.my-tasks td:nth-child(1) { width:36%; }
+        .my-tasks th:nth-child(2),.my-tasks td:nth-child(2) { width:18%; }
+        .my-tasks th:nth-child(3),.my-tasks td:nth-child(3) { width:18%; }
+        .my-tasks th:nth-child(4),.my-tasks td:nth-child(4) { width:18%; }
+        .my-tasks th:nth-child(5),.my-tasks td:nth-child(5) { width:10%; }
         .my-tasks th,.my-tasks td { height:52px; padding:10px 16px; border-bottom:1px solid #edf1f3; text-align:left; }
         .my-tasks th { color:#667085; background:#f7f9fa; font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; }
-        .my-tasks td { color:#667085; font-size:13px; }
-        .my-tasks td:first-child { color:#101828; font-size:14px; font-weight:500; }
+        .my-tasks td { color:#344054; font-size:13px; }
+        .my-tasks td:first-child { color:#101828; font-size:14px; font-weight:600; }
+        .my-task-document { display:block; overflow:hidden; color:inherit; text-overflow:ellipsis; white-space:nowrap; }
+        .my-task-document-cell { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .my-tasks tbody td[colspan] { padding:28px 16px; color:#667085; text-align:center; }
         .my-task-row { cursor:pointer; transition:background .15s ease; }
         .my-task-row:hover { background:#f7fbfc; }
         .my-task-status { display:inline-flex; align-items:center; min-height:24px; padding:3px 9px; border-radius:999px; font-size:12px; font-weight:600; }
-        .my-task-status--pending { color:#475467; background:#f2f4f7; }
+        .my-task-status--pending { color:#9a6700; background:#fff4cc; }
         .my-task-status--progress { color:#175cd3; background:#dbeafe; }
         .my-task-status--submitted { color:#6941c6; background:#f4ebff; }
         .my-task-status--approved { color:#067647; background:#dff3e9; }
+        .my-task-status--rejected { color:#b42318; background:#fee4e2; }
+        .my-task-action { display:inline-flex; align-items:center; justify-content:center; min-width:64px; padding:5px 10px; border:1px solid #0b84ad; border-radius:7px; color:#075985; background:#fff; font-size:12px; font-weight:700; text-decoration:none; }
+        .my-task-action:hover { color:#fff; background:#0b84ad; }
+        .my-task-action--view { border-color:#98a2b3; color:#475467; }
+        .my-tasks__empty { padding:28px 16px!important; color:#667085!important; text-align:center; }
         .manual-secondary-button { border:1px solid #cbd5e1!important; color:#344054!important; background:#fff!important; }
+        @media (max-width:1100px) { .manual-stat-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
         @media (max-width:900px) { .manual-stat-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .my-tasks { overflow-x:auto; } .my-tasks table { min-width:720px; } }
         @media (max-width:560px) { .manual-stat-grid { grid-template-columns:1fr; } }
     </style>
@@ -107,12 +121,13 @@
         <main>
             <section class="manual-stat-grid" aria-label="Task summary">
                 <article class="manual-stat-card"><div class="manual-stat-icon"><span class="material-symbols-outlined">folder</span></div><p class="manual-stat-label">Assigned Sessions</p><h3 id="assignedSessionsValue" class="manual-stat-value">—</h3><p class="manual-stat-sub">Current active sessions</p></article>
-                <article class="manual-stat-card"><div class="manual-stat-icon"><span class="material-symbols-outlined">schedule</span></div><p class="manual-stat-label">Pending Tasks</p><h3 id="pendingTasksValue" class="manual-stat-value">—</h3><p class="manual-stat-sub">Tasks requiring labeling</p></article>
-                <article class="manual-stat-card"><div class="manual-stat-icon"><span class="material-symbols-outlined">check_circle</span></div><p class="manual-stat-label">Completed Tasks</p><h3 id="completedTasksValue" class="manual-stat-value">—</h3><p class="manual-stat-sub">Total tasks finished</p></article>
-                <article class="manual-stat-card"><div class="manual-stat-icon"><span class="material-symbols-outlined">trending_up</span></div><p class="manual-stat-label">Overall Progress</p><h3 id="overallProgressValue" class="manual-stat-value">—</h3><p class="manual-stat-sub">Completed tasks out of all assigned</p><div class="manual-progress" aria-hidden="true"><span id="overallProgressBar"></span></div></article>
+                <article class="manual-stat-card"><div class="manual-stat-icon"><span class="material-symbols-outlined">schedule</span></div><p class="manual-stat-label">Pending Tasks</p><h3 id="pendingTasksValue" class="manual-stat-value">—</h3><p class="manual-stat-sub">Pending, in progress or returned</p></article>
+                <article class="manual-stat-card"><div class="manual-stat-icon"><span class="material-symbols-outlined">rate_review</span></div><p class="manual-stat-label">In Review</p><h3 id="submittedTasksValue" class="manual-stat-value">—</h3><p class="manual-stat-sub">Submitted, awaiting review</p></article>
+                <article class="manual-stat-card"><div class="manual-stat-icon"><span class="material-symbols-outlined">check_circle</span></div><p class="manual-stat-label">Completed Tasks</p><h3 id="completedTasksValue" class="manual-stat-value">—</h3><p class="manual-stat-sub">Approved tasks</p></article>
+                <article class="manual-stat-card"><div class="manual-stat-icon"><span class="material-symbols-outlined">trending_up</span></div><p class="manual-stat-label">Overall Progress</p><h3 id="overallProgressValue" class="manual-stat-value">—</h3><p class="manual-stat-sub">Approved / all assigned tasks</p><div class="manual-progress" aria-hidden="true"><span id="overallProgressBar"></span></div></article>
             </section>
             <section class="my-tasks" aria-labelledby="myTasksTitle">
-                <div class="my-tasks__head"><div><h2 id="myTasksTitle">My Tasks</h2><p>Continue your five most recent labeling tasks.</p></div><a href="ViewAll.html" class="text-primary text-[13px] font-semibold hover:underline">View All</a></div>
+                <div class="my-tasks__head"><div><h2 id="myTasksTitle">My Tasks</h2><p>Your five priority tasks, with unfinished work shown first.</p></div><a href="ViewAll.html" class="text-primary text-[13px] font-semibold hover:underline">View All</a></div>
                 <div class="overflow-x-auto"><table><thead><tr><th>Document</th><th>Session</th><th>Status</th><th>Updated</th><th>Action</th></tr></thead><tbody id="myTasksBody"><tr><td colspan="5">Loading tasks…</td></tr></tbody></table></div>
             </section>
         </main>
