@@ -21,8 +21,7 @@
     <header class="analyst-page-header flex items-center border-b border-outline-variant bg-text-active px-6 shadow-sm">
         <h1 id="analystTitle" class="analyst-page-title">Good Evening, Analyst</h1>
         <div class="ml-auto flex items-center gap-2">
-            <label class="analyst-date-filter"><span>Time range</span><select id="analystRangeSelect" aria-label="Time range"><option value="today">Today</option><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="all">All time</option></select></label>
-            <span id="analystRange" class="analyst-range-label">Last 30 days</span>
+            <label class="analyst-date-filter"><select id="analystRangeSelect" aria-label="Time range"><option value="30" selected>Last 30 days</option></select></label>
             <button id="analystRefresh" type="button" class="aair-dashboard-button flex items-center gap-2 rounded-lg px-4 py-2 text-xs shadow-sm"><span class="material-symbols-outlined text-sm">refresh</span>Refresh</button>
         </div>
     </header>
@@ -40,7 +39,6 @@
         </section>
     </main>
     <script src="../../../JavaScript/api.js"></script>
-    <script src="../../../JavaScript/guidelineModal.js"></script>
     <script src="../../../JavaScript/navbar.js"></script>
     <script src="../../../JavaScript/resultAnalysisDashboard.js"></script>
     <script src="../../../JavaScript/workspace.js"></script>

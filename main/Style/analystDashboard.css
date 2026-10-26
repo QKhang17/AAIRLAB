@@ -1,6 +1,6 @@
 .analyst-page-header{height:64px!important;min-height:64px;gap:20px}
 .analyst-page-title{margin:0;color:#172031;font-size:22px;font-weight:600}
-.analyst-date-filter{display:flex;align-items:center;gap:8px;color:#667589;font-size:12px}
+.analyst-date-filter{display:flex;align-items:center;color:#667589;font-size:12px}
 .analyst-date-filter span{font-weight:500}
 .analyst-date-filter select{height:34px;padding:0 28px 0 10px;border:1px solid #bdcad7;border-radius:7px;color:#243449;background:#fff;font:500 12px Inter,Arial,sans-serif}
 .analyst-range-label{color:#68778a;font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
