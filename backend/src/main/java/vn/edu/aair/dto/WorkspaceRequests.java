@@ -36,7 +36,9 @@ public final class WorkspaceRequests {
             @JsonAlias("documentIds")
             List<@NotNull @Positive Long> documents,
 
-            @Size(min=2, max=2, message="Manual session phải có đúng 2 Manual Labeler")
+            // MANUAL sessions require exactly two labelers; AI sessions legitimately send [].
+            // The conditional rule is enforced by WorkspaceService.validateSessionAssignment.
+            @Size(max=2, message="Manual session không được có quá 2 Manual Labeler")
             List<@NotNull @Positive Long> manualLabelerIds,
 
             @Positive(message="aiLabelerId phải là số dương")

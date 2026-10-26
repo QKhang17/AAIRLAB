@@ -153,7 +153,12 @@
 }
 .result-analysis-page .ra-footer.has-differences b { color: #b42318; }
 .result-analysis-page .ra-note { top: var(--ra-header-h); }
-.result-analysis-page .document-sidebar-handle--analysis { display: none !important; }
+/* Analyst uses the same draggable document rail as Reviewer. */
+.result-analysis-page .document-sidebar-handle--analysis {
+    display:block!important;
+    z-index:45;
+    cursor:col-resize;
+}
 .result-analysis-page .ra-documents__header button { display: grid; }
 .result-analysis-page .ra-documents__header button span { font-size: 18px; }
 

@@ -25,6 +25,7 @@
     <!-- Custom CSS -->
     <link href="../../Style/basic.css" rel="stylesheet">
     <link href="../../Style/dashboardKpi.css" rel="stylesheet">
+    <link href="../../Style/adminKpiLayout.css" rel="stylesheet">
 <style>
 .admin-kpi-subtext{display:block;margin-top:7px;color:#64748b;font-size:11px;line-height:1.35}.admin-kpi-trend{display:block;margin-top:4px;color:#16845e;font-size:10px;font-weight:700}.admin-security-card{border-left-color:#16845e!important}.admin-security-card.admin-security-card--alert{border-left-color:#ba1a1a!important}.admin-security-card--alert .admin-security-icon{color:#ba1a1a!important;background:#ffdad6!important}.admin-security-card--alert .admin-security-count{color:#ba1a1a!important}.admin-security-card--alert .admin-security-state{color:#9a2c2c!important;background:#ffdad6!important}.admin-time-filter{display:block;height:auto;padding:0;background:transparent}.admin-time-filter>span{display:none}.admin-time-filter .admin-filter-select{width:145px;height:40px;padding:0 34px 0 14px;border:1px solid #cbd7e0;border-radius:10px;outline:0;color:#334155;background:#fff;box-shadow:none;font-size:12px;font-weight:600}.admin-filter-select{height:34px;min-width:112px;padding:0 8px;border:1px solid #c3c6d7;border-radius:8px;color:#334155;background:#fff;font-size:11px}.admin-audit-table{table-layout:fixed}.admin-audit-table th:nth-child(1){width:16%}.admin-audit-table th:nth-child(2){width:22%}.admin-audit-table th:nth-child(3){width:21%}.admin-audit-table th:nth-child(4){width:17%}.admin-audit-table th:nth-child(5){width:24%}.admin-audit-row{transition:background .15s ease}.admin-audit-row:hover,.admin-audit-row:focus{outline:0;background:#f4fbfd}.admin-audit-time{color:#718096;font-size:11px;white-space:nowrap}.admin-audit-user{display:flex;align-items:center;gap:8px}.admin-audit-avatar{display:grid;width:28px;height:28px;place-items:center;border-radius:50%;color:#075b92;background:#e0f3f8;font-size:10px;font-weight:800}.admin-audit-user strong,.admin-audit-user small{display:block}.admin-audit-user strong{font-size:12px;color:#243b53}.admin-audit-user small{margin-top:2px;color:#8291a1;font-size:10px}.admin-role-badge{display:inline-flex;margin-top:3px;padding:2px 6px;border-radius:999px;color:#49677d;background:#edf4f7;font-size:9px;font-weight:700}.admin-resource-link{color:#1263c9;font-family:monospace;font-size:11px;font-weight:700;text-decoration:none}.admin-action-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:800;white-space:nowrap}.admin-action-badge::before{width:6px;height:6px;border-radius:50%;background:currentColor;content:''}.admin-action--create{color:#16744d;background:#e8f8ef}.admin-action--update{color:#1762a3;background:#e8f1ff}.admin-action--security{color:#a45d0b;background:#fff1dc}.admin-action--delete{color:#a6323e;background:#ffebed}.admin-action--login,.admin-action--neutral{color:#5d6c7c;background:#edf1f4}.admin-action--export{color:#6e45a3;background:#f2ecff}.admin-audit-expand{margin-left:8px;padding:3px 6px;border:0;border-radius:5px;color:#1263c9;background:#eaf2ff;cursor:pointer;font-size:10px;font-weight:800}.admin-chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}.admin-mini-chart{min-height:180px;padding:18px 20px;border:1px solid #dfe7ef;border-radius:12px;background:#fff;box-shadow:0 4px 12px #22445c0a}.admin-mini-chart h3{margin:0;font-size:16px}.admin-mini-chart__head{display:flex;align-items:start;justify-content:space-between;margin-bottom:17px}.admin-mini-chart__head small{color:#718096;font-size:10px;font-weight:700}.admin-role-row{margin:11px 0}.admin-role-row__label{display:flex;justify-content:space-between;margin-bottom:5px;color:#52667b;font-size:11px}.admin-role-bar{height:7px;overflow:hidden;border-radius:999px;background:#edf2f5}.admin-role-bar span{display:block;height:100%;border-radius:inherit;background:#1764a8}.admin-role-bar span:nth-child(1){background:#1764a8}.admin-role-row:nth-child(3) .admin-role-bar span{background:#0b9c9a}.admin-role-row:nth-child(4) .admin-role-bar span{background:#df9630}.admin-role-row:nth-child(5) .admin-role-bar span{background:#7e60d1}.admin-role-row:nth-child(6) .admin-role-bar span{background:#d65d69}.admin-activity-chart{display:flex;height:120px;align-items:end;justify-content:space-between;gap:9px}.admin-activity-chart__bar{display:flex;height:100%;align-items:center;flex:1;flex-direction:column;justify-content:end;gap:4px}.admin-activity-chart__bar b{color:#6e7f92;font-size:9px}.admin-activity-chart__track{display:flex;width:100%;height:82px;align-items:end;border-radius:6px 6px 2px 2px;background:#edf4f8}.admin-activity-chart__track span{display:block;width:100%;border-radius:6px 6px 2px 2px;background:linear-gradient(#12a2c0,#0b72a9)}.admin-activity-chart__bar small{color:#8291a1;font-size:8px;white-space:nowrap}@media(max-width:900px){.admin-chart-grid{grid-template-columns:1fr}.admin-filter-select{min-width:94px}}@media(max-width:640px){.admin-filter-select{width:100%}.admin-chart-grid{margin-top:14px}}
 .admin-kpi-icon,.admin-audit-icon{color:#067f82!important;background:#e4faf7!important}.admin-security-card{border-left-color:#cbd5e1!important}.admin-security-card .admin-security-icon{color:#087f70!important;background:#dff4ec!important}.admin-security-card .admin-security-count,.admin-security-card .admin-kpi-trend{color:#334155!important}.admin-security-card.admin-security-card--alert{border-left-color:#ba1a1a!important}.admin-security-card--alert .admin-security-icon{color:#ba1a1a!important;background:#ffdad6!important}.admin-security-card--alert .admin-security-count,.admin-security-card--alert .admin-kpi-trend{color:#a6323e!important}.admin-security-card--alert .admin-security-state{color:#9a2c2c!important;background:#ffdad6!important}.admin-security-svg{display:block;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}/* Admin dashboard readability and alignment */
@@ -239,7 +240,7 @@
                     </div>
                     <div>
                         <p class="text-on-surface-variant text-body-md font-medium">Active Managers</p>
-                        <h3 class="text-[32px] font-bold text-on-surface">—</h3><small class="admin-kpi-subtext">From database</small><small class="admin-kpi-trend"></small>
+                        <h3 class="text-[32px] font-bold text-on-surface">—</h3><small class="admin-kpi-trend"></small>
                     </div>
                 </div>
                 <!-- KPI 2 -->
@@ -251,7 +252,7 @@
                     </div>
                     <div>
                         <p class="text-on-surface-variant text-body-md font-medium">Running AI Services</p>
-                        <h3 class="text-[32px] font-bold text-on-surface">—</h3><small class="admin-kpi-subtext">From database</small><small class="admin-kpi-trend"></small>
+                        <h3 class="text-[32px] font-bold text-on-surface">—</h3><small class="admin-kpi-trend"></small>
                     </div>
                 </div>
 
@@ -274,7 +275,7 @@
                     </div>
                     <div>
                         <p class="text-on-surface-variant text-body-md font-medium">Storage Usage</p>
-                        <h3 class="text-[32px] font-bold text-on-surface">—</h3><small class="admin-kpi-subtext">From database</small><small class="admin-kpi-trend"></small></div>
+                        <h3 class="text-[32px] font-bold text-on-surface">—</h3><small class="admin-kpi-trend"></small></div>
                 </div>
 
                 <!-- KPI 4 -->
@@ -288,7 +289,7 @@
                     </div>
                     <div>
                         <p class="text-on-surface-variant text-body-md font-medium">Security Alerts</p>
-                        <h3 class="text-[32px] font-bold text-on-surface admin-security-count" data-security-count>—</h3><small class="admin-kpi-subtext">From database</small><small class="admin-kpi-trend"></small>
+                        <h3 class="text-[32px] font-bold text-on-surface admin-security-count" data-security-count>—</h3><small class="admin-kpi-trend"></small>
                     </div>
                 </div>
 
@@ -333,58 +334,28 @@
                                         action</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-outline-variant">
-                                <tr class="hover:bg-surface-container-low transition-colors group">
-                                    <td class="px-6 py-4 font-code text-on-surface">14:37</td>
-                                    <td class="px-6 py-4 font-medium text-on-surface">Emily Wong</td>
-                                    <td class="px-6 py-4 text-on-surface-variant">Manager</td>
-                                    <td class="px-6 py-4 text-on-surface-variant">26 Jul 2026</td>
-                                    <td class="px-6 py-4">
-                                        <div class="flex items-center gap-2"><span
-                                                class="w-2 h-2 rounded-full bg-outline"></span><span
-                                                class="text-body-sm">Logged out of the system</span></div>
-                                    </td>
-                                </tr>
-                                <tr
-                                    class="bg-surface-container-low/30 hover:bg-surface-container-low transition-colors group">
-                                    <td class="px-6 py-4 font-code text-on-surface">13:05</td>
-                                    <td class="px-6 py-4 font-medium text-on-surface">David Chen</td>
-                                    <td class="px-6 py-4 text-on-surface-variant">Manager</td>
-                                    <td class="px-6 py-4 text-on-surface-variant">26 Jul 2026</td>
-                                    <td class="px-6 py-4">
-                                        <div class="flex items-center gap-2"><span
-                                                class="w-2 h-2 rounded-full bg-tertiary"></span><span
-                                                class="text-body-sm">Logged into the system</span></div>
-                                    </td>
-                                </tr>
-                                <tr class="hover:bg-surface-container-low transition-colors group">
-                                    <td class="px-6 py-4 font-code text-on-surface">11:42</td>
-                                    <td class="px-6 py-4 font-medium text-on-surface">Sarah Lee</td>
-                                    <td class="px-6 py-4 text-on-surface-variant">Manager</td>
-                                    <td class="px-6 py-4 text-on-surface-variant">26 Jul 2026</td>
-                                    <td class="px-6 py-4">
-                                        <div class="flex items-center gap-2"><span
-                                                class="w-2 h-2 rounded-full bg-outline"></span><span
-                                                class="text-body-sm">Logged out of the system</span></div>
-                                    </td>
-                                </tr>
-                                <tr
-                                    class="bg-surface-container-low/30 hover:bg-surface-container-low transition-colors group">
-                                    <td class="px-6 py-4 font-code text-on-surface">09:15</td>
-                                    <td class="px-6 py-4 font-medium text-on-surface">John Smith</td>
-                                    <td class="px-6 py-4 text-on-surface-variant">Manager</td>
-                                    <td class="px-6 py-4 text-on-surface-variant">26 Jul 2026</td>
-                                    <td class="px-6 py-4">
-                                        <div class="flex items-center gap-2"><span
-                                                class="w-2 h-2 rounded-full bg-tertiary"></span><span
-                                                class="text-body-sm">Logged into the system</span></div>
-                                    </td>
-                                </tr>
-                            </tbody>
+                            <tbody class="divide-y divide-outline-variant"></tbody>
                         </table>
                     </div>
                 </div>
-                <div class="admin-chart-grid"><section class="admin-mini-chart"><div class="admin-mini-chart__head"><div><p class="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">TEAM COMPOSITION</p><h3>Accounts by Role</h3></div><small>9 total</small></div><div class="admin-role-row"><div class="admin-role-row__label"><span>Reviewer</span><b>3</b></div><div class="admin-role-bar"><span style="width:100%"></span></div></div><div class="admin-role-row"><div class="admin-role-row__label"><span>Labeler</span><b>3</b></div><div class="admin-role-bar"><span style="width:100%"></span></div></div><div class="admin-role-row"><div class="admin-role-row__label"><span>Manager</span><b>1</b></div><div class="admin-role-bar"><span style="width:33%"></span></div></div><div class="admin-role-row"><div class="admin-role-row__label"><span>Analyst</span><b>1</b></div><div class="admin-role-bar"><span style="width:33%"></span></div></div></section><section class="admin-mini-chart"><div class="admin-mini-chart__head"><div><p class="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">AUDIT VOLUME</p><h3>Activity Over Time</h3></div><small>Last 7 days</small></div><div class="admin-activity-chart"><div class="admin-activity-chart__bar"><b>32</b><span class="admin-activity-chart__track"><span style="height:32%"></span></span><small>Oct 10</small></div><div class="admin-activity-chart__bar"><b>48</b><span class="admin-activity-chart__track"><span style="height:48%"></span></span><small>Oct 11</small></div><div class="admin-activity-chart__bar"><b>38</b><span class="admin-activity-chart__track"><span style="height:38%"></span></span><small>Oct 12</small></div><div class="admin-activity-chart__bar"><b>66</b><span class="admin-activity-chart__track"><span style="height:66%"></span></span><small>Oct 13</small></div><div class="admin-activity-chart__bar"><b>53</b><span class="admin-activity-chart__track"><span style="height:53%"></span></span><small>Oct 14</small></div><div class="admin-activity-chart__bar"><b>72</b><span class="admin-activity-chart__track"><span style="height:72%"></span></span><small>Oct 15</small></div><div class="admin-activity-chart__bar"><b>58</b><span class="admin-activity-chart__track"><span style="height:58%"></span></span><small>Today</small></div></div></section></div>                <!-- Quick Actions -->
+                <div class="admin-chart-grid">
+                    <section class="admin-mini-chart">
+                        <div class="admin-mini-chart__head">
+                            <div>
+                                <p class="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">TEAM COMPOSITION</p>
+                                <h3>Accounts by Role</h3>
+                            </div>
+                        </div>
+                    </section>
+                    <section class="admin-mini-chart">
+                        <div class="admin-mini-chart__head">
+                            <div>
+                                <p class="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">AUDIT VOLUME</p>
+                                <h3>Activity Over Time</h3>
+                            </div>
+                        </div>
+                    </section>
+                </div>                <!-- Quick Actions -->
 
             </div>
 

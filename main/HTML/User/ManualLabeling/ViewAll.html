@@ -31,6 +31,15 @@
         .task-page__heading h1 { margin:0; color:#101828; font-size:22px; line-height:28px; font-weight:600; }
         .task-page__heading p { margin:4px 0 0; color:#667085; font-size:13px; }
         .task-toolbar { height:48px; margin-bottom:0!important; padding:0 24px!important; }
+        /* The shared navbar is fixed at 58px. Reserve that space before the
+           task filters so the page heading cannot slide underneath them. */
+        .manual-labeling-tasks > header.task-toolbar {
+            position:relative!important;
+            top:auto!important;
+            z-index:10;
+            margin-top:58px!important;
+        }
+        .manual-labeling-tasks > main { padding-top:0!important; }
         .task-search { width:500px!important; min-width:280px; height:36px!important; font-size:13px!important; }
         .task-filter-group { display:flex; align-items:center; gap:8px; }
         .task-filter-group label { color:#344054; font-size:13px; font-weight:500; }
@@ -109,7 +118,7 @@
 
 </head>
 
-<body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+<body class="manual-labeling-tasks bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
 
     <div data-manual-navbar-mount></div>
 
@@ -164,7 +173,7 @@
         <!-- ===================================================== -->
 
         <section class="task-page">
-            <div class="task-page__heading"><div><h1>My Tasks</h1><p data-task-count>Tasks assigned to you</p></div><div class="task-controls"><div id="taskStatusChips" class="task-chip-group"><span class="task-chip-label">Status</span><button type="button" class="task-filter-chip is-active" data-task-status="">All</button><button type="button" class="task-filter-chip" data-task-status="PENDING">Pending</button><button type="button" class="task-filter-chip" data-task-status="IN_PROGRESS">In progress</button><button type="button" class="task-filter-chip" data-task-status="SUBMITTED">Awaiting review</button><button type="button" class="task-filter-chip" data-task-status="APPROVED">Approved</button><button type="button" class="task-filter-chip" data-task-status="REJECTED">Returned</button></div><div id="taskDueChips" class="task-chip-group"><span class="task-chip-label">Due</span><button type="button" class="task-filter-chip is-active" data-task-due="">All</button><button type="button" class="task-filter-chip" data-task-due="OVERDUE">Overdue</button><button type="button" class="task-filter-chip" data-task-due="UPCOMING">Upcoming</button></div><label class="task-chip-group"><span class="task-chip-label">Sort</span><select id="taskSortSelect" class="task-sort-select"><option value="priority">Priority</option><option value="due">Due date</option><option value="status">Status</option></select></label><button id="clearTaskFilters" type="button" class="task-clear-filters">Clear filters</button></div></div>
+            <div class="task-page__heading"><div><h1>My Tasks</h1><p data-task-count>Tasks assigned to you</p></div></div>
 
             <!-- ================================================= -->
             <!-- SESSION TABLE -->

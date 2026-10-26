@@ -28,7 +28,8 @@
         :root { --gap-section: 24px; }
         .manual-labeling-dashboard { font-family: Inter, Arial, sans-serif; }
         .manual-labeling-dashboard :where(button, input, select, textarea, label, th, td) { font-family: inherit; }
-        .manual-labeling-dashboard main { padding: 8px 24px 32px; }
+        .manual-labeling-dashboard main { padding: 24px 24px 32px; }
+        .manual-labeling-dashboard > header { position:relative !important; top:auto !important; z-index:10; margin-bottom:0 !important; }
         .manual-stat-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:var(--gap-section); margin-bottom:var(--gap-section); }
         .manual-stat-card { position:relative; min-height:128px; padding:16px 18px; border:1px solid #cbd5e1; border-radius:12px; background:#fff; box-shadow:0 2px 8px rgba(16,24,40,.06); }
         .manual-stat-icon { position:absolute; top:14px; right:16px; width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:9px; background:#f1f5f9; color:#005bd4; }
@@ -38,6 +39,12 @@
         .manual-stat-sub { margin:6px 0 0; color:#475467; font-size:12px; line-height:16px; font-style:normal; font-weight:500; }
         .manual-progress { height:6px; margin-top:10px; overflow:hidden; border-radius:999px; background:#e2e8f0; }
         .manual-progress span { display:block; width:0; height:100%; border-radius:inherit; background:#087fa8; transition:width .2s ease; }
+        .manual-labeling-dashboard .manual-stat-card { display:block !important; }
+        .manual-labeling-dashboard .manual-stat-icon { position:absolute !important; top:14px; right:16px; margin:0 !important; }
+        .manual-labeling-dashboard .manual-stat-value { margin:6px 0 0 !important; }
+        .manual-labeling-dashboard .manual-stat-label { margin:0; padding-right:42px; }
+        .manual-labeling-dashboard .manual-stat-sub { margin:6px 0 0 !important; }
+        .manual-labeling-dashboard #continueLastSession:disabled { opacity:.55; cursor:not-allowed; }
         .my-tasks { border:1px solid #d5dee4; border-radius:12px; background:#fff; box-shadow:0 2px 8px rgba(16,24,40,.06); overflow:hidden; }
         .my-tasks__head { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid #e1e7eb; }
         .my-tasks__head h2 { margin:0; color:#101828; font-size:18px; line-height:24px; font-weight:600; }

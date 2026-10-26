@@ -202,6 +202,19 @@ body.task-workspace-resizing iframe#pdfViewer {
     background: #fff !important;
 }
 
+/* The PDF should use the full AI document pane, without the outer p-4 gutter. */
+.ai-task-page .workspace-pdf-viewport {
+    width:100%!important;
+    min-width:0!important;
+    padding:0!important;
+    margin:0!important;
+    background:#fff!important;
+}
+.ai-task-page iframe#pdfViewer {
+    border-radius:0!important;
+    box-shadow:none!important;
+}
+
 .annotation-term-input,
 .annotation-definition-input {
     display: block;
@@ -288,8 +301,23 @@ body.task-workspace-resizing iframe#pdfViewer {
 /* Compact manual-labeling workspace: optimized for reviewing six fields at 1080p. */
 .manual-task-page { --manual-header-height: 58px; --manual-toolbar-height: 58px; --pdf-pane-width: 56%; }
 .ai-task-page { --manual-header-height: 50px; --manual-toolbar-height: 58px; }
+.ai-task-page > header:first-of-type {
+    z-index:100!important;
+    height:50px!important;
+    min-height:50px;
+}
 .manual-task-page .manual-navbar { height:var(--manual-header-height); }
 .manual-task-page > .manual-session-toolbar,.ai-task-page > .manual-session-toolbar { width:calc(100% - var(--document-sidebar-width))!important; margin-left:var(--document-sidebar-width)!important; top:var(--manual-header-height)!important; height:var(--manual-toolbar-height)!important; min-height:var(--manual-toolbar-height); margin-bottom:0!important; padding:0 24px!important; background:#fff!important; }
+.ai-task-page > .manual-session-toolbar {
+    position:fixed!important;
+    right:0;
+    z-index:90!important;
+    margin-top:0!important;
+}
+.ai-task-page > main {
+    margin-top:calc(var(--manual-header-height) + var(--manual-toolbar-height))!important;
+    height:calc(100vh - var(--manual-header-height) - var(--manual-toolbar-height))!important;
+}
 .manual-task-page > aside { top:var(--manual-header-height)!important; height:calc(100vh - var(--manual-header-height))!important; background:#f7fafc!important; }
 .manual-task-page > aside::after,.ai-task-page > aside::after { content:none; display:none; }
 .manual-task-page > main { height:calc(100vh - var(--manual-header-height) - var(--manual-toolbar-height))!important; }
@@ -338,7 +366,7 @@ body.task-workspace-resizing iframe#pdfViewer {
 .ai-task-page > aside { top:50px!important; height:calc(100vh - 50px)!important; }
 .manual-task-page .task-workspace-splitter { width:12px; min-width:12px; background:#eef4f7; }
 .manual-task-page .task-workspace-splitter::after { width:4px; height:54px; background:#507080; box-shadow:0 -9px #507080,0 9px #507080; }
-.manual-task-page .workspace-pdf-viewport { flex-direction:column; padding:0!important; background:#e8eef2!important; }
+.manual-task-page .workspace-pdf-viewport { width:100%!important; min-width:0!important; flex-direction:column; padding:0!important; margin:0!important; background:#fff!important; }
 .manual-task-page iframe#pdfViewer { min-height:0; flex:1; border-radius:0!important; box-shadow:none!important; }
 .manual-task-page .manual-pdf-toolbar { display:none; }
 .manual-task-page .manual-pdf-toolbar__title { font-size:13px; font-weight:700; }
@@ -433,4 +461,39 @@ body.task-workspace-resizing iframe#pdfViewer {
 .ai-task-page .annotation-definition-input { margin:0; }
 .ai-task-page main > .workspace-data-pane { align-self:start; height:fit-content; max-height:100%; }
 .ai-task-page .workspace-data-pane > div:last-child { flex:0 1 auto; max-height:calc(100vh - 150px); }
+
+/* Compact, stable AI Extraction header. Keep the prompt control inside the
+   header row instead of letting its padding determine the panel height. */
+.ai-task-page .workspace-data-pane > div:first-child {
+    flex:0 0 48px;
+    height:48px!important;
+    min-height:48px;
+    padding:0 12px!important;
+    background:#fff!important;
+}
+.ai-task-page .workspace-data-pane > div:first-child h2 {
+    margin:0;
+    font-size:16px!important;
+    line-height:20px;
+}
+.ai-task-page .workspace-data-pane > div:first-child .material-symbols-outlined {
+    font-size:18px!important;
+}
+.ai-task-page #aiPromptControls {
+    gap:6px!important;
+}
+.ai-task-page #aiPromptControls label {
+    font-size:11px!important;
+    line-height:16px;
+}
+.ai-task-page #aiPromptSelect {
+    width:180px;
+    max-width:180px!important;
+    height:32px!important;
+    min-height:32px;
+    padding:0 10px!important;
+    border-radius:7px;
+    font-size:11px!important;
+    line-height:16px;
+}
 

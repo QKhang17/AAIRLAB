@@ -15,7 +15,9 @@
     const table = $('table'), head = table?.querySelector('thead tr'), body = $('#taskRows'); table?.classList.add('aa-table'); table?.closest('div.bg-white')?.classList.add('aa-table-shell');
     if (head) head.innerHTML = '<th>Document</th><th>Session</th><th>Annotator</th><th>Type</th><th>Status</th><th>Due date</th><th>Action</th>';
     const allRows = await AAIR.request('/tasks');
-    const rows = allRows.filter(row => !/^test\d*$/i.test(String(row.session_name || '').trim()) && String(row.assignee || '').trim().toLowerCase() !== 'yes');
+    // Do not discard sessions by name. A real manager-created session may be
+    // named "test"; the API already scopes the rows to this Analyst.
+    const rows = allRows.filter(row => String(row.assignee || '').trim().toLowerCase() !== 'yes');
     const session = $('#sessionFilter'), status = $('#statusFilter'), search = $('#taskSearch');
     [...new Set(rows.map(row => row.session_name).filter(Boolean))].sort().forEach(value => session.add(new Option(value, value)));
     [...new Set(rows.map(row => row.status).filter(Boolean))].sort().forEach(value => status.add(new Option(labels[value] || value, value)));

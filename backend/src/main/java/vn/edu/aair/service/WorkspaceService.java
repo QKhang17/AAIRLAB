@@ -16,12 +16,13 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /** Business rules and row-level access for the existing PostgreSQL schema. */
 @Service
 @Transactional
 public class WorkspaceService {
-    public static final Set<String> ROLES = Set.of("ADMIN", "MANAGER", "AI_LABELER", "MANUAL_LABELER", "REVIEWER", "RESULT_ANALYST", "TERMINOLOGY");
+    public static final Set<String> ROLES = Set.of("USER", "ADMIN", "MANAGER", "AI_LABELER", "MANUAL_LABELER", "REVIEWER", "RESULT_ANALYST", "TERMINOLOGY");
     public static final Set<String> ACCOUNT_MANAGEMENT_ROLES = Set.of("ADMIN", "MANAGER");
     public static final List<String> PERMISSION_FEATURES = List.of(
             "DASHBOARD", "USER_MANAGEMENT", "PERMISSION_MANAGEMENT", "AUDIT_LOGS",
@@ -133,10 +134,19 @@ public class WorkspaceService {
     public List<Map<String,Object>> assignees() {
         var a = actor(); require(a, "MANAGER"); requirePermission(a, "TASKS", "READ");
         return db.queryForList("""
-                SELECT id, username, role, status, is_active FROM users u
+                SELECT id, username, role,
+                       CASE WHEN EXISTS (
+                           SELECT 1 FROM session_members sm
+                           JOIN annotation_sessions s ON s.id=sm.session_id
+                           WHERE sm.user_id=u.id AND s.status IN ('DRAFT','ACTIVE')
+                       ) OR EXISTS (
+                           SELECT 1 FROM annotation_tasks at
+                           JOIN annotation_sessions s ON s.id=at.session_id
+                           WHERE at.assigned_to=u.id AND s.status IN ('DRAFT','ACTIVE')
+                       ) THEN 'BUSY' ELSE status END AS status,
+                       is_active FROM users u
                 WHERE is_active = true
-                  AND status = 'AVAILABLE'
-                  AND role IN ('AI_LABELER','MANUAL_LABELER','REVIEWER','RESULT_ANALYST')
+                  AND role IN ('USER','AI_LABELER','MANUAL_LABELER','REVIEWER','RESULT_ANALYST')
                 ORDER BY username
                 """);
     }
@@ -317,7 +327,7 @@ public class WorkspaceService {
             case "MANAGER" -> "t.assigned_by="+a.id();
             // Analysts compare AI runs only. This is enforced at the data boundary,
             // so opening a manually labelled task directly cannot bypass the UI.
-            case "RESULT_ANALYST" -> "t.task_type='AI'";
+            case "RESULT_ANALYST" -> "t.task_type='AI' AND EXISTS (SELECT 1 FROM session_members m WHERE m.session_id=t.session_id AND m.user_id="+a.id()+")";
             case "REVIEWER" -> "t.task_type='MANUAL' AND (EXISTS (SELECT 1 FROM session_members m WHERE m.session_id=t.session_id AND m.user_id="+a.id()+") " +
                     "OR EXISTS (SELECT 1 FROM review_cases rc WHERE rc.assigned_to="+a.id()+" AND t.id IN (rc.left_task_id,rc.right_task_id)))";
             default -> "t.assigned_to="+a.id();
@@ -406,7 +416,10 @@ public class WorkspaceService {
         // 9. Atomically claim each assigned user: AVAILABLE -> BUSY (concurrency-safe)
         claimAssignedUsers(memberIds);
 
-        // 10. Insert annotation_sessions
+        // 10. Assign the function selected by the manager to generic USER accounts.
+        assignSessionRoles(sessionType, r);
+
+        // 11. Insert annotation_sessions
         var s = one("""
                 INSERT INTO annotation_sessions(name, description, session_type, status, due_at, created_by, started_at, ended_at)
                 VALUES (?, ?, ?, 'DRAFT', ?, ?, NULL, NULL)
@@ -416,12 +429,12 @@ public class WorkspaceService {
         long sessionId = id(s, "id");
         audit(a, "CREATE", "SESSION", sessionId);
 
-        // 11. Insert session_members
+        // 12. Insert session_members
         for (Long userId : memberIds) {
             db.update("INSERT INTO session_members(session_id, user_id) VALUES (?, ?)", sessionId, userId);
         }
 
-        // 12. Create annotation_tasks for documents and labelers
+        // 13. Create annotation_tasks for documents and labelers
         for (Long docId : documentIds) {
             if ("MANUAL".equalsIgnoreCase(sessionType)) {
                 if (r.manualLabelerIds() != null) {
@@ -469,6 +482,18 @@ public class WorkspaceService {
         }
     }
 
+    private void assignSessionRoles(String sessionType, Session r) {
+        if ("MANUAL".equalsIgnoreCase(sessionType)) {
+            for (Long userId : r.manualLabelerIds()) {
+                db.update("UPDATE users SET role='MANUAL_LABELER' WHERE id=? AND role='USER'", userId);
+            }
+            db.update("UPDATE users SET role='RESULT_ANALYST' WHERE id=? AND role='USER'", r.reviewerId());
+        } else {
+            db.update("UPDATE users SET role='AI_LABELER' WHERE id=? AND role='USER'", r.aiLabelerId());
+            db.update("UPDATE users SET role='RESULT_ANALYST' WHERE id=? AND role='USER'", r.reviewerId());
+        }
+    }
+
     private void validateSessionAssignment(String sessionType, Session r) {
         if ("MANUAL".equalsIgnoreCase(sessionType)) {
             valid(r.manualLabelerIds() != null && r.manualLabelerIds().size() == 2,
@@ -489,7 +514,7 @@ public class WorkspaceService {
             for (Long manualId : r.manualLabelerIds()) {
                 validateAssignmentUser(manualId, "MANUAL_LABELER");
             }
-            validateAssignmentUser(r.reviewerId(), "REVIEWER");
+            validateAssignmentUser(r.reviewerId(), "RESULT_ANALYST");
 
             // 6. Validate previous-session availability
             for (Long manualId : r.manualLabelerIds()) {
@@ -512,7 +537,7 @@ public class WorkspaceService {
 
             // 4. Validate user roles & 5. Validate active users
             validateAssignmentUser(r.aiLabelerId(), "AI_LABELER");
-            validateAssignmentUser(r.reviewerId(), "REVIEWER");
+            validateAssignmentUser(r.reviewerId(), "RESULT_ANALYST");
 
             // 6. Validate previous-session availability
             validateUserAvailability(r.aiLabelerId());
@@ -531,7 +556,8 @@ public class WorkspaceService {
         valid(!rows.isEmpty(), "User " + userId + " không tồn tại");
         var u = rows.getFirst();
         String identifier = u.get("username") != null ? String.valueOf(u.get("username")) : String.valueOf(userId);
-        valid(Objects.equals(u.get("role"), expectedRole), "User " + identifier + " must have role " + expectedRole + ".");
+        valid(Objects.equals(u.get("role"), expectedRole) || Objects.equals(u.get("role"), "USER"),
+                "User " + identifier + " must have role USER or " + expectedRole + ".");
         valid(Boolean.TRUE.equals(u.get("is_active")), "User " + identifier + " is inactive.");
     }
 
@@ -615,7 +641,7 @@ public class WorkspaceService {
     public List<Map<String,Object>> tasks() { return tasks(null,null,null,null,null); }
     public List<Map<String,Object>> tasks(String type, String status, Long sessionId, String due, String search) {
         var a=actor(); if (a.role().equals("MANAGER")) requirePermission(a, "TASKS", "READ");
-        StringBuilder sql=new StringBuilder("SELECT t.*,d.title AS document_title,u.username AS assignee,s.name AS session_name, " +
+        StringBuilder sql=new StringBuilder("SELECT t.*,t.id AS task_id,d.title AS document_title,u.username AS assignee,s.name AS session_name, " +
                 "s.started_at AS session_started_at, " +
                 "(SELECT count(*) FROM ai_labeler_results ar WHERE ar.task_id=t.id) AS result_count " +
                 "FROM annotation_tasks t JOIN documents d ON d.id=t.document_id LEFT JOIN users u ON u.id=t.assigned_to " +
@@ -646,8 +672,14 @@ public class WorkspaceService {
                        created_by_username, created_at
                 FROM ai_labeler_results
                 WHERE task_id=?
+                UNION ALL
+                SELECT id, run_id, task_id, document_id, provider, model, indicator_name,
+                       indicator_value, unit, source_page, source_label, confidence,
+                       created_by_username, created_at
+                FROM manual_labeler_results
+                WHERE task_id=?
                 ORDER BY created_at DESC, id DESC
-                """, taskId);
+                """, taskId, taskId);
     }
     private void validAssignee(String type, Long sessionId, long userId) {
         var u=one("SELECT role,is_active FROM users WHERE id=? FOR SHARE",userId);
@@ -832,7 +864,7 @@ public class WorkspaceService {
         var args=new ArrayList<Object>();args.add(a.id());
         String filter="";
         if(status!=null&&!status.isBlank()){filter=" AND rc.status=?";args.add(status);}
-        return db.queryForList("""
+        var rows = db.queryForList("""
                 SELECT rc.*,d.title AS document_title,d.original_name,
                        lu.username AS left_assignee,ru.username AS right_assignee,
                        lt.task_type AS left_task_type,rt.task_type AS right_task_type,
@@ -851,6 +883,37 @@ public class WorkspaceService {
                 " AND lu.role='MANUAL_LABELER' AND ru.role='MANUAL_LABELER'"+
                 " AND EXISTS (SELECT 1 FROM session_members sm WHERE sm.session_id=lt.session_id AND sm.user_id=rc.assigned_to)"+
                 " ORDER BY rc.due_at NULLS LAST,rc.id DESC",args.toArray());
+        if (a.role().equals("REVIEWER") && (status == null || status.isBlank())) {
+            var assigned = db.queryForList("""
+                    SELECT t.id,t.session_id,t.document_id,t.status,d.title AS document_title,
+                           u.username AS assignee
+                    FROM annotation_tasks t
+                    JOIN documents d ON d.id=t.document_id
+                    JOIN users u ON u.id=t.assigned_to
+                    WHERE t.task_type='MANUAL'
+                      AND u.role='MANUAL_LABELER'
+                      AND t.status IN ('SUBMITTED','APPROVED')
+                      AND EXISTS (SELECT 1 FROM session_members sm WHERE sm.session_id=t.session_id AND sm.user_id=? )
+                    ORDER BY t.session_id,t.document_id,t.id
+                    """, a.id());
+            var groups = new LinkedHashMap<String,List<Map<String,Object>>>();
+            for (var task : assigned) groups.computeIfAbsent(String.valueOf(task.get("session_id"))+":"+task.get("document_id"), key -> new ArrayList<>()).add(task);
+            var existingPairs = rows.stream().map(row -> String.valueOf(row.get("left_task_id"))+":"+row.get("right_task_id")).collect(Collectors.toSet());
+            for (var group : groups.values()) if (group.size() >= 2) {
+                var left = group.get(0); var right = group.get(1);
+                String pair = String.valueOf(left.get("id"))+":"+right.get("id");
+                String reverse = String.valueOf(right.get("id"))+":"+left.get("id");
+                if (existingPairs.contains(pair) || existingPairs.contains(reverse)) continue;
+                var synthetic = new LinkedHashMap<String,Object>();
+                synthetic.put("id", -Math.abs(((Number)left.get("id")).longValue()));
+                synthetic.put("left_task_id", left.get("id")); synthetic.put("right_task_id", right.get("id"));
+                synthetic.put("document_id", left.get("document_id")); synthetic.put("document_title", left.get("document_title"));
+                synthetic.put("left_assignee", left.get("assignee")); synthetic.put("right_assignee", right.get("assignee"));
+                synthetic.put("status", "PENDING"); synthetic.put("resolved_fields", 0);
+                rows.add(synthetic);
+            }
+        }
+        return rows;
     }
 
     public Map<String,Object> createReviewCase(ReviewCaseCreate r) {
@@ -879,6 +942,7 @@ public class WorkspaceService {
 
     public Map<String,Object> reviewCase(long reviewCaseId) {
         var a=actor();require(a,"MANAGER","REVIEWER");
+        if (reviewCaseId < 0) return directReviewComparison(a, -reviewCaseId);
         var review=accessibleReviewCase(a,reviewCaseId,false);
         long leftId=nullableId(review,"left_task_id"),rightId=nullableId(review,"right_task_id");
         var left=annotationMap(leftId);var right=annotationMap(rightId);
@@ -889,6 +953,30 @@ public class WorkspaceService {
         for(String key:keys) fields.add(comparisonField(key,left.get(key),right.get(key),decisions.get(key)));
         review.put("fields",fields);
         review.put("history",db.queryForList("SELECT fd.*,u.username AS reviewer FROM review_field_decisions fd LEFT JOIN users u ON u.id=fd.reviewed_by WHERE fd.review_case_id=? ORDER BY fd.reviewed_at DESC NULLS LAST,fd.id DESC",reviewCaseId));
+        return review;
+    }
+
+    private Map<String,Object> directReviewComparison(Actor a, long taskId) {
+        var task = one("SELECT t.*,d.title AS document_title,u.username AS assignee FROM annotation_tasks t JOIN documents d ON d.id=t.document_id JOIN users u ON u.id=t.assigned_to WHERE t.id=?", taskId);
+        valid(canReadTask(a, taskId), "Bạn không được xem tác vụ này");
+        var pair = one("""
+                SELECT t.*,d.title AS document_title,u.username AS assignee
+                FROM annotation_tasks t JOIN documents d ON d.id=t.document_id JOIN users u ON u.id=t.assigned_to
+                WHERE t.task_type='MANUAL' AND t.session_id=? AND t.document_id=? AND t.id<>?
+                  AND t.status IN ('SUBMITTED','APPROVED')
+                ORDER BY t.id LIMIT 1
+                """, task.get("session_id"), task.get("document_id"), taskId);
+        var leftId = taskId; var rightId = id(pair,"id");
+        var left = annotationMap(leftId); var right = annotationMap(rightId);
+        var keys = new TreeSet<String>(); keys.addAll(left.keySet()); keys.addAll(right.keySet());
+        var fields = new ArrayList<Map<String,Object>>();
+        for (String key : keys) fields.add(comparisonField(key,left.get(key),right.get(key),null));
+        var review = new LinkedHashMap<String,Object>();
+        review.put("id", -Math.abs(taskId)); review.put("left_task_id", leftId); review.put("right_task_id", rightId);
+        review.put("document_id", task.get("document_id")); review.put("document_title", task.get("document_title"));
+        review.put("left_assignee", task.get("assignee")); review.put("right_assignee", pair.get("assignee"));
+        review.put("left_status", task.get("status")); review.put("right_status", pair.get("status"));
+        review.put("status", "PENDING"); review.put("fields", fields); review.put("history", List.of());
         return review;
     }
 

@@ -19,15 +19,46 @@ window.AAIRResultAnalysisDashboard = async function ({ request, notice, go, user
         const selected = range(); $('analystRange').textContent = selected.label; $('analystDashboardState').textContent = 'Loading data…';
         try {
             const query = selected.from ? `?from=${encodeURIComponent(localIso(selected.from))}&to=${encodeURIComponent(localIso(selected.to))}` : '';
-            const [statistics, tasks] = await Promise.all([request(`/statistics${query}`), request('/tasks')]);
-            const statuses = statistics.statuses || [], labels = statistics.labels || [], productivity = statistics.userProductivity || []; const totals = Object.fromEntries(statuses.map(item => [item.status, number(item.total)])); const totalTasks = statuses.reduce((sum, item) => sum + number(item.total), 0); const inProgress = Object.entries(totals).filter(([status]) => !['APPROVED', 'SUBMITTED', 'REJECTED'].includes(status)).reduce((sum, [, total]) => sum + total, 0); const overdue = productivity.reduce((sum, item) => sum + number(item.overdue_tasks), 0);
-            metric('metricTotalTasks', totalTasks); metric('metricInProgress', inProgress); metric('metricSubmitted', totals.SUBMITTED); metric('metricApproved', totals.APPROVED); metric('metricOverdue', overdue); metric('metricLabels', labels.reduce((sum, item) => sum + number(item.total), 0)); $('overdueMetric').classList.toggle('is-alert', overdue > 0);
-            bars($('statusDistribution'), statuses, item => statusLabels[item.status] || item.status, item => number(item.total), 'status'); bars($('labelDistribution'), labels.slice(0, 8), item => friendlyLabel(item.label_name), item => number(item.total), 'labels');
-            const from = selected.from || new Date(0), recent = tasks.filter(task => !task.created_at || new Date(task.created_at) >= from).sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0)).slice(0, 10); const taskBody = $('recentTasks'); taskBody.replaceChildren(); if (!recent.length) emptyRow(taskBody, 4, 'No tasks in the selected range.');
+            const [statistics, tasks] = await Promise.all([
+                request(`/statistics${query}`).catch(() => ({})),
+                request('/tasks'),
+            ]);
+            const taskDate = task => new Date(task.updated_at || task.created_at || 0);
+            const inRange = task => !selected.from || taskDate(task) >= selected.from;
+            const scopedTasks = (Array.isArray(tasks) ? tasks : []).filter(inRange);
+            const statusTotals = scopedTasks.reduce((counts, task) => {
+                const status = String(task.status || 'PENDING').toUpperCase();
+                counts[status] = (counts[status] || 0) + 1;
+                return counts;
+            }, {});
+            const statuses = Object.entries(statusTotals).map(([status, total]) => ({ status, total }));
+            const totalTasks = scopedTasks.length;
+            const inProgress = scopedTasks.filter(task => ['PENDING', 'IN_PROGRESS', 'REJECTED'].includes(String(task.status || '').toUpperCase())).length;
+            const overdue = scopedTasks.filter(task => task.due_at && new Date(task.due_at) < new Date() && String(task.status || '').toUpperCase() !== 'APPROVED').length;
+            const productivityMap = new Map();
+            scopedTasks.forEach(task => {
+                const username = task.assignee || task.assignee_username || 'Unassigned';
+                const entry = productivityMap.get(username) || { username, completed_tasks: 0, overdue_tasks: 0 };
+                if (String(task.status || '').toUpperCase() === 'APPROVED') entry.completed_tasks += 1;
+                if (task.due_at && new Date(task.due_at) < new Date() && String(task.status || '').toUpperCase() !== 'APPROVED') entry.overdue_tasks += 1;
+                productivityMap.set(username, entry);
+            });
+            const productivity = [...productivityMap.values()];
+            const taskDetails = await Promise.all(scopedTasks.map(task => request(`/tasks/${task.id}`).catch(() => task)));
+            const labelCounts = new Map();
+            taskDetails.forEach(task => (Array.isArray(task.labels) ? task.labels : []).forEach(label => {
+                const labelName = label.label_name || label.indicator_name || label.name;
+                if (labelName) labelCounts.set(labelName, (labelCounts.get(labelName) || 0) + 1);
+            }));
+            const labels = [...labelCounts.entries()].map(([label_name, total]) => ({ label_name, total }));
+            const totals = statusTotals;
+            const labelsTotal = labels.reduce((sum, item) => sum + number(item.total), 0);
+            metric('metricTotalTasks', totalTasks); metric('metricSubmitted', totals.SUBMITTED); metric('metricApproved', totals.APPROVED); metric('metricOverdue', overdue); $('overdueMetric').classList.toggle('is-alert', overdue > 0);
+            const recent = scopedTasks.sort((a, b) => taskDate(b) - taskDate(a)).slice(0, 10); const taskBody = $('recentTasks'); taskBody.replaceChildren(); if (!recent.length) emptyRow(taskBody, 4, 'No tasks in the selected range.');
             recent.forEach(task => { const row = document.createElement('tr'); row.addEventListener('click', () => go(`Task.html?id=${task.id}`)); const status = document.createElement('td'); status.append(statusPill(task.status)); row.append(textCell(task.document_title || task.document_name), textCell(task.assignee || task.assignee_username), status, textCell(formatDate(task.updated_at || task.created_at))); taskBody.append(row); });
             const productivityBody = $('userProductivity'); productivityBody.replaceChildren(); if (!productivity.length) emptyRow(productivityBody, 3, 'No productivity data.'); productivity.slice(0, 10).forEach(item => { const row = document.createElement('tr'); const overdueCell = document.createElement('td'); const overdueValue = number(item.overdue_tasks); if (overdueValue > 0) { const badge = document.createElement('span'); badge.className = 'analyst-overdue-count'; badge.textContent = displayNumber(overdueValue); overdueCell.append(badge); } else overdueCell.textContent = '0'; row.append(textCell(item.username || 'Unassigned'), textCell(item.completed_tasks), overdueCell); productivityBody.append(row); });
             $('analystDashboardState').textContent = totalTasks ? `Updated ${new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date())}` : 'No data in the selected range.';
-        } catch (error) { $('analystDashboardState').textContent = `Unable to load data: ${error.message}`; ['metricTotalTasks', 'metricInProgress', 'metricSubmitted', 'metricApproved', 'metricOverdue', 'metricLabels'].forEach(id => { $(id).textContent = '—'; }); emptyRow($('recentTasks'), 4, 'Unable to load tasks. Try again.'); emptyRow($('userProductivity'), 3, 'Unable to load productivity. Try again.'); $('statusDistribution').textContent = 'Unable to load data.'; $('labelDistribution').textContent = 'Unable to load data.'; notice(error.message, true); }
+        } catch (error) { $('analystDashboardState').textContent = `Unable to load data: ${error.message}`; ['metricTotalTasks', 'metricSubmitted', 'metricApproved', 'metricOverdue'].forEach(id => { $(id).textContent = '—'; }); emptyRow($('recentTasks'), 4, 'Unable to load tasks. Try again.'); emptyRow($('userProductivity'), 3, 'Unable to load productivity. Try again.'); notice(error.message, true); }
     }
     const currentUser = user || await window.AAIR?.guard?.(); if (currentUser) $('analystTitle').textContent = `${greeting(new Date().getHours())}, ${currentUser.username || 'Analyst'}`;
     $('analystRangeSelect').addEventListener('change', load); $('analystRefresh').addEventListener('click', load); await load();

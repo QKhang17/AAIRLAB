@@ -53,7 +53,7 @@
         el.setAttribute('aria-label', `${text(el)} — ${message}`); el.style.opacity = '0.5';
     }
     const date = value => value ? new Date(value).toLocaleString('vi-VN') : '—';
-    const userRoleLabels = { ADMIN: 'Admin', MANAGER: 'Manager', AI_LABELER: 'AI Labeler', MANUAL_LABELER: 'Manual Labeler', REVIEWER: 'Reviewer', RESULT_ANALYST: 'Result Analyst', TERMINOLOGY: 'Terminology', LABELER: 'Labeler', ANALYST: 'Analyst' };
+    const userRoleLabels = { ADMIN: 'Admin', MANAGER: 'Manager', AI_LABELER: 'AI Labeler', MANUAL_LABELER: 'Manual Labeler', REVIEWER: 'Reviewer', RESULT_ANALYST: 'Analyst', TERMINOLOGY: 'Terminology', LABELER: 'Labeler', ANALYST: 'Analyst' };
     const userRoleLabel = value => userRoleLabels[String(value || '').toUpperCase()] || String(value || 'User');
     const userDate = value => { const parsed = new Date(value); if (Number.isNaN(parsed.getTime())) return '—'; const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${parsed.getDate()} ${months[parsed.getMonth()]} ${parsed.getFullYear()}, ${String(parsed.getHours()).padStart(2,'0')}:${String(parsed.getMinutes()).padStart(2,'0')}`; };
     function userBadge(label, tone) { const badge = document.createElement('span'); badge.className = `users-badge users-badge--${tone}`; badge.textContent = label; return badge; }
@@ -613,12 +613,15 @@
             if(!pendingFiles.length)return;
             const files=[...pendingFiles];let uploaded=0;
             for(const file of files){const data=new FormData();data.append('file',file);data.append('metadata',new Blob([JSON.stringify({title:file.name,documentType:'PDF'})],{type:'application/json'}));await request('/documents',{method:'POST',body:data});uploaded++;}
-            pendingFiles=[];syncSaveState();await refresh();notice(`Đã lưu ${uploaded} tài liệu vào cơ sở dữ liệu.`);
+            pendingFiles=[];syncSaveState();notice(`Đã lưu ${uploaded} tài liệu vào cơ sở dữ liệu.`);window.location.reload();
         });
         window.addEventListener('beforeunload',event=>{if(!pendingFiles.length)return;event.preventDefault();event.returnValue='Xác nhận lưu thay đổi?';});
     }
     async function sessionsPage() {
-        const [documents, assignees] = await Promise.all([request('/documents'),request('/assignees')]);
+        // Use the assignment endpoint so availability is calculated from active sessions,
+        // even when the users.status column has not been refreshed yet.
+        const [documents, userRows] = await Promise.all([request('/documents'),request('/assignees')]);
+        const assignees=(userRows||[]).filter(row=>row.is_active!==false && String(row.status||'AVAILABLE').toUpperCase()!=='BUSY' && ['USER','AI_LABELER','MANUAL_LABELER','RESULT_ANALYST'].includes(String(row.role||'').toUpperCase()));
         const modal=$('#modalContent'), name=$('input[placeholder^="e.g."]',modal), description=$('textarea',modal);
         const lists=$$('div.max-h-48',modal);
         const [documentList,typeList,memberList]=lists;
@@ -639,9 +642,11 @@
         $('p',modelSection).textContent='Session Type';
         $$('p',modelSection)[1].textContent='Chọn gán nhãn AI, thủ công hoặc cả hai.';
         const modelSearch=$('input[placeholder="Search AI models..."]',modal);modelSearch.parentElement.hidden=true;
-        checkList(memberList,assignees.map(u=>({id:u.id,name:`${u.username} — ${u.role}`})),'members');
+        const assignmentRoleLabel=u=>u.role==='RESULT_ANALYST'?'ANALYST':u.role;
+        checkList(memberList,assignees.map(u=>({id:u.id,name:`${u.username} — ${assignmentRoleLabel(u)}`})),'members');
         const userSection=memberList.parentElement;
         const userSearchRow=memberList.previousElementSibling;
+        userSearchRow?.remove();
         const userCountSpan=$$('span',userSection).find(s=>/Selected$/.test(text(s)));
 
         const manualAssignContainer=document.createElement('div');
@@ -666,7 +671,7 @@
             </div>
             <div class="space-y-1.5">
                 <label class="text-label-md text-on-surface-variant uppercase tracking-wider font-bold">
-                    Reviewer <span class="text-error font-normal">*</span>
+                    Analyst <span class="text-error font-normal">*</span>
                 </label>
                 <select id="manualReviewer" class="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-body-md cursor-pointer">
                     <option value="">Select user...</option>
@@ -689,7 +694,7 @@
             </div>
             <div class="space-y-1.5">
                 <label class="text-label-md text-on-surface-variant uppercase tracking-wider font-bold">
-                    Reviewer <span class="text-error font-normal">*</span>
+                    Analyst <span class="text-error font-normal">*</span>
                 </label>
                 <select id="aiReviewer" class="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-body-md cursor-pointer">
                     <option value="">Select user...</option>
@@ -706,13 +711,19 @@
         const aiReviewerSelect=$('#aiReviewer',aiAssignContainer);
 
         let currentAssignees=assignees;
-        let manualLabelers=currentAssignees.filter(u=>u.role==='MANUAL_LABELER');
-        let aiLabelers=currentAssignees.filter(u=>u.role==='AI_LABELER');
-        let reviewers=currentAssignees.filter(u=>u.role==='REVIEWER');
+        const roleOf=user=>String(user?.role||'').toUpperCase();
+        const isUnavailable=user=>user?.is_active===false||String(user?.status||'AVAILABLE').toUpperCase()!=='AVAILABLE';
+        const selectableUser=user=>['USER','MANUAL_LABELER','AI_LABELER','RESULT_ANALYST'].includes(roleOf(user));
+        const canManual=user=>selectableUser(user)&&['USER','MANUAL_LABELER'].includes(roleOf(user));
+        const canAi=user=>selectableUser(user)&&['USER','AI_LABELER'].includes(roleOf(user));
+        const canReview=user=>selectableUser(user)&&['USER','RESULT_ANALYST'].includes(roleOf(user));
+        let manualLabelers=currentAssignees.filter(canManual);
+        let aiLabelers=currentAssignees.filter(canAi);
+        let reviewers=currentAssignees.filter(canReview);
 
         function formatUserOptionLabel(user){
             if(!user)return '';
-            const status=user.is_active===false?'INACTIVE':(user.status||'UNKNOWN');
+            const status=user.is_active===false?'INACTIVE':(user.status||'AVAILABLE');
             return `${user.username} — ${status}`;
         }
 
@@ -727,6 +738,7 @@
                 const opt=document.createElement('option');
                 opt.value=String(u.id);
                 opt.textContent=formatUserOptionLabel(u);
+                opt.disabled=isUnavailable(u);
                 if(String(u.id)===currentVal)opt.selected=true;
                 select.appendChild(opt);
             }
@@ -747,9 +759,9 @@
 
         function renderAssignmentDropdowns(assigneeList=currentAssignees){
             currentAssignees=assigneeList||[];
-            manualLabelers=currentAssignees.filter(u=>u.role==='MANUAL_LABELER');
-            aiLabelers=currentAssignees.filter(u=>u.role==='AI_LABELER');
-            reviewers=currentAssignees.filter(u=>u.role==='REVIEWER');
+            manualLabelers=currentAssignees.filter(canManual);
+            aiLabelers=currentAssignees.filter(canAi);
+            reviewers=currentAssignees.filter(canReview);
             populateManualOptions();
             populateAiOptions();
         }
@@ -763,8 +775,8 @@
             $$('option',m1Select).forEach(opt=>{
                 if(!opt.value)return;
                 const taken=(opt.value===val2 && val2!=='')||(opt.value===valRev && valRev!=='');
-                opt.disabled=taken;
                 const user=manualLabelers.find(u=>String(u.id)===opt.value);
+                opt.disabled=isUnavailable(user)||taken;
                 if(user){
                     const label=formatUserOptionLabel(user);
                     opt.textContent=taken?`${label} (Selected)`:label;
@@ -774,8 +786,8 @@
             $$('option',m2Select).forEach(opt=>{
                 if(!opt.value)return;
                 const taken=(opt.value===val1 && val1!=='')||(opt.value===valRev && valRev!=='');
-                opt.disabled=taken;
                 const user=manualLabelers.find(u=>String(u.id)===opt.value);
+                opt.disabled=isUnavailable(user)||taken;
                 if(user){
                     const label=formatUserOptionLabel(user);
                     opt.textContent=taken?`${label} (Selected)`:label;
@@ -785,8 +797,8 @@
             $$('option',reviewerSelect).forEach(opt=>{
                 if(!opt.value)return;
                 const taken=(opt.value===val1 && val1!=='')||(opt.value===val2 && val2!=='');
-                opt.disabled=taken;
                 const user=reviewers.find(u=>String(u.id)===opt.value);
+                opt.disabled=isUnavailable(user)||taken;
                 if(user){
                     const label=formatUserOptionLabel(user);
                     opt.textContent=taken?`${label} (Selected)`:label;
@@ -804,8 +816,8 @@
             $$('option',aiLabelerSelect).forEach(opt=>{
                 if(!opt.value)return;
                 const taken=(opt.value===valRev && valRev!=='');
-                opt.disabled=taken;
                 const user=aiLabelers.find(u=>String(u.id)===opt.value);
+                opt.disabled=isUnavailable(user)||taken;
                 if(user){
                     const label=formatUserOptionLabel(user);
                     opt.textContent=taken?`${label} (Selected)`:label;
@@ -815,8 +827,8 @@
             $$('option',aiReviewerSelect).forEach(opt=>{
                 if(!opt.value)return;
                 const taken=(opt.value===valAi && valAi!=='');
-                opt.disabled=taken;
                 const user=reviewers.find(u=>String(u.id)===opt.value);
+                opt.disabled=isUnavailable(user)||taken;
                 if(user){
                     const label=formatUserOptionLabel(user);
                     opt.textContent=taken?`${label} (Selected)`:label;
@@ -927,9 +939,10 @@
         };
         const reloadAssignees=async()=>{
             try{
-                const fetched=await request('/assignees');
+                const fetchedRows=await request('/assignees');
+                const fetched=(fetchedRows||[]).filter(row=>row.is_active!==false && String(row.status||'AVAILABLE').toUpperCase()!=='BUSY' && ['USER','AI_LABELER','MANUAL_LABELER','RESULT_ANALYST'].includes(String(row.role||'').toUpperCase()));
                 renderAssignmentDropdowns(fetched);
-                checkList(memberList,currentAssignees.map(u=>({id:u.id,name:`${u.username} — ${u.role}`})),'members');
+                checkList(memberList,currentAssignees.map(u=>({id:u.id,name:`${u.username} — ${assignmentRoleLabel(u)}`})),'members');
             }catch{}
         };
         const refresh=async()=>{list.reload(await request('/sessions'));await reloadAssignees();};
@@ -961,7 +974,7 @@
 
                 if(!m1Select.value)throw new Error('Vui lòng chọn Manual Labeler 1.');
                 if(!m2Select.value)throw new Error('Vui lòng chọn Manual Labeler 2.');
-                if(!reviewerSelect.value)throw new Error('Vui lòng chọn Reviewer.');
+                if(!reviewerSelect.value)throw new Error('Vui lòng chọn Analyst.');
 
                 const m1Id=Number(m1Select.value);
                 const m2Id=Number(m2Select.value);
@@ -974,9 +987,10 @@
                 const m2User=currentAssignees.find(u=>u.id===m2Id);
                 const revUser=currentAssignees.find(u=>u.id===revId);
 
-                if(!m1User || m1User.role!=='MANUAL_LABELER')throw new Error('Manual Labeler 1 phải có vai trò MANUAL_LABELER.');
-                if(!m2User || m2User.role!=='MANUAL_LABELER')throw new Error('Manual Labeler 2 phải có vai trò MANUAL_LABELER.');
-                if(!revUser || revUser.role!=='REVIEWER')throw new Error('Reviewer phải có vai trò REVIEWER.');
+                const hasRole=(candidate,...roles)=>candidate&&roles.includes(String(candidate.role||'').toUpperCase());
+                if(!hasRole(m1User,'USER','MANUAL_LABELER'))throw new Error('Manual Labeler 1 phải là tài khoản USER hoặc MANUAL_LABELER.');
+                if(!hasRole(m2User,'USER','MANUAL_LABELER'))throw new Error('Manual Labeler 2 phải là tài khoản USER hoặc MANUAL_LABELER.');
+                if(!hasRole(revUser,'USER','RESULT_ANALYST'))throw new Error('Analyst phải là tài khoản USER hoặc RESULT_ANALYST.');
 
                 const manualLabelerIds=[m1Id,m2Id];
 
@@ -1006,7 +1020,7 @@
                 if(!docIds.length)throw new Error('Vui lòng chọn ít nhất một tài liệu PDF.');
 
                 if(!aiLabelerSelect.value)throw new Error('Vui lòng chọn AI Labeler.');
-                if(!aiReviewerSelect.value)throw new Error('Vui lòng chọn Reviewer.');
+                if(!aiReviewerSelect.value)throw new Error('Vui lòng chọn Analyst.');
 
                 const aiId=Number(aiLabelerSelect.value);
                 const revId=Number(aiReviewerSelect.value);
@@ -1016,8 +1030,9 @@
                 const aiUser=currentAssignees.find(u=>u.id===aiId);
                 const revUser=currentAssignees.find(u=>u.id===revId);
 
-                if(!aiUser || aiUser.role!=='AI_LABELER')throw new Error('AI Labeler phải có vai trò AI_LABELER.');
-                if(!revUser || revUser.role!=='REVIEWER')throw new Error('Reviewer phải có vai trò REVIEWER.');
+                const hasRole=(candidate,...roles)=>candidate&&roles.includes(String(candidate.role||'').toUpperCase());
+                if(!hasRole(aiUser,'USER','AI_LABELER'))throw new Error('AI Labeler phải là tài khoản USER hoặc AI_LABELER.');
+                if(!hasRole(revUser,'USER','RESULT_ANALYST'))throw new Error('Analyst phải là tài khoản USER hoặc RESULT_ANALYST.');
 
                 const payload={
                     name:name.value.trim(),
@@ -1039,6 +1054,7 @@
     }
     async function taskList() {
         const rows=(await request('/tasks')).filter(row=>user.role!=='REVIEWER'||String(row.task_type||row.type||'').toUpperCase()==='MANUAL');
+        const taskIdOf=row=>row.task_id??row.id;
         const isLabeler=['MANUAL_LABELER','LABELER','AI_LABELER'].includes(user.role);
         const isReviewer=user.role==='REVIEWER';
         if(isReviewer){
@@ -1050,7 +1066,7 @@
                 const count=Array.isArray(detail.fields)?detail.fields.filter(field=>String(field.comparisonType||'').toUpperCase()!=='EXACT').length:Number(detail.conflict_count??detail.conflicts??0)||0;
                 [detail.left_task_id,detail.right_task_id].filter(Boolean).forEach(taskId=>conflictCounts.set(String(taskId),count));
             }));
-            rows.forEach(row=>{if(row.conflict_count==null)row.conflict_count=conflictCounts.get(String(row.id))??0;});
+            rows.forEach(row=>{if(row.conflict_count==null)row.conflict_count=conflictCounts.get(String(taskIdOf(row)))??0;});
         }
         if(isLabeler && page==='ViewAll.html'){
             const tableTarget=$('#taskTable'), body=$('#taskRows'), search=$('#taskSearch'), sessionSelect=$('#taskSessionFilter'), pagination=$('#taskPagination')?.parentElement;
@@ -1083,7 +1099,7 @@
                 body.replaceChildren();
                 groupItems.forEach(group=>{
                     const header=body.insertRow();header.className='task-session-header';const cell=header.insertCell();cell.colSpan=3;const unfinished=group.items.filter(row=>statusOf(row)!=='APPROVED');const statusText=group.completed===group.items.length?'Completed':group.overdue?'Overdue':unfinished.length&&unfinished.every(row=>statusOf(row)==='SUBMITTED')?'Awaiting review':'In progress';const statusClass=statusText==='Completed'?'task-session-header__meta--complete':statusText==='Overdue'?'task-session-header__meta--overdue':'';const percent=group.items.length?Math.round(group.completed/group.items.length*100):0;cell.innerHTML=`<div class="task-session-header__top"><span class="task-session-header__name">${escapeHtml(sessionName(group.items[0]))}</span><span class="task-session-header__meta ${statusClass}">Due ${escapeHtml(formatDate(group.due))} · ${statusText} · ${group.completed}/${group.items.length} files completed</span></div><div class="task-session-progress" aria-label="${group.completed} of ${group.items.length} files completed"><span style="width:${percent}%"></span></div>`;
-                    group.items.sort((a,b)=>{const priority=(statusPriority[statusOf(a)]??5)-(statusPriority[statusOf(b)]??5);if(priority)return priority;return (dateValue(b.updated_at||b.created_at)?.getTime()??0)-(dateValue(a.updated_at||a.created_at)?.getTime()??0);}).forEach(row=>{const tr=body.insertRow();tr.className='task-session-file';const status=statusOf(row),action=renderAction(row),documentCell=tr.insertCell(),statusCell=tr.insertCell(),actionCell=tr.insertCell();const link=document.createElement('a');link.className='cell-primary';link.href=`Task.html?id=${encodeURIComponent(row.id)}`;link.textContent=row.document_title||'Untitled document';link.title=link.textContent;documentCell.append(link);const badge=document.createElement('span');badge.className=`task-status task-status--${status==='SUBMITTED'?'awaiting-review':status==='REJECTED'?'returned':status.toLowerCase()}`;badge.textContent=statusLabels[status]||statusLabels.PENDING;statusCell.append(badge);const actionLink=document.createElement('a');actionLink.className=`task-action ${action[1]}`;actionLink.href=link.href;actionLink.textContent=action[0];actionCell.className='task-action-cell';actionCell.append(actionLink);});
+                    group.items.sort((a,b)=>{const priority=(statusPriority[statusOf(a)]??5)-(statusPriority[statusOf(b)]??5);if(priority)return priority;return (dateValue(b.updated_at||b.created_at)?.getTime()??0)-(dateValue(a.updated_at||a.created_at)?.getTime()??0);}).forEach(row=>{const tr=body.insertRow();tr.className='task-session-file';const status=statusOf(row),action=renderAction(row),taskId=taskIdOf(row),documentCell=tr.insertCell(),statusCell=tr.insertCell(),actionCell=tr.insertCell();const link=document.createElement('a');link.className='cell-primary';link.href=`Task.html?id=${encodeURIComponent(taskId)}`;link.textContent=row.document_title||'Untitled document';link.title=link.textContent;documentCell.append(link);const badge=document.createElement('span');badge.className=`task-status task-status--${status==='SUBMITTED'?'awaiting-review':status==='REJECTED'?'returned':status.toLowerCase()}`;badge.textContent=statusLabels[status]||statusLabels.PENDING;statusCell.append(badge);const actionLink=document.createElement('a');actionLink.className=`task-action ${action[1]}`;actionLink.href=link.href;actionLink.textContent=action[0];actionCell.className='task-action-cell';actionCell.append(actionLink);});
                 });
                 if(!groupItems.length){const row=body.insertRow(),cell=row.insertCell();cell.colSpan=3;cell.className='task-empty-state';cell.textContent='No tasks match the selected filters.';}
                 if(pagination)pagination.hidden=true;
@@ -1107,10 +1123,10 @@
             pagers:$('#taskPagination')?$$('button',$('#taskPagination')):[],
             paginationContainer:$('#taskPagination')?.parentElement,
         }:{};
-        const documentCell=row=>{const link=document.createElement('a');link.href=`Task.html?id=${row.id}`;link.textContent=row.document_title||'Untitled document';return link;};
+        const documentCell=row=>{const link=document.createElement('a');link.href=`Task.html?id=${encodeURIComponent(taskIdOf(row))}`;link.textContent=row.document_title||'Untitled document';return link;};
         const columns=isLabeler?[['Document',documentCell],['Session','session_name'],['Status','status'],['Due',r=>formatTaskDate(r.due_at)],['Action','$actions']]:isReviewer?[['Document',documentCell],['Session','session_name'],['Annotator','assignee'],['Type','task_type'],['Status','status'],['Due',r=>formatTaskDate(r.due_at)],['Conflicts',r=>r.conflict_count??r.conflicts??0],['Action','$actions']]:[['Document',documentCell],['Session','session_name'],['Annotator','assignee'],['Type','task_type'],['Status','status'],['Due',r=>formatTaskDate(r.due_at)],['Action','$actions']];
         const list=listTable(rows,columns,row=>{
-            const status=String(row.status||'PENDING').toUpperCase();const label=status==='PENDING'?'Start':status==='IN_PROGRESS'?'Continue':status==='SUBMITTED'?'Review':status==='APPROVED'?'View':'Open';return [action(label,()=>go(`Task.html?id=${row.id}`))];
+            const status=String(row.status||'PENDING').toUpperCase();const label=status==='PENDING'?'Start':status==='IN_PROGRESS'?'Continue':status==='SUBMITTED'?'Review':status==='APPROVED'?'View':'Open';const taskId=taskIdOf(row);return [action(label,()=>go(`Task.html?id=${encodeURIComponent(taskId)}`))];
         },['session_name','status'],{...pageTargets,table:tableTarget,numbered:false});
         const count=$('[data-task-count]');if(count)count.textContent=`${rows.length} task${rows.length===1?'':'s'} assigned to you`;
     }
@@ -1129,11 +1145,8 @@
         });
         const qs=new URLSearchParams(location.search);
         const requestedId=qs.get('id');
-        const tasks=(await request('/tasks')).filter(task=>{
-            const session=String(task.session_name||task.session||'').trim();
-            const assignee=String(task.assignee||task.assigned_to||'').trim().toLowerCase();
-            return !/^test\d*$/i.test(session)&&assignee!=='yes';
-        });
+        // Keep all API-scoped Analyst tasks, including sessions named "test".
+        const tasks=(await request('/tasks')).filter(task=>String(task.assignee||task.assigned_to||'').trim().toLowerCase()!=='yes');
         const taskSelect=$('#raTaskSelect');
         const durationEl=$('#raSessionDuration');
         let currentTimerSessionId=Symbol('initial');
@@ -1287,13 +1300,9 @@
             ]);
             if(state.task.id!==taskId)return;
             state.task=Object.assign(state.task,detail);
-            const savedProvider=state.task.task_type==='MANUAL'?'Manual Labeler':'AI Labeler';
-            const savedModel='Saved result';
-            const savedRows=Array.isArray(detail.labels)?detail.labels.map(row=>({
-                provider:savedProvider,model:savedModel,indicator_name:row.label_name,
-                indicator_value:row.label_value,source_page:row.source_page,confidence:row.confidence,
-            })):[];
-            state.rows=[...aiRows,...savedRows];
+            // Analysis compares only persisted AI runs. Manual/task labels are saved
+            // separately and must not appear as a selectable "Saved result" source.
+            state.rows=Array.isArray(aiRows)?aiRows.filter(row=>row?.run_id):[];
             state.models=[...new Map(state.rows.map(row=>[modelKey(row),{key:modelKey(row),provider:row.provider||'AI',model:row.model||row.provider||'Model',runId:row.run_id||null}])).values()];
             state.modelA='';state.modelB='';renderModels();syncModelOptions();renderResults();setMessage('');
             try{await loadPdf();}catch(error){setMessage(error.message); }
@@ -1439,29 +1448,24 @@
             const confidence=document.createElement('span');confidence.className='annotation-confidence';const confidencePct=row.confidence==null?null:Math.round(row.confidence*100);confidence.textContent=`AI ${confidencePct==null?'—':`${confidencePct}%`}`;confidence.dataset.level=confidencePct==null?'unknown':confidencePct>=90?'high':confidencePct>=70?'medium':'low';
             const currentValue=parts.editableValue.trim();const suspicious=(key==='report_period'&&currentValue&&/^fy$/i.test(currentValue))||(key==='report_year'&&currentValue&&!/^\d{4}$/.test(currentValue))||(key==='revenue'&&currentValue&&!/[\d]/.test(currentValue));
             const warning=document.createElement('span');warning.className='annotation-warning';warning.hidden=!suspicious;warning.title='Giá trị cần kiểm tra lại với tài liệu nguồn.';warning.innerHTML='<span class="material-symbols-outlined">warning</span>';
-            const sourceToggle=document.createElement('button');sourceToggle.type='button';sourceToggle.className='annotation-source-toggle';sourceToggle.textContent='Xem nguồn';sourceToggle.disabled=!pageInput.value;sourceToggle.title=pageInput.value?'Xem nhãn nguồn':'Chưa có trang nguồn';
-            meta.append(pageButton,pageInput,confidence,warning,sourceToggle);
+            meta.append(pageButton,pageInput,confidence,warning);
             const hasSavedValue=Boolean(row.labelName||row.labelValue||row.sourcePage);
             const saveState=document.createElement('span');saveState.className='annotation-save-state';
             const cardState={termInput,valueInput,pageInput,sourceLabel:parts.sourceLabel,confidence:row.confidence,saveState,dirty:false,saved:hasSavedValue,confirmed:false};
-            const paintState=()=>{const state=readonly?'Read-only':cardState.confirmed?'Approved':cardState.dirty?'Edited':hasSavedValue?'Pending review':'Empty';stateBadge.textContent=state;stateBadge.dataset.state=readonly?'readonly':cardState.confirmed?'confirmed':cardState.dirty?'edited':'pending';saveState.textContent=readonly?'Read-only':cardState.dirty?'Unsaved':cardState.saved?'Saved':'Empty';pageButton.textContent=pageInput.value?`Page ${pageInput.value}`:'No source page';pageButton.disabled=!pageInput.value;sourceToggle.disabled=!pageInput.value;sourceToggle.title=pageInput.value?'View source label':'No source page';};
+            const paintState=()=>{const state=readonly?'Read-only':cardState.confirmed?'Approved':cardState.dirty?'Edited':hasSavedValue?'Pending review':'Empty';stateBadge.textContent=state;stateBadge.dataset.state=readonly?'readonly':cardState.confirmed?'confirmed':cardState.dirty?'edited':'pending';saveState.textContent=readonly?'Read-only':cardState.dirty?'Unsaved':cardState.saved?'Saved':'Empty';pageButton.textContent=pageInput.value?`Page ${pageInput.value}`:'No source page';pageButton.disabled=!pageInput.value;};
             const changed=()=>{if(readonly)return;cardState.dirty=true;cardState.confirmed=false;saveState.dataset.state='dirty';paintState();queueAutoSave(cardState);};
             const jumpToSource=()=>{const raw=Number(pageInput.value);if(!Number.isFinite(raw))return;const max=pdfPageCount||Number(pageInput.max)||9999;const page=Math.min(max,Math.max(1,Math.trunc(raw)));pageInput.value=String(page);const iframe=$('#pdfViewer');const viewer=iframe?.contentWindow?.PDFViewerApplication?.pdfViewer;if(viewer){viewer.currentPageNumber=page;return;}if(iframe?.src)iframe.src=iframe.src.replace(/#.*/,'')+`#page=${page}&zoom=page-width`;};
             const original={term:termInput.value,value:valueInput.value,page:pageInput.value};
             editButton.onclick=()=>{if(card.classList.contains('is-editing')){termInput.value=original.term;valueInput.value=original.value;pageInput.value=original.page;valueInput.readOnly=true;pageInput.readOnly=true;cardState.dirty=false;card.classList.remove('is-editing');labelBlock.hidden=false;termInput.hidden=true;pageInput.hidden=true;paintState();return;}card.classList.add('is-editing');labelBlock.hidden=true;termInput.hidden=false;termInput.disabled=readonly;valueInput.readOnly=false;pageInput.readOnly=true;pageInput.hidden=false;termInput.focus();};
             confirmButton.onclick=()=>{cardState.confirmed=true;changed();paintState();};
             const definitionLabel=document.createElement('label');definitionLabel.className='annotation-legacy-label';definitionLabel.textContent='Definition';
-            const source=document.createElement('div');source.className='annotation-source-label';source.hidden=false;
-            const sourceTitle=document.createElement('strong');sourceTitle.textContent='SOURCE LABEL';
-            const sourceValue=document.createElement('span');sourceValue.textContent=parts.sourceLabel||'NO AI SOURCE LABEL YET';
-            source.append(sourceTitle,sourceValue);
-            sourceToggle.onclick=()=>{if(sourceToggle.disabled)return;source.hidden=!source.hidden;sourceToggle.textContent=source.hidden?'Xem nguồn':'Ẩn nguồn';};pageButton.onclick=jumpToSource;pageInput.addEventListener('click',jumpToSource);pageInput.addEventListener('change',()=>{jumpToSource();changed();});pageInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();jumpToSource();changed();}});
+            pageButton.onclick=jumpToSource;pageInput.addEventListener('click',jumpToSource);pageInput.addEventListener('change',()=>{jumpToSource();changed();});pageInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();jumpToSource();changed();}});
             termInput.addEventListener('input',changed);valueInput.addEventListener('input',changed);
             valueInput.addEventListener('keydown',event=>{if(event.key==='Escape'&&card.classList.contains('is-editing')){editButton.click();return;}if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();confirmButton.click();}if(event.key==='Tab'&&!event.shiftKey){const index=cards.indexOf(cardState);const next=cards[index+1];if(next){event.preventDefault();next.valueInput.focus();}}});
-            card.append(top,definitionLabel,valueInput,meta,source);paintState();cards.push(cardState);panel.append(card);return valueInput;
+            card.append(top,definitionLabel,valueInput,meta);paintState();cards.push(cardState);panel.append(card);return valueInput;
         }
         const editor={
-            get value(){return JSON.stringify(cards.map(c=>{const editableValue=c.valueInput.value;return {labelName:c.termInput.value.trim(),labelValue:c.sourceLabel?`${editableValue}\nNhãn nguồn: ${c.sourceLabel}`:editableValue,sourcePage:c.pageInput.value?Number(c.pageInput.value):null,confidence:c.confidence};}).filter(c=>c.labelName||c.labelValue));},
+            get value(){return JSON.stringify(cards.map(c=>({labelName:c.termInput.value.trim(),labelValue:c.valueInput.value,sourcePage:c.pageInput.value?Number(c.pageInput.value):null,confidence:c.confidence})).filter(c=>c.labelName||c.labelValue));},
             set value(value){clearCards();const rows=JSON.parse(value);rows.forEach(addLabel);if(!rows.length&&labeler)addLabel();const saveDock=panel.querySelector('.annotation-panel-save');if(saveDock)panel.append(saveDock);},
             get readOnly(){return readonly;},
             set readOnly(value){readonly=value;cards.forEach(c=>{c.termInput.disabled=readonly;c.valueInput.readOnly=readonly;c.pageInput.disabled=false;c.pageInput.readOnly=true;c.saveState.textContent=readonly?'Read-only':c.dirty?'Unsaved':c.saved?'Saved':'Empty';});},
@@ -1513,7 +1517,7 @@
             buttons(/Save|Submit|Nộp bài|Approve|Analyze/).forEach(b=>unavailable(b,'No task assigned.'));
             notice(id?'Task not found or access denied.':'No task assigned.',Boolean(id));return;
         }
-        let task, fileUrl, workTimer, completionGuard;
+        let task, fileUrl, workTimer, completionGuard, loadSequence=0;
         const title=$('#sessionTitle');
         const type=null;
         const docHeading=$$('main h3').find(h=>['Document Information','Document Info','Thông tin tài liệu'].includes(text(h)));
@@ -1529,9 +1533,19 @@
         };
         const refresh=async()=>{task=await request(`/tasks/${task.id}`);renderTask();};
         async function loadTask(row){
+            const sequence=++loadSequence;
             if(task&&task.id!==row.id)await flushAutoSave();
             if(workTimer)await workTimer.stop('MANUAL');
-            task=await request(`/tasks/${row.id}`);
+            const loadedTask=await request(`/tasks/${row.id}`);
+            if(sequence!==loadSequence)return;
+            task=loadedTask;
+            if(labeler&&!task.labels?.length){
+                const aiRows=await request(`/tasks/${row.id}/ai-results`,{suppressAuthRedirect:true}).catch(()=>[]);
+                if(Array.isArray(aiRows)&&aiRows.length){
+                    const latestRun=aiRows[0].run_id;
+                    task.labels=aiRows.filter(item=>item.run_id===latestRun).reverse().map(item=>({label_name:item.indicator_name,label_value:item.indicator_value,source_page:item.source_page,confidence:item.confidence}));
+                }
+            }
             pdfPageCount=null;
             const persistedDotState=readDocumentSaveState(task.id);
             setDocumentSaveState(task.id,persistedDotState!=='none'?persistedDotState:(task.labels?.length?'saved':'none'));
@@ -1549,12 +1563,14 @@
             if(iframe){iframe.removeAttribute('src');iframe.srcdoc='<p style="font-family:sans-serif;padding:24px">Đang tải tài liệu PDF…</p>';}
             try {
                 const blob=await request(`/documents/${task.document_id}/file`,{blob:true});
+                if(sequence!==loadSequence)return;
                 if(fileUrl)URL.revokeObjectURL(fileUrl);
                 fileUrl=URL.createObjectURL(blob);
                 if(iframe){
                     const viewerUrl=`/resource/pdfjs/viewer.html?file=${encodeURIComponent(fileUrl)}&title=${encodeURIComponent(task.document_title)}#page=1&zoom=page-width`;
                     const openedTaskId=task.id;
                     iframe.onload=()=>{
+                        if(sequence!==loadSequence||task.id!==openedTaskId)return;
                         const addPdfControls=()=>{
                             const documentInFrame=iframe.contentDocument;
                             const toolbar=documentInFrame?.querySelector('#toolbarViewerRight');
@@ -1567,6 +1583,8 @@
                         let attempts=0;
                         const syncPageCount=()=>{
                             if(task.id!==openedTaskId)return;
+                            const viewer=iframe.contentWindow?.PDFViewerApplication?.pdfViewer;
+                            if(viewer) viewer.currentScaleValue='page-width';
                             const count=Number(iframe.contentWindow?.PDFViewerApplication?.pdfDocument?.numPages||0);
                             if(count>0){pdfPageCount=count;cards.forEach(card=>{card.pageInput.max=String(count);card.pageInput.title=`Trang hợp lệ: 1-${count}`;});addPdfControls();return;}
                             if(++attempts<30)setTimeout(syncPageCount,200);
@@ -1637,18 +1655,6 @@
                 }finally{runAiButton.innerHTML=oldMarkup;runAiButton.disabled=false;runAiButton.classList.remove('is-running');updateRunAiState();}
             });
         }else if(runAiButton)unavailable(runAiButton,'Chỉ AI Labeler được chạy mô hình AI.');
-        const runAiSilently=async()=>{
-            if(normalizedRole!=='MANUAL_LABELER'||task?.labels?.length)return;
-            try{
-                const result=await request(`/tasks/${task.id}/run-ai`,{method:'POST',json:{provider:'Gemini',prompt:systemPrompt||null}});
-                editor.value=JSON.stringify(result.labels||[]);editor.readOnly=false;
-                setDocumentSaveState(task.id,'ai-pending');
-                cards.forEach(card=>{card.dirty=true;card.saveState.dataset.state='dirty';card.saveState.textContent='AI result not saved';});
-                queueAutoSave();
-            }catch(error){
-                console.warn('Background AI extraction failed.',error);
-            }
-        };
         function labels(){
             let data;try{data=JSON.parse(editor.value);}catch{throw new Error('Nhãn phải là JSON hợp lệ.');}
             if(!Array.isArray(data)||data.length>500||data.some(l=>!l||typeof l.labelName!=='string'||!l.labelName.trim()||l.labelName.length>150||!(l.labelValue==null||typeof l.labelValue==='string')||(l.labelValue?.length||0)>20000||!Number.isInteger(l.sourcePage)||l.sourcePage<1||(pdfPageCount&&l.sourcePage>pdfPageCount)||!(l.confidence==null||typeof l.confidence==='number'&&l.confidence>=0&&l.confidence<=1)))throw new Error(`Mỗi chỉ tiêu cần tên, giá trị, trang nguồn từ 1${pdfPageCount?`-${pdfPageCount}`:''} và confidence từ 0 đến 1 (hoặc null); tối đa 500 chỉ tiêu.`);
@@ -1692,7 +1698,6 @@
             if(aiContent){if(toolbarSaveButton){toolbarSaveButton.disabled=false;toolbarSaveButton.classList.add('is-dirty');}return;}
             autoSaveTimer=setTimeout(()=>{autoSaveTimer=null;autoSavePromise=autoSavePromise.then(performAutoSave,performAutoSave);},1000);
         };
-        if(normalizedRole==='MANUAL_LABELER')void runAiSilently();
         bindText(/^(Submit Task|Nộp bài)$/,async()=>{if(!labels().length)throw new Error('Add at least one field before submitting.');await flushAutoSave();if(['PENDING','REJECTED'].includes(task.status))await save(false,false,false);if(completionGuard&&!await completionGuard.ensure('Unable to submit the task'))return;await request(`/tasks/${task.id}/submit`,{method:'POST'});if(workTimer)await workTimer.stop('SUBMIT');await refresh();if(completionGuard)await completionGuard.refresh();notice('Task submitted successfully.');});
         if(labeler){
             const saveDock=panel.querySelector('.annotation-panel-save');
@@ -1852,6 +1857,7 @@
             const pending=rows.filter(row=>['PENDING','IN_PROGRESS','REJECTED'].includes(String(row.status||'').toUpperCase())).length;
             const submitted=rows.filter(row=>String(row.status||'').toUpperCase()==='SUBMITTED').length;
             const completed=rows.filter(row=>String(row.status||'').toUpperCase()==='APPROVED').length;
+            const resumableTask=rows.find(row=>['IN_PROGRESS','REJECTED'].includes(String(row.status||'').toUpperCase()));
             const assignedSessions=new Set(rows.map(row=>row.session_id).filter(value=>value!=null)).size;
             const percent=total?Math.round(completed/total*100):0;
             $('#assignedSessionsValue').textContent=String(assignedSessions);
@@ -1865,7 +1871,13 @@
             const relativeTaskTime=value=>{const parsed=new Date(value||'');if(Number.isNaN(parsed.getTime()))return '—';const seconds=Math.max(0,Math.round((Date.now()-parsed.getTime())/1000));if(seconds<60)return 'Just now';if(seconds<3600)return `${Math.floor(seconds/60)} min ago`;if(seconds<86400)return `${Math.floor(seconds/3600)} hr ago`;return `${Math.floor(seconds/86400)} days ago`;};
             const tasksBody=$('#myTasksBody');if(tasksBody){tasksBody.innerHTML=rows.slice(0,5).map(row=>{const status=String(row.status||'PENDING').toUpperCase();const updated=row.updated_at||row.created_at||row.updatedAt;return `<tr class="my-task-row" tabindex="0" data-task-id="${row.id||''}"><td>${row.document_title||'Untitled document'}</td><td>${row.session_name||'Unassigned session'}</td><td><span class="my-task-status my-task-status--${taskStatusClasses[status]||'pending'}">${taskStatusLabels[status]||'Pending'}</span></td><td title="${updated||''}">${relativeTaskTime(updated)}</td><td><a href="Task.html?id=${row.id||''}" class="text-primary font-semibold hover:underline">Continue</a></td></tr>`;}).join('')||'<tr><td colspan="5">No tasks assigned.</td></tr>';tasksBody.querySelectorAll('.my-task-row').forEach(row=>{const open=()=>go(`Task.html?id=${row.dataset.taskId}`);row.addEventListener('click',event=>{if(event.target.closest('a'))return;open();});row.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();open();}});});}
             tasksBody?.querySelectorAll('.my-task-row').forEach(rowElement=>{const item=rows.find(row=>String(row.id)===rowElement.dataset.taskId);if(!item)return;const status=String(item.status||'PENDING').toUpperCase();const actionLink=$('a',rowElement);const documentCell=$('td',rowElement);const updated=item.updated_at||item.created_at||item.updatedAt;if(documentCell){documentCell.classList.add('my-task-document-cell');documentCell.title=item.document_title||'Untitled document';}if(actionLink){const label=status==='APPROVED'||status==='SUBMITTED'?'View':status==='PENDING'?'Start':'Continue';actionLink.textContent=label;actionLink.classList.add('my-task-action');if(label==='View')actionLink.classList.add('my-task-action--view');}const updatedCell=$$('td',rowElement)[3];if(updatedCell){const parsed=new Date(updated);updatedCell.title=Number.isNaN(parsed.getTime())?'Exact time unavailable':new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(parsed);}});
-            bind($('#continueLastSession'),()=>go(rows.find(row=>['PENDING','IN_PROGRESS','REJECTED'].includes(String(row.status||'').toUpperCase()))?`Task.html?id=${rows.find(row=>['PENDING','IN_PROGRESS','REJECTED'].includes(String(row.status||'').toUpperCase())).id}`:rows[0]?`Task.html?id=${rows[0].id}`:'ViewAll.html'));
+            const continueButton=$('#continueLastSession');
+            if(continueButton){
+                continueButton.disabled=!resumableTask;
+                continueButton.setAttribute('aria-disabled',String(!resumableTask));
+                continueButton.title=resumableTask?'Tiếp tục tác vụ đang làm dở':'Chưa có tác vụ nào đang làm dở';
+                if(resumableTask)bind(continueButton,()=>go(`Task.html?id=${resumableTask.id}`));
+            }
             bind($('#refreshDashboard'),()=>location.reload());
             return;
         }
@@ -2100,6 +2112,7 @@
         // Clear sample rows immediately so network failures never look like real data.
         $$('tbody').forEach(body=>{const el=body.closest('table');tableStyles.set(el,$$('tr:first-child td',body).map(c=>c.className));const columns=$$('thead th',el).length;body.replaceChildren();const td=body.insertRow().insertCell();td.colSpan=columns||1;td.className='p-4';td.textContent='Loading data…';});
         user=await AAIR.guard();if(!user){loadingOverlay.remove();if(main)main.style.visibility='visible';return;}window.AAIRGuidelineModal?.init();
+        $$('button.manual-navbar__logout, #logoutButton').forEach(button=>bind(button,()=>{if(confirm('Are you sure you want to log out?'))AAIR.logout();}));
         const profile=$('header .hidden.md\\:block');
         if(profile){const ps=$$('p',profile);const roleNames={ADMIN:'Administrator',MANAGER:'Manager',ANALYST:'Analyst',RESULT_ANALYST:'Analyst',AI_LABELER:'AI Labeler',MANUAL_LABELER:'Manual Labeler',REVIEWER:'Reviewer'};if(ps[0])ps[0].textContent=user.username;if(ps[1])ps[1].textContent=roleNames[user.role]||user.role;
             const avatar=profile.previousElementSibling;if(avatar){avatar.replaceChildren();const node=avatarNode(user,'w-full h-full');avatar.append(node);}

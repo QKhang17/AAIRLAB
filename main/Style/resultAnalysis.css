@@ -46,3 +46,7 @@
 .result-analysis-page .ra-ai-column{display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden}
 .result-analysis-page .ra-panel-header{flex:0 0 46px}
 .result-analysis-page .ra-results{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden}
+.result-analysis-page .ra-panel-header strong{gap:0;font-size:13px;line-height:1.15}
+.result-analysis-page .ra-panel-header strong .material-symbols-outlined{display:none}
+.result-analysis-page .ra-panel-header label{min-width:0;font-size:9px;line-height:1.1}
+.result-analysis-page .ra-panel-header select{width:180px;min-width:180px;height:32px;padding:0 28px 0 10px;font-size:11px}

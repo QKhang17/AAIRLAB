@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
 
     CONSTRAINT uk_users_username UNIQUE (username),
     CONSTRAINT ck_users_role CHECK (
-        role IN ('ADMIN', 'MANAGER', 'AI_LABELER', 'MANUAL_LABELER',
+        role IN ('USER', 'ADMIN', 'MANAGER', 'AI_LABELER', 'MANUAL_LABELER',
                  'REVIEWER', 'RESULT_ANALYST', 'TERMINOLOGY')
     )
 );
@@ -35,7 +35,7 @@ COMMENT ON COLUMN users.role IS 'Vai trò dùng để phân quyền và điều 
 -- Khi bảng cũ đã tồn tại, cập nhật role constraint để bổ sung ADMIN và MANAGER.
 ALTER TABLE users DROP CONSTRAINT IF EXISTS ck_users_role;
 ALTER TABLE users ADD CONSTRAINT ck_users_role CHECK (
-    role IN ('ADMIN', 'MANAGER', 'AI_LABELER', 'MANUAL_LABELER',
+    role IN ('USER', 'ADMIN', 'MANAGER', 'AI_LABELER', 'MANUAL_LABELER',
              'REVIEWER', 'RESULT_ANALYST', 'TERMINOLOGY')
 );
 

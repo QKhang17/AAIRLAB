@@ -1,0 +1,44 @@
+.admin-kpi-grid .dashboard-kpi-row {
+    min-height: 154px !important;
+    padding: 18px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 9px !important;
+}
+
+.admin-kpi-grid .dashboard-kpi-row > div:first-child {
+    width: 100%;
+    min-height: 36px;
+    align-items: flex-start !important;
+}
+
+.admin-kpi-grid .dashboard-kpi-row > div:last-child {
+    width: 100%;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0 !important;
+}
+
+.admin-kpi-grid .dashboard-kpi-row > div:last-child > h3 {
+    order: 1 !important;
+    margin: 0 !important;
+    line-height: 1.1 !important;
+}
+
+.admin-kpi-grid .dashboard-kpi-row > div:last-child > p {
+    order: 2 !important;
+    margin: 5px 0 0 !important;
+}
+
+.admin-kpi-grid .dashboard-kpi-row .admin-kpi-subtext {
+    order: 3 !important;
+    margin: 4px 0 0 !important;
+}
+
+.admin-kpi-grid .admin-security-state {
+    margin-left: auto;
+}

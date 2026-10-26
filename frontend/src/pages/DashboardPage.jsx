@@ -91,7 +91,7 @@ export default function DashboardPage() {
             {loading && <p className="workspace-data-state">Loading data...</p>}
             {!loading && error && <div className="workspace-data-state workspace-data-state--error"><p>{error.message}</p><button onClick={() => loadStats().catch(() => {})} type="button">Retry</button></div>}
             {!loading && !error && stats && Object.entries(stats).length > 0 && Object.entries(stats).map(([label, value]) => (
-              <article key={label}><span>{label}</span><strong>{String(value)}</strong><small><i /> From database</small></article>
+              <article key={label}><span>{label}</span><strong>{String(value)}</strong></article>
             ))}
             {!loading && !error && stats && Object.entries(stats).length === 0 && <p className="workspace-data-state">No data available.</p>}
           </section>

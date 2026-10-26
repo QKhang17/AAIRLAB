@@ -4,12 +4,20 @@
 .analyst-date-filter span{font-weight:500}
 .analyst-date-filter select{height:34px;padding:0 28px 0 10px;border:1px solid #bdcad7;border-radius:7px;color:#243449;background:#fff;font:500 12px Inter,Arial,sans-serif}
 .analyst-range-label{color:#68778a;font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
-.analyst-dashboard-state{display:flex;align-items:center;min-height:28px;margin-bottom:10px;color:#718094;font-size:13px}
-.analyst-kpi{display:flex;align-items:flex-start;gap:12px;min-height:126px;padding:19px 18px;border:1px solid #c6d1df;border-radius:11px;background:#fff}
+.analyst-dashboard-state{display:none!important}
+.analyst-kpi{display:flex;flex-direction:column;align-items:flex-start;gap:12px;min-height:184px;padding:20px 24px;border:1px solid #c6d1df;border-radius:11px;background:#fff}
 .analyst-kpi-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:8px;color:#087da7;background:#e8f4f8;font-size:20px}
+.analyst-kpi>div{display:block;min-width:0;white-space:normal}
 .analyst-kpi p{margin:0;color:#536277;font-size:14px;font-weight:500}
-.analyst-kpi strong{display:block;margin-top:5px;color:#172031;font-size:32px;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
-.analyst-kpi small{display:block;margin-top:7px;color:#7b8797;font-size:13px}
+.analyst-kpi strong{display:block;margin-top:6px;color:#172031;font-size:32px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.analyst-kpi small{display:block;margin-top:8px;color:#7b8797;font-size:13px}
+
+/* Keep Analyst dashboard cards in the vertical KPI layout after shared KPI styles load. */
+.analyst-kpi{align-items:flex-start!important;flex-direction:column!important}
+.analyst-kpi>div{display:block!important;align-items:initial!important;gap:0!important;flex-wrap:nowrap!important}
+.analyst-kpi p{order:initial!important;white-space:normal!important}
+.analyst-kpi strong{order:initial!important;display:block!important;margin-top:6px!important}
+.analyst-kpi small{order:initial!important;flex:initial!important;margin-top:8px!important}
 .analyst-kpi#overdueMetric.is-alert .analyst-kpi-icon{color:#b42318;background:#fef0ef}
 .analyst-kpi#overdueMetric.is-alert strong{color:#b42318}
 .analyst-panel{padding:20px;border:1px solid #c6d1df;border-radius:11px;background:#fff}

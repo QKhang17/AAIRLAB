@@ -28,17 +28,11 @@
     </header>
     <main class="min-h-[calc(100vh-106px)] bg-surface p-6" aria-live="polite">
         <div id="analystDashboardState" class="analyst-dashboard-state">Loading data…</div>
-        <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6" aria-label="Work metrics">
-            <article class="analyst-kpi"><span class="analyst-kpi-icon material-symbols-outlined">assignment</span><div><p>Total tasks</p><strong id="metricTotalTasks">—</strong><small>All assigned tasks</small></div></article>
-            <article class="analyst-kpi"><span class="analyst-kpi-icon material-symbols-outlined">pending_actions</span><div><p>In progress</p><strong id="metricInProgress">—</strong><small>Currently being handled</small></div></article>
-            <article class="analyst-kpi"><span class="analyst-kpi-icon material-symbols-outlined">upload_file</span><div><p>Submitted</p><strong id="metricSubmitted">—</strong><small>Awaiting review</small></div></article>
-            <article class="analyst-kpi"><span class="analyst-kpi-icon material-symbols-outlined">task_alt</span><div><p>Approved</p><strong id="metricApproved">—</strong><small>Completed review</small></div></article>
-            <article class="analyst-kpi" id="overdueMetric"><span class="analyst-kpi-icon material-symbols-outlined">warning</span><div><p>Overdue</p><strong id="metricOverdue">—</strong><small>Needs attention</small></div></article>
-            <article class="analyst-kpi"><span class="analyst-kpi-icon material-symbols-outlined">label</span><div><p>Extracted labels</p><strong id="metricLabels">—</strong><small>Across assigned tasks</small></div></article>
-        </section>
-        <section class="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-2">
-            <article class="analyst-panel"><h2>Task status distribution</h2><div id="statusDistribution" class="analyst-bars"></div></article>
-            <article class="analyst-panel"><h2>Extracted label distribution</h2><div id="labelDistribution" class="analyst-bars"></div></article>
+        <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Work metrics">
+            <article class="analyst-kpi"><span class="analyst-kpi-icon material-symbols-outlined">assignment</span><div><p>Daily Tasks</p><strong id="metricTotalTasks">—</strong><small>Assigned tasks</small></div></article>
+            <article class="analyst-kpi"><span class="analyst-kpi-icon material-symbols-outlined">pending_actions</span><div><p>Pending Review</p><strong id="metricSubmitted">—</strong><small>Awaiting review</small></div></article>
+            <article class="analyst-kpi"><span class="analyst-kpi-icon material-symbols-outlined">task_alt</span><div><p>Approved</p><strong id="metricApproved">—</strong><small>Approved tasks</small></div></article>
+            <article class="analyst-kpi" id="overdueMetric"><span class="analyst-kpi-icon material-symbols-outlined">priority_high</span><div><p>Urgent Tasks</p><strong id="metricOverdue">—</strong><small>Needs attention</small></div></article>
         </section>
         <section class="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-5">
             <article class="analyst-table-panel xl:col-span-3"><header><h2>Recent tasks</h2><p>Tasks in the selected time range</p></header><div class="overflow-auto"><table><thead><tr><th>Document</th><th>Assignee</th><th>Status</th><th>Updated</th></tr></thead><tbody id="recentTasks"></tbody></table></div></article>
