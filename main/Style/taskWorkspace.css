@@ -415,6 +415,56 @@ body.task-workspace-resizing iframe#pdfViewer {
 .manual-task-page .annotation-source-label { margin:0; padding:7px 8px; border-left:2px solid #078bb8; color:#465967; background:#f1f9fc; font-size:12px; line-height:1.4; white-space:pre-wrap; }
 .manual-task-page .workspace-data-pane::after { content:""; position:absolute; right:0; bottom:0; left:0; height:24px; pointer-events:none; background:linear-gradient(transparent,#f7fafc); }
 
+/* Manual labeler readability pass: let definitions size to their content and
+   keep the PDF and editor panes filled to the viewport. */
+.manual-task-page .workspace-pdf-pane,
+.manual-task-page .workspace-pdf-pane > div,
+.manual-task-page .workspace-pdf-viewport { min-height:0!important; }
+.manual-task-page .workspace-pdf-pane { display:flex!important; flex-direction:column; padding-top:8px!important; background:#eef4f7!important; }
+.manual-task-page .workspace-pdf-pane > div { flex:1 1 auto; display:flex; flex-direction:column; padding:0!important; }
+.manual-task-page .manual-pdf-toolbar { display:flex!important; flex:0 0 42px; align-items:center; padding:0 12px; color:#fff; background:#294b5a; }
+.manual-task-page .manual-pdf-toolbar__title { color:#fff; font-size:13px; font-weight:700; }
+.manual-task-page .manual-pdf-toolbar__actions { display:flex; gap:4px; margin-left:auto; }
+.manual-task-page .manual-pdf-toolbar button { color:#fff; }
+.manual-task-page .workspace-pdf-viewport { flex:1 1 auto!important; height:auto!important; }
+.manual-task-page iframe#pdfViewer { height:100%!important; min-height:0!important; }
+.manual-task-page .annotation-field-card--legacy { height:auto!important; max-height:none!important; min-height:0!important; gap:8px; padding:12px 14px 14px; }
+.manual-task-page .annotation-field-card--legacy .annotation-field-card__top { display:flex!important; flex-wrap:wrap; gap:6px; align-items:center; }
+.manual-task-page .annotation-field-card--legacy .annotation-field-card__top::before { content:'Term'; display:block; flex:0 0 100%; color:#344054; font-size:13px; line-height:1.2; font-weight:700; }
+.manual-task-page .annotation-field-card--legacy .annotation-field-name { display:flex!important; flex:1 1 auto; min-width:120px; }
+.manual-task-page .annotation-field-card--legacy .annotation-field-name strong { color:#172b3a; font-size:14px; font-weight:700; }
+.manual-task-page .annotation-field-card--legacy .annotation-field-name small { color:#64748b; font-size:10px; font-weight:500; }
+.manual-task-page .annotation-field-card--legacy .annotation-status { display:inline-flex!important; margin-left:auto; }
+.manual-task-page .annotation-field-card--legacy .annotation-confidence { display:none!important; }
+.manual-task-page .annotation-field-card--legacy .annotation-term-input { display:none!important; }
+.manual-task-page .annotation-field-card--legacy .annotation-status { margin-left:auto; }
+.manual-task-page .annotation-field-card--legacy .annotation-legacy-label { display:block; margin-top:2px; color:#344054; font-size:13px; line-height:1.2; font-weight:700; }
+.manual-task-page .annotation-field-card--legacy .annotation-definition-input { width:100%; height:auto!important; min-height:140px; max-height:none; overflow:hidden; padding:10px 12px; border:1px solid #b9ccd7; border-radius:7px; background:#f8fbfc; color:#172b3a; font-size:14px; line-height:1.45; resize:vertical; }
+.manual-task-page .annotation-field-card--legacy .annotation-definition-input { min-height:84px; max-height:190px; padding:10px 12px; line-height:1.5; resize:none; }
+.manual-task-page .annotation-definition-tools { display:flex; align-items:center; gap:8px; min-height:22px; color:#64748b; font-size:11px; }
+.manual-task-page .annotation-definition-hint { flex:1; line-height:1.35; }
+.manual-task-page .annotation-definition-count { white-space:nowrap; font-variant-numeric:tabular-nums; }
+.manual-task-page .annotation-definition-expand { display:inline-flex; align-items:center; gap:3px; padding:3px 7px; border:1px solid #9fb8c5; border-radius:5px; color:#075985; background:#fff; font:600 11px Inter,Arial,sans-serif; cursor:pointer; }
+.manual-task-page .annotation-definition-expand:hover { border-color:#078bb8; background:#eaf8fb; }
+.manual-task-page .annotation-definition-expand .material-symbols-outlined { font-size:14px; }
+.manual-task-page .annotation-definition-chips { display:flex; flex-wrap:wrap; gap:4px; max-height:42px; overflow:hidden; }
+.manual-task-page .annotation-definition-chips[hidden] { display:none!important; }
+.manual-task-page .annotation-definition-chips span { padding:3px 7px; border:1px solid #c6e4eb; border-radius:999px; color:#075985; background:#effbfe; font-size:11px; line-height:1.2; }
+.manual-task-page .annotation-field-card--legacy.is-expanded .annotation-definition-input { max-height:420px; }
+.manual-task-page .annotation-field-card--legacy .annotation-definition-input:focus { border-color:#078bb8; background:#fff; outline:2px solid rgba(7,139,184,.14); }
+.manual-task-page .annotation-field-card--legacy .annotation-field-card__meta { display:flex!important; align-items:center; gap:8px; padding:8px 0 0; border-top:1px solid #d9e1e7; }
+.manual-task-page .annotation-field-card--legacy .annotation-field-card__meta::before { content:'Source page'; color:#344054; font-size:13px; font-weight:700; }
+.manual-task-page .annotation-field-card--legacy .annotation-page-input { display:block!important; width:70px; height:30px; margin-left:0; padding:4px 8px; font-size:13px; }
+.manual-task-page .annotation-field-card--legacy .annotation-page-chip { display:inline-flex!important; order:3; }
+.manual-task-page .annotation-field-card--legacy .annotation-source-label { display:flex!important; flex-direction:column; gap:4px; margin-top:2px; padding:9px 11px; border-left:3px solid #078bb8; color:#344054; background:#eff9fb; font-size:13px; line-height:1.4; white-space:pre-wrap; }
+.manual-task-page .annotation-field-card--legacy .annotation-source-label[hidden] { display:none!important; }
+.manual-task-page .annotation-field-card--legacy .annotation-source-label strong { color:#075985; font-size:12px; }
+.manual-task-page .annotation-panel-save { position:sticky!important; bottom:0; z-index:5; margin:12px -16px 0!important; padding:12px 16px!important; box-shadow:0 -3px 10px rgba(15,44,63,.08); }
+.manual-task-page .manual-run-ai-button:disabled { color:#526477!important; background:#edf3f6!important; border-color:#9fb4bf!important; opacity:1!important; }
+.manual-task-page .manual-submit-button.session-ready,.manual-task-page .task-toolbar-button--submit.session-ready { box-shadow:0 0 0 3px rgba(8,127,168,.18); }
+.manual-task-page .document-status-legend { color:#344054!important; font-size:12px!important; }
+.manual-task-page .document-status-legend__item i { width:10px!important; height:10px!important; box-shadow:0 0 0 1px currentColor; }
+
 @media (max-width: 760px) {
     .ai-task-page main,
     .manual-task-page main {
@@ -496,4 +546,48 @@ body.task-workspace-resizing iframe#pdfViewer {
     font-size:11px!important;
     line-height:16px;
 }
+
+/* Definition editor sizing and controls (must remain last in this stylesheet). */
+.manual-task-page .annotation-field-card--legacy .annotation-definition-input { min-height:140px!important; max-height:360px!important; padding:10px 12px!important; line-height:1.5!important; resize:vertical!important; overflow-y:auto!important; overflow-x:hidden!important; scrollbar-width:thin; scrollbar-color:#6f9baa #e8f1f4; }
+.manual-task-page .annotation-field-card--legacy .annotation-definition-input::-webkit-scrollbar { width:9px; }
+.manual-task-page .annotation-field-card--legacy .annotation-definition-input::-webkit-scrollbar-track { background:#e8f1f4; border-radius:8px; }
+.manual-task-page .annotation-field-card--legacy .annotation-definition-input::-webkit-scrollbar-thumb { background:#6f9baa; border-radius:8px; border:2px solid #e8f1f4; }
+.manual-task-page .annotation-definition-tools { display:flex; align-items:center; gap:8px; min-height:22px; color:#64748b; font-size:11px; }
+.manual-task-page .annotation-definition-hint { flex:1; line-height:1.35; }
+.manual-task-page .annotation-definition-count { white-space:nowrap; font-variant-numeric:tabular-nums; }
+.manual-task-page .annotation-definition-expand { display:inline-flex; align-items:center; gap:3px; padding:3px 7px; border:1px solid #9fb8c5; border-radius:5px; color:#075985; background:#fff; font:600 11px Inter,Arial,sans-serif; cursor:pointer; }
+.manual-task-page .annotation-definition-expand:hover { border-color:#078bb8; background:#eaf8fb; }
+.manual-task-page .annotation-definition-expand .material-symbols-outlined { font-size:14px; }
+.manual-task-page .annotation-definition-chips { display:flex; flex-wrap:wrap; gap:4px; max-height:42px; overflow:hidden; }
+.manual-task-page .annotation-definition-chips[hidden] { display:none!important; }
+.manual-task-page .annotation-definition-chips span { padding:3px 7px; border:1px solid #c6e4eb; border-radius:999px; color:#075985; background:#effbfe; font-size:11px; line-height:1.2; }
+.manual-task-page .annotation-field-card--legacy.is-expanded .annotation-definition-input { max-height:420px!important; }
+
+/* Final manual workspace overrides: placed after the legacy compatibility
+   rules above so the current layout cannot be overwritten. */
+.manual-task-page .workspace-pdf-pane { display:flex!important; flex-direction:column; min-height:0!important; padding-top:8px!important; background:#eef4f7!important; }
+.manual-task-page .workspace-pdf-pane > div { display:flex; flex:1 1 auto; min-height:0; flex-direction:column; padding:0!important; }
+.manual-task-page .manual-pdf-toolbar { display:flex!important; flex:0 0 42px; align-items:center; padding:0 12px; color:#fff; background:#294b5a; }
+.manual-task-page .manual-pdf-toolbar__title { color:#fff; font-size:13px; font-weight:700; }
+.manual-task-page .workspace-pdf-viewport { flex:1 1 auto!important; min-height:0!important; height:auto!important; }
+.manual-task-page iframe#pdfViewer { height:100%!important; min-height:0!important; }
+.manual-task-page .annotation-field-card--legacy { height:auto!important; max-height:none!important; min-height:0!important; gap:8px; padding:12px 14px 14px; }
+.manual-task-page .annotation-field-card--legacy .annotation-field-card__top { display:flex!important; flex-wrap:wrap; gap:6px; align-items:center; }
+.manual-task-page .annotation-field-card--legacy .annotation-field-card__top::before { content:'Term'; display:block; flex:0 0 100%; color:#344054; font-size:13px; line-height:1.2; font-weight:700; }
+.manual-task-page .annotation-field-card--legacy .annotation-field-name { display:flex!important; flex:1 1 auto; min-width:120px; }
+.manual-task-page .annotation-field-card--legacy .annotation-field-name strong { color:#172b3a; font-size:14px; font-weight:700; }
+.manual-task-page .annotation-field-card--legacy .annotation-field-name small { color:#64748b; font-size:10px; font-weight:500; }
+.manual-task-page .annotation-field-card--legacy .annotation-term-input { display:none!important; visibility:hidden!important; }
+.manual-task-page .annotation-field-card--legacy .annotation-legacy-label { display:block; margin-top:2px; color:#344054; font-size:13px; line-height:1.2; font-weight:700; }
+.manual-task-page .annotation-field-card--legacy .annotation-definition-input { width:100%; height:auto!important; min-height:56px; max-height:none; overflow:hidden; padding:10px 12px; border:1px solid #b9ccd7; border-radius:7px; background:#f8fbfc; color:#172b3a; font-size:14px; line-height:1.45; resize:vertical; }
+.manual-task-page .annotation-field-card--legacy .annotation-field-card__meta { display:flex!important; align-items:center; gap:8px; padding:8px 0 0; border-top:1px solid #d9e1e7; }
+.manual-task-page .annotation-field-card--legacy .annotation-field-card__meta::before { content:'Source page'; color:#344054; font-size:13px; font-weight:700; }
+.manual-task-page .annotation-field-card--legacy .annotation-page-input { display:block!important; width:70px; height:30px; margin-left:0; padding:4px 8px; font-size:13px; }
+.manual-task-page .annotation-field-card--legacy .annotation-page-chip { display:inline-flex!important; order:3; }
+.manual-task-page .annotation-field-card--legacy .annotation-source-label { display:flex!important; flex-direction:column; gap:4px; margin-top:2px; padding:9px 11px; border-left:3px solid #078bb8; color:#344054; background:#eff9fb; font-size:13px; line-height:1.4; white-space:pre-wrap; }
+.manual-task-page .annotation-field-card--legacy .annotation-source-label[hidden] { display:none!important; }
+.manual-task-page .annotation-panel-save { position:sticky!important; bottom:0; z-index:5; box-shadow:0 -3px 10px rgba(15,44,63,.08); }
+.manual-task-page .manual-run-ai-button:disabled { color:#526477!important; background:#edf3f6!important; border-color:#9fb4bf!important; opacity:1!important; }
+.manual-task-page .document-status-legend { color:#344054!important; font-size:12px!important; }
+.manual-task-page .document-status-legend__item i { width:10px!important; height:10px!important; box-shadow:0 0 0 1px currentColor; }
 

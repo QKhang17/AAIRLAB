@@ -26,21 +26,21 @@
 
     <style>
         :root { --gap-section:24px; --row-h:52px; }
-        .task-page { padding:24px; }
+        .task-page { min-height:calc(100vh - 120px); padding:24px; }
         .task-page__heading { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:var(--gap-section); }
-        .task-page__heading h1 { margin:0; color:#101828; font-size:22px; line-height:28px; font-weight:600; }
+        .task-page__heading h1 { display:block!important; visibility:visible!important; margin:0; color:#101828!important; font-size:22px!important; line-height:28px!important; font-weight:700!important; }
         .task-page__heading p { margin:4px 0 0; color:#667085; font-size:13px; }
-        .task-toolbar { height:48px; margin-bottom:0!important; padding:0 24px!important; }
+        .task-toolbar { height:auto; min-height:48px; margin:0 0 20px!important; padding:0!important; flex-wrap:wrap; }
         /* The shared navbar is fixed at 58px. Reserve that space before the
            task filters so the page heading cannot slide underneath them. */
-        .manual-labeling-tasks > header.task-toolbar {
+        .manual-labeling-tasks .task-toolbar {
             position:relative!important;
             top:auto!important;
             z-index:10;
-            margin-top:58px!important;
+            margin-top:0!important;
         }
         .manual-labeling-tasks > main { padding-top:0!important; }
-        .task-search { width:500px!important; min-width:280px; height:36px!important; font-size:13px!important; }
+        .task-search { width:min(500px,100%)!important; min-width:260px; height:36px!important; font-size:13px!important; }
         .task-filter-group { display:flex; align-items:center; gap:8px; }
         .task-filter-group label { color:#344054; font-size:13px; font-weight:500; }
         .filter-select { min-width:120px!important; height:36px!important; padding:0 28px 0 10px!important; font-size:13px!important; font-weight:500!important; }
@@ -86,31 +86,32 @@
         .task-filter-chip:hover,.task-filter-chip.is-active { border-color:#087fa8; color:#075985; background:#e6f7fb; }
         .task-clear-filters { min-height:30px; padding:4px 10px; border:0; color:#175cd3; background:transparent; font-size:12px; font-weight:700; cursor:pointer; }
         .task-sort-select { height:32px; padding:0 28px 0 10px; border:1px solid #cbd5e1; border-radius:7px; color:#344054; background:#fff; font-size:12px; font-weight:600; }
-        .task-table { min-width:720px; }
-        .task-table th:nth-child(1),.task-table td:nth-child(1) { width:65%; }
-        .task-table th:nth-child(2),.task-table td:nth-child(2) { width:20%; }
-        .task-table th:nth-child(3),.task-table td:nth-child(3) { width:15%; }
-        .task-table th:last-child,.task-table td:last-child { width:15%; }
-        .task-session-header td { padding:14px 16px 10px!important; border-top:1px solid #cbd5e1; border-bottom:0; background:#f0f8fa; }
+        .task-table { min-width:760px; }
+        .task-table th:nth-child(1),.task-table td:nth-child(1) { width:48%; }
+        .task-table th:nth-child(2),.task-table td:nth-child(2) { width:17%; }
+        .task-table th:nth-child(3),.task-table td:nth-child(3) { width:14%; }
+        .task-table th:nth-child(4),.task-table td:nth-child(4) { width:13%; }
+        .task-table th:nth-child(5),.task-table td:nth-child(5) { width:8%; }
+        .task-session-header td { padding:16px 20px 12px!important; border-top:1px solid #cbd5e1; border-bottom:0; background:#eaf8fb; }
         .task-session-header:first-child td { border-top:0; }
-        .task-session-header__top { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-        .task-session-header__name { color:#101828; font-size:14px; font-weight:700; }
-        .task-session-header__meta { color:#475467; font-size:12px; }
+        .task-session-header__top { display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
+        .task-session-header__name { color:#075985; font-size:16px; line-height:22px; font-weight:800; }
+        .task-session-header__meta { color:#344054; font-size:13px; line-height:20px; font-weight:600; }
         .task-session-header__meta--overdue { color:#b42318; font-weight:700; }
         .task-session-header__meta--complete { color:#067647; font-weight:700; }
-        .task-session-progress { height:6px; margin-top:8px; overflow:hidden; border-radius:999px; background:#dbe7eb; }
-        .task-session-progress span { display:block; height:100%; border-radius:inherit; background:#087fa8; }
-        .task-session-file td:first-child { padding-left:28px!important; }
+        .task-session-progress { height:8px; margin-top:10px; overflow:hidden; border-radius:999px; background:#c9e0e7; }
+        .task-session-progress span { display:block; height:100%; min-width:2px; border-radius:inherit; background:#087fa8; }
+        .task-session-file td:first-child { padding-left:36px!important; }
         .task-session-file .cell-primary { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .task-session-file .task-action-cell { padding-right:20px!important; text-align:right; }
         .task-empty-state { padding:36px 16px!important; color:#667085!important; text-align:center; }
         .task-status--pending { color:#9a6700; background:#fff4cc; }
         .task-status--returned { color:#b42318; background:#fee4e2; }
-        .task-status--awaiting-review { color:#6941c6; background:#f4ebff; }
+        .task-status--awaiting-review { color:#075985; background:#dff5fa; }
         .task-action--start { border-color:#087fa8; color:#fff!important; background:#087fa8; }
         .task-action--start:hover { border-color:#075985; color:#fff!important; background:#075985; }
         .task-action--continue { border-color:#8ccbdc; color:#075985!important; background:#e6f7fb; }
-        .task-action--review,.task-action--view { border-color:#cbd5e1; color:#344054!important; background:#fff; }
+        .task-action--review,.task-action--view { border-color:#087fa8; color:#fff!important; background:#087fa8; }
         .task-action--review:hover,.task-action--view:hover { border-color:#175cd3; color:#175cd3!important; background:#f8fbff; }
         @media(max-width:1000px) { .task-page__heading { flex-direction:column; } .task-controls { justify-content:flex-start; } }
         @media(max-width:800px) { .task-page { padding:16px; } .task-search { width:100%!important; } .task-toolbar { height:auto; min-height:48px; flex-wrap:wrap; padding:8px 16px!important; } .task-table { min-width:760px; } }
@@ -122,49 +123,6 @@
 
     <div data-manual-navbar-mount></div>
 
-    <!-- TopNavBar -->
-    <header class="task-toolbar w-full h-12
-           flex items-center gap-2 px-lg
-           bg-text-active border-b border-outline-variant
-           shadow-sm sticky top-[50px] z-30 mb-6">
-
-        <!-- Search Box - Left -->
-        <div class="relative w-[280px]">
-
-            <span class="material-symbols-outlined
-                     absolute left-3 top-1/2
-                     -translate-y-1/2
-                     text-slate-400 text-[20px]">
-                search
-            </span>
-
-            <input id="taskSearch" type="search" placeholder="Search tasks…" class="task-search w-full h-8
-                   pl-10 pr-4
-                   rounded-lg
-                   border border-slate-300
-                   bg-white
-                   text-sm
-                   outline-none
-                   focus:border-blue-500
-                   focus:ring-2
-                   focus:ring-blue-100">
-        </div>
-
-        <!-- Buttons -->
-        <div class="ml-auto flex items-center gap-2">
-
-            <div class="flex items-center gap-2">
-                <label for="taskSessionFilter" class="text-label-md text-on-surface-variant">Session:</label>
-                <select id="taskSessionFilter"
-                    class="filter-select bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary">
-                    <option value="">All</option>
-                </select>
-            </div>
-
-        </div>
-
-    </header>
-
     <main class="w-full min-h-[calc(100vh-98px)] bg-surface pt-0">
 
 
@@ -173,7 +131,13 @@
         <!-- ===================================================== -->
 
         <section class="task-page">
-            <div class="task-page__heading"><div><h1>My Tasks</h1><p data-task-count>Tasks assigned to you</p></div></div>
+            <div class="task-page__heading"><div><h1>My Tasks</h1></div></div>
+            <div class="task-toolbar flex items-center gap-2">
+                <div class="relative w-[280px]"><span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">search</span><input id="taskSearch" type="search" placeholder="Search tasks…" class="task-search w-full h-8 pl-10 pr-4 rounded-lg border border-slate-300 bg-white text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"></div>
+                <div class="task-filter-group"><label for="taskSessionFilter">Session:</label><select id="taskSessionFilter" class="filter-select bg-surface border border-outline-variant rounded-lg"><option value="">All</option></select></div>
+                <div class="task-filter-group"><label for="taskStatusFilter">Status:</label><select id="taskStatusFilter" class="filter-select bg-surface border border-outline-variant rounded-lg"><option value="">All</option><option value="PENDING">Pending</option><option value="IN_PROGRESS">In progress</option><option value="SUBMITTED">Submitted</option><option value="APPROVED">Approved</option><option value="REJECTED">Returned</option></select></div>
+                <div class="task-filter-group"><label for="taskSortSelect">Sort:</label><select id="taskSortSelect" class="task-sort-select"><option value="priority">Priority</option><option value="due">Due date</option><option value="status">Status</option></select></div>
+            </div>
 
             <!-- ================================================= -->
             <!-- SESSION TABLE -->
@@ -207,6 +171,9 @@
                                            font-semibold
                                            text-slate-600">
                                     Status
+                                </th>
+                                <th>Due</th>
+                                <th>Updated
                                 </th>
 
                                 <th class="px-6 py-4

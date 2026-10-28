@@ -33,16 +33,41 @@
     </header>
     <main id="main-content">
         <section class="home-hero" aria-labelledby="hero-title">
+            <!-- AAIR logo glass-morphism hero art: exact system logo, orbit and motion. -->
+            <div class="home-hero-art" aria-hidden="true">
+                <svg class="home-logo-orbit" viewBox="0 0 230 150" role="presentation">
+                    <!-- The same path drives both the orbit line and the moving dot. -->
+                    <defs>
+                        <!-- Open arc: the upper-right section is intentionally omitted. -->
+                        <path id="aairLogoOrbitPath" d="M 185 42 C 204 54 213 68 209 82 C 201 110 157 124 108 124 C 58 124 20 108 14 84 C 9 64 25 49 45 41" />
+                    </defs>
+                    <g transform="rotate(17 112 76)">
+                        <use class="home-orbit-line" href="#aairLogoOrbitPath" fill="none" stroke="var(--aair-orbit)" stroke-width="1.2" />
+                        <circle class="home-orbit-dot" r="3.5" fill="var(--aair-orbit-dot)">
+                            <animateMotion dur="17s" repeatCount="indefinite">
+                                <mpath href="#aairLogoOrbitPath" />
+                            </animateMotion>
+                        </circle>
+                    </g>
+                </svg>
+                <div class="home-logo-float">
+                    <!-- Use the exact transparent AAIR logo asset so its asymmetric A, network graph and data pixels are preserved. -->
+                    <img class="home-logo-original" src="/resource/icon/logo_remove_BG.png" alt="" width="260" height="260">
+                </div>
+                <span class="home-logo-speck home-logo-speck--one"></span>
+                <span class="home-logo-speck home-logo-speck--two"></span>
+                <span class="home-logo-speck home-logo-speck--three"></span>
+                <span class="home-logo-shadow"></span>
+            </div>
             <div class="home-container home-hero__grid">
                 <div class="home-hero__copy">
                     <p class="home-eyebrow"><span class="home-signal" aria-hidden="true"></span>APPLIED AI RESEARCH LABORATORY</p>
                     <h1 id="hero-title">Expert knowledge. <span>Better AI data.</span></h1>
                     <p class="home-lead">Bring human expertise and AI into the same workflow. Annotate financial reports, verify every value, and review results with your team.</p>
                     <div class="home-actions">
-                        <a class="home-button" href="signIn.html">Open workspace <span aria-hidden="true">↗</span></a>
-                        <a class="home-text-link" href="#workflow">See how it works <span aria-hidden="true">↓</span></a>
+                        <a class="home-button" href="signIn.html">Get started <span aria-hidden="true">↗</span></a>
+                        <a class="home-text-link home-text-link--cta" href="#workflow">See how it works <span aria-hidden="true">↓</span></a>
                     </div>
-                    <div class="home-hero__notes"><span><i aria-hidden="true">✓</i> AI-assisted annotation</span><span><i aria-hidden="true">✓</i> Human-led review</span></div>
                 </div>
                 <div class="home-showcase">
                 <div class="home-showcase__intro"><span>THE AAIR WORKSPACE</span><p>From a page in a report<br> to a value you can trust.</p><span>READ · ANNOTATE · REVIEW</span></div>

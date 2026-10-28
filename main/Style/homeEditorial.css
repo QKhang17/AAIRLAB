@@ -1,5 +1,37 @@
 /* Home-only editorial treatment: centered introduction, large showcase and
    alternating stories. Loaded after the shared public-page compatibility CSS. */
+:root {
+  /* Color system for the pastel AAIR Lab landing page. */
+  --aair-navy: #0f1b3d;
+  --aair-blue: #2563eb;
+  --aair-blue-bright: #3b82f6;
+  --aair-teal: #14b8a6;
+  --aair-lavender: #e9e5ff;
+  --aair-sky: #e8f0ff;
+  --aair-mint: #e3f7f1;
+  --aair-yellow: #fff4cc;
+  --aair-yellow-line: #f5c542;
+  --aair-muted: #5b6785;
+  --aair-line: #dbe5f2;
+  --aair-glass: rgba(255, 255, 255, .62);
+  --aair-glass-line: rgba(255, 255, 255, .78);
+  --aair-shadow: rgba(35, 85, 160, .12);
+  --aair-glass-mint: #8fe6d5;
+  --aair-glass-cyan: #73cfe6;
+  --aair-glass-blue: #83b7f2;
+  --aair-glass-lavender: #b9a9f2;
+  --aair-glass-edge: rgba(255, 255, 255, .82);
+  --aair-glass-highlight: rgba(255, 255, 255, .94);
+  --aair-network-line: rgba(231, 249, 255, .86);
+  --aair-network-node: #eafcff;
+  --aair-orbit: rgba(90, 145, 225, .34);
+  --aair-orbit-dot: #3b82f6;
+  --aair-positive: #138f80;
+  --aair-logo-left-light: #5b6fd6;
+  --aair-logo-left-glass: #a5b4fc;
+  --aair-logo-glass-white: rgba(255, 255, 255, .32);
+}
+
 .home-page { --home-ink:#1f2937; --home-muted:#4b5563; --home-blue:#0a3d91; --home-teal:#00a3b5; --home-line:#e5e7eb; --home-paper:#f5f7fa; }
 .home-header { background:#fffffff5; border-bottom-color:#eeeeee; }
 .home-nav a { font-weight:500; color:#454b54; }
@@ -124,3 +156,262 @@
   .home-cta h2 { font-size:29px; }
 }
 @media (prefers-reduced-motion:reduce) { .home-feature__icon { transition:none; } }
+
+/* Pastel visual pass: colors and background effects only. */
+.home-page {
+  --home-ink: var(--aair-navy);
+  --home-muted: var(--aair-muted);
+  --home-blue: var(--aair-blue);
+  --home-teal: var(--aair-teal);
+  --home-line: var(--aair-line);
+  --home-paper: #f8fbff;
+  color: var(--aair-navy);
+  background: var(--home-paper);
+  border-top: 0;
+}
+
+.home-header {
+  border-top: 0;
+  border-bottom-color: rgba(151, 177, 214, .22);
+  background: rgba(255, 255, 255, .72);
+  backdrop-filter: blur(18px);
+}
+.home-brand { color: var(--aair-navy); }
+.home-nav a { color: var(--aair-navy); }
+.home-nav a[aria-current="location"] { color: var(--aair-blue); text-decoration-color: var(--aair-blue); }
+.home-nav a:first-child { position: relative; color: var(--aair-navy); }
+.home-nav a:first-child::after {
+  position: absolute; right: 0; bottom: -17px; left: 0; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--aair-blue), var(--aair-teal)); content: "";
+}
+.home-nav a:hover, .home-footer a:hover { color: var(--aair-blue); }
+.home-page .home-button {
+  border-color: var(--aair-blue);
+  background: linear-gradient(105deg, #1d4ed8, var(--aair-blue) 55%, #0e9f9a);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, .22);
+}
+.home-page .home-button:hover {
+  background: linear-gradient(105deg, #1d4ed8, var(--aair-blue), var(--aair-teal));
+  box-shadow: 0 10px 24px rgba(37, 99, 235, .28);
+}
+.home-page .home-button--small {
+  border-color: rgba(143, 166, 198, .34);
+  background: rgba(255, 255, 255, .58);
+  color: var(--aair-navy);
+  box-shadow: 0 2px 9px rgba(44, 72, 122, .04);
+}
+.home-page .home-button--small:hover { background: rgba(255, 255, 255, .86); border-color: var(--aair-blue); }
+.home-eyebrow { color: var(--aair-blue); }
+.home-signal { background: var(--aair-teal); box-shadow: 0 0 0 4px rgba(20, 184, 166, .12); }
+
+/* Soft wave field plus low-opacity, pointer-free decoration. */
+.home-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 8% 28%, rgba(187, 220, 255, .72) 0 13%, transparent 40%),
+    radial-gradient(ellipse at 95% 42%, rgba(210, 235, 255, .78) 0 12%, transparent 39%),
+    radial-gradient(ellipse at 44% 108%, rgba(233, 229, 255, .82) 0 23%, transparent 58%),
+    linear-gradient(135deg, #fbfdff 0%, var(--aair-sky) 42%, #f4f0ff 72%, var(--aair-mint) 100%);
+}
+.home-hero::before,
+.home-hero::after,
+.home-hero__copy::before,
+.home-showcase::before,
+.home-showcase::after { pointer-events: none; content: ""; position: absolute; z-index: 0; }
+.home-hero::before {
+  display: none;
+}
+.home-hero::after {
+  right: 7%; top: 150px; width: 28px; height: 28px; border-radius: 50%;
+  background: linear-gradient(135deg, #65e0cb 10%, var(--aair-blue) 78%);
+  box-shadow: 0 0 18px rgba(20, 184, 166, .24), 124px 110px 0 -9px rgba(135, 174, 247, .26);
+  opacity: .78;
+}
+.home-hero__copy::before {
+  display: none;
+}
+.home-hero__grid, .home-paths { position: relative; z-index: 1; }
+
+/* Floating exact-logo treatment. It sits behind hero content and never captures input. */
+.home-hero-art {
+  position: absolute;
+  z-index: 0;
+  top: 94px;
+  left: max(24px, calc(50% - 650px));
+  width: 360px;
+  height: 330px;
+  pointer-events: none;
+  perspective: 800px;
+}
+.home-logo-orbit { position: absolute; top: 56px; left: 27px; width: 306px; height: 200px; overflow: visible; }
+.home-orbit-line { stroke-linecap: round; opacity: .72; }
+.home-orbit-dot { opacity: .92; }
+.home-logo-float {
+  position: absolute;
+  top: 26px;
+  left: 50px;
+  width: 260px;
+  height: 260px;
+  transform-origin: 50% 65%;
+  will-change: transform;
+  animation: aair-logo-float 7s ease-in-out infinite;
+}
+.home-logo-original {
+  display: block;
+  width: 260px;
+  height: 260px;
+  object-fit: contain;
+  overflow: visible;
+  opacity: .96;
+  filter: brightness(1.55) saturate(.72) drop-shadow(0 8px 20px rgba(99, 140, 255, .35));
+  transform: rotateY(-6deg);
+}
+.home-logo-float::before {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .56), var(--aair-logo-left-glass) 34%, var(--aair-logo-left-light) 49%, transparent 72%);
+  content: "";
+  mix-blend-mode: screen;
+  opacity: .54;
+  pointer-events: none;
+  transform: translate(-2px, -2px);
+  -webkit-mask: url('/resource/icon/logo_remove_BG.png') center / contain no-repeat;
+  mask: url('/resource/icon/logo_remove_BG.png') center / contain no-repeat;
+}
+.home-logo-float::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--aair-logo-glass-white), rgba(126, 231, 214, .24) 42%, rgba(196, 181, 253, .22));
+  content: "";
+  mix-blend-mode: screen;
+  opacity: .62;
+  pointer-events: none;
+  -webkit-mask: url('/resource/icon/logo_remove_BG.png') center / contain no-repeat;
+  mask: url('/resource/icon/logo_remove_BG.png') center / contain no-repeat;
+}
+.home-logo-shadow {
+  position: absolute;
+  left: 111px;
+  bottom: 1px;
+  width: 110px;
+  height: 19px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, .25);
+  filter: blur(14px);
+  will-change: transform, opacity;
+  animation: aair-logo-shadow 7s ease-in-out infinite;
+}
+.home-logo-speck { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.78); box-shadow: 0 0 9px rgba(255,255,255,.8); animation: aair-logo-speck 5s ease-in-out infinite; }
+.home-logo-speck--one { top: 39px; left: 31px; }
+.home-logo-speck--two { top: 112px; left: 190px; width: 4px; height: 4px; animation-delay: -2s; }
+.home-logo-speck--three { top: 147px; left: 19px; width: 3px; height: 3px; animation-delay: -3.2s; }
+@keyframes aair-logo-float {
+  0%, 100% { transform: translate3d(0, 7px, 0) rotate(-2deg) rotateY(-6deg); }
+  50% { transform: translate3d(0, -9px, 0) rotate(3deg) rotateY(7deg); }
+}
+@keyframes aair-logo-shadow {
+  0%, 100% { transform: scaleX(1); opacity: .25; }
+  50% { transform: scaleX(.68); opacity: .12; }
+}
+@keyframes aair-orbit-dot-fade {
+  0%, 27% { opacity: 1; }
+  39%, 60% { opacity: .16; }
+  72%, 100% { opacity: 1; }
+}
+
+/* Readability pass: labels and compact mockup text remain legible on the pastel field. */
+.home-hero__copy > .home-eyebrow { font-size: 12px; }
+.home-hero__notes { font-size: 13px; }
+.home-workspace__chrome { font-size: 11px; }
+.home-workspace__toolbar { font-size: 12px; }
+.home-workspace__status { font-size: 10px; }
+.home-report__heading > span { font-size: 9px; }
+.home-report__heading > small { font-size: 8px; }
+.home-extraction__heading { font-size: 12px; }
+.home-extraction__heading > span { font-size: 9px; }
+.home-value__label { font-size: 11px; }
+.home-value__source { font-size: 9px; }
+@keyframes aair-logo-speck {
+  0%, 100% { transform: translate3d(0, 0, 0); opacity: .28; }
+  50% { transform: translate3d(6px, -12px, 0); opacity: .72; }
+}
+.home-hero h1 > span {
+  background: linear-gradient(100deg, #1d4ed8, #0e7490 72%, #087f8a);
+  -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700;
+}
+.home-text-link--cta {
+  min-height: 48px;
+  padding: 10px 17px;
+  border: 1px solid rgba(91, 125, 184, .34);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .48);
+  color: var(--aair-navy) !important;
+  box-shadow: 0 3px 10px rgba(61, 107, 176, .07);
+}
+.home-text-link--cta:hover { background: rgba(255, 255, 255, .76); text-decoration: none; border-color: var(--aair-blue); }
+.home-lead { color: var(--aair-muted); }
+.home-page .home-text-link { color: var(--aair-navy); }
+.home-hero__notes { color: var(--aair-muted); }
+.home-hero__notes i { color: var(--aair-positive); font-weight: 700; }
+
+.home-showcase {
+  position: relative;
+  border-color: rgba(173, 199, 235, .62);
+  background:
+    radial-gradient(circle at 96% 23%, rgba(20, 184, 166, .18) 0 3px, transparent 4px 12px),
+    linear-gradient(125deg, rgba(216, 232, 255, .90), rgba(233, 229, 255, .84) 54%, rgba(218, 248, 240, .78));
+  box-shadow: 0 18px 46px rgba(61, 107, 176, .10), inset 0 1px 0 rgba(255,255,255,.72);
+}
+.home-showcase::before {
+  right: 34px; bottom: 28px; width: 42px; height: 42px; border-radius: 10px;
+  background: linear-gradient(135deg, rgba(255,255,255,.68), rgba(157, 187, 255, .26));
+  border: 1px solid rgba(255,255,255,.64); box-shadow: 0 10px 24px rgba(90, 123, 196, .12);
+  transform: rotate(18deg) skewY(-7deg); opacity: .78;
+}
+.home-showcase::after {
+  right: 10px; top: 23px; width: 74px; height: 48px;
+  z-index: 0;
+  background-image: radial-gradient(circle, rgba(37,99,235,.24) 1.5px, transparent 1.8px);
+  background-size: 14px 14px; opacity: .48;
+}
+.home-showcase__intro { position: relative; z-index: 1; align-self: center; transform: translateY(-8px); }
+.home-showcase__intro > span { color: var(--aair-blue); font-size: 12px; }
+.home-showcase__intro p { color: var(--aair-navy); font-weight: 600; }
+.home-workspace {
+  position: relative;
+  z-index: 1;
+  border-color: rgba(167, 188, 217, .52);
+  background: rgba(255, 255, 255, .94);
+  border-color: rgba(132, 166, 211, .72);
+  box-shadow: 0 18px 40px -24px rgba(48, 76, 119, .34), 0 2px 8px rgba(24, 62, 108, .12);
+}
+.home-workspace__status { color: var(--aair-positive); background: var(--aair-mint); border-color: rgba(19, 143, 128, .24); }
+.home-workspace__body { background: rgba(232, 240, 255, .72); }
+.home-report__highlight { color: #675417; background: var(--aair-yellow); border-color: var(--aair-yellow-line); }
+.home-value--active { border-color: rgba(37, 99, 235, .34); box-shadow: 0 0 0 2px rgba(37, 99, 235, .08); }
+.home-value__label i { color: var(--aair-positive); background: var(--aair-mint); font-weight: 700; }
+.home-value__source > span:first-child { color: var(--aair-blue); }
+.home-value__source > span:last-child { color: var(--aair-positive); font-weight: 600; }
+
+/* Keep the remaining sections on the same readable pastel system. */
+.home-section, .home-footer { background: #fbfdff; }
+.home-feature__tag, .home-steps small { border-color: var(--aair-line); }
+.home-workflow__intro { background: linear-gradient(135deg, var(--aair-sky), var(--aair-lavender)); }
+.home-about__identity { background: linear-gradient(135deg, var(--aair-mint), var(--aair-lavender)); }
+.home-cta { background: rgba(255,255,255,.68); }
+
+@media (max-width: 767px) {
+  .home-hero::after { right: 9%; top: 118px; transform: scale(.76); }
+  .home-hero-art { top: 84px; left: -37px; transform: scale(.42); transform-origin: top left; }
+  .home-showcase::before { right: 16px; bottom: 16px; transform: scale(.72) rotate(18deg) skewY(-7deg); }
+  .home-showcase::after { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-logo-float, .home-logo-shadow, .home-logo-speck, .home-orbit-dot { animation: none; }
+  .home-logo-float { transform: rotate(-1deg) rotateY(-4deg); }
+  .home-logo-shadow { transform: scaleX(.86); opacity: .16; }
+  .home-logo-orbit circle animateMotion { display: none; }
+}
