@@ -77,7 +77,7 @@ Hệ thống tuân thủ nghiêm ngặt bộ tiêu chuẩn thiết kế Jelly Ke
 
 1. **JWT Stateless Authentication**:
    - Access token mang thông tin danh tính và quyền hạn (`ROLE_ADMIN`, `ROLE_MANAGER`, `ROLE_AI_LABELER`, `ROLE_MANUAL_LABELER`, `ROLE_REVIEWER`, `ROLE_ANALYST`, `ROLE_TERMINOLOGY`).
-   - Phiên đăng nhập được quản lý tại client qua `localStorage` và bảo vệ chuyển hướng tự động khi nhận HTTP 401.
+   - Access token được đặt trong cookie `HttpOnly; SameSite=Lax` và `Secure` ở production; frontend không lưu JWT trong `localStorage`/`sessionStorage`.
 2. **Atomic Workflows**:
    - Các nghiệp vụ tạo phiên (Session creation) được xử lý nguyên khối, rollback hoàn toàn nếu gặp lỗi và không sinh tác vụ rác.
 3. **Audit Logging**:

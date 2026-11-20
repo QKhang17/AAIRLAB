@@ -4,6 +4,10 @@
 !.env.example
 *.env
 *.env.local
+secrets/
+backend/secrets/
+deploy/compose.env
+deploy/secrets/
 
 # Frontend
 frontend/node_modules/

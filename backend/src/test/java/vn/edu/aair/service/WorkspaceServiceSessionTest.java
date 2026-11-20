@@ -856,6 +856,8 @@ class WorkspaceServiceSessionTest {
         when(db.queryForList(startsWith("INSERT INTO annotation_sessions"), any(Object[].class)))
                 .thenReturn(List.of(new HashMap<>(Map.of("id", 201L, "name", "S28", "session_type", "MANUAL", "status", "DRAFT"))));
 
+        doReturn(1).when(db).update(startsWith("UPDATE users SET role="), any(Object[].class));
+
         doThrow(new DataIntegrityViolationException("Database constraint error during Member INSERT"))
                 .when(db).update(startsWith("INSERT INTO session_members"), any(Object[].class));
 
@@ -903,6 +905,8 @@ class WorkspaceServiceSessionTest {
                     annotationSessionsTable.add(sessionRow);
                     return List.of(sessionRow);
                 });
+
+        doReturn(1).when(db).update(startsWith("UPDATE users SET role="), any(Object[].class));
 
         doAnswer(invocation -> {
             Object[] args = invocation.getArguments();

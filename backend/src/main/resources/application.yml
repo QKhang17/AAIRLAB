@@ -3,7 +3,9 @@ server:
 
 spring:
   config:
-    import: optional:classpath:application-ai-keys.yml
+    # Keep provider credentials outside the packaged classpath. The file is optional
+    # so production can use a mounted secret file or environment variables.
+    import: optional:file:${AI_KEYS_FILE:./secrets/application-ai-keys.yml}
   servlet:
     multipart:
       max-file-size: 50MB
@@ -12,7 +14,9 @@ spring:
     name: aair-backend
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/aair_db}
-    username: ${DB_USERNAME:postgres}
+    # Never fall back to the PostgreSQL superuser. Deployment must provide a
+    # dedicated least-privilege application role explicitly.
+    username: ${DB_USERNAME:}
     password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
   mail:
@@ -47,7 +51,35 @@ app:
     directory: ${UPLOAD_DIRECTORY:./uploads}
   cors:
     allowed-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+    allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}
+  auth:
+    cookie-secure: ${AUTH_COOKIE_SECURE:true}
+    cookie-same-site: ${AUTH_COOKIE_SAMESITE:Lax}
   jwt:
-    # Khi triển khai production, bắt buộc phải cung cấp biến môi trường JWT_SECRET với khóa ngẫu nhiên tối thiểu 32 ký tự (256-bit).
-    secret: ${JWT_SECRET:AAIR-Development-Secret-Key-Minimum-32-Characters-Must-Change-In-Production}
-    expiration-ms: ${JWT_EXPIRATION_MS:28800000}
+    # Không dùng fallback: deployment phải cung cấp khóa ngẫu nhiên tối thiểu 32 bytes.
+    secret: ${JWT_SECRET:}
+    expiration-ms: ${JWT_EXPIRATION_MS:3600000}
+  ai:
+    gemini:
+      model: ${GEMINI_MODEL:gemini-2.5-flash}
+      api-key: ${GEMINI_API_KEY:}
+    groq:
+      model: ${GROQ_MODEL:llama-3.3-70b-versatile}
+      api-key: ${GROQ_API_KEY:}
+    openai:
+      model: ${OPENAI_MODEL:gpt-5}
+      api-key: ${OPENAI_API_KEY:}
+    claude:
+      model: ${ANTHROPIC_MODEL:claude-sonnet-4-6}
+      api-key: ${ANTHROPIC_API_KEY:}
+
+management:
+  endpoints:
+    enabled-by-default: false
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      enabled: true
+      show-details: never

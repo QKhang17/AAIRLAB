@@ -13,7 +13,7 @@
     const node = document.querySelector('[data-greeting]');
     if (!node) return;
     let user = null;
-    try { user = JSON.parse(sessionStorage.getItem('aair_user') || localStorage.getItem('aair_user') || 'null'); } catch {}
+    try { user = JSON.parse(sessionStorage.getItem('aair_user') || 'null'); } catch {}
     const name = user?.displayName || user?.display_name || user?.username || '';
     const render = () => { node.textContent = `${getGreeting(new Date())}${name ? ` ${name}` : ''}`; };
     render();

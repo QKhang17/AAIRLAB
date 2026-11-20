@@ -11,6 +11,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 
 @Service
 public class JwtService {
@@ -22,6 +23,13 @@ public class JwtService {
             @Value("${app.jwt.secret}") String secret,
             @Value("${app.jwt.expiration-ms}") long expirationMs
     ) {
+        if (secret == null || secret.isBlank()
+                || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("JWT_SECRET must be configured with at least 32 bytes");
+        }
+        if (expirationMs <= 0) {
+            throw new IllegalStateException("JWT_EXPIRATION_MS must be positive");
+        }
         this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMs = expirationMs;
     }
@@ -30,6 +38,7 @@ public class JwtService {
         Instant now = Instant.now();
 
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(user.getUsername())
                 .claim("role", user.getRole())
                 .issuedAt(Date.from(now))
@@ -47,6 +56,14 @@ public class JwtService {
         return user.getUsername().equalsIgnoreCase(claims.getSubject())
                 && claims.getExpiration().after(new Date())
                 && Boolean.TRUE.equals(user.getIsActive());
+    }
+
+    public String extractTokenId(String token) {
+        return extractClaims(token).getId();
+    }
+
+    public Instant extractExpiration(String token) {
+        return extractClaims(token).getExpiration().toInstant();
     }
 
     public long getExpirationMs() {

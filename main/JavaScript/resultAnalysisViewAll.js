@@ -37,5 +37,20 @@
     };
     search.oninput = () => { page = 0; render(); }; session.onchange = status.onchange = () => { page = 0; render(); }; render();
   }
-  init().catch(error => { const body = $('#taskRows'); if (body) body.innerHTML = `<tr><td colspan="7" class="aa-empty">${String(error.message || 'Unable to load data.')} <button class="aa-button" onclick="location.reload()">Retry</button></td></tr>`; });
+  init().catch(error => {
+    const body = $('#taskRows');
+    if (!body) return;
+    body.replaceChildren();
+    const row = body.insertRow();
+    const cell = row.insertCell();
+    cell.colSpan = 7;
+    cell.className = 'aa-empty';
+    cell.append(document.createTextNode(`${error?.message || 'Unable to load data.'} `));
+    const retry = document.createElement('button');
+    retry.className = 'aa-button';
+    retry.type = 'button';
+    retry.textContent = 'Retry';
+    retry.addEventListener('click', () => window.location.reload());
+    cell.append(retry);
+  });
 })();
