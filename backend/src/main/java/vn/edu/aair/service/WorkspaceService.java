@@ -141,7 +141,7 @@ public class WorkspaceService {
                 """);
     }
     public Map<String,Object> createUser(CreateUser r) {
-        var a = actor(); require(a, "ADMIN", "MANAGER"); requirePermission(a, "USER_MANAGEMENT", "WRITE");
+        var a = actor(); require(a, "ADMIN"); requirePermission(a, "USER_MANAGEMENT", "WRITE");
         String requestedRole = r.role() == null ? "" : r.role().trim().toUpperCase(Locale.ROOT);
         valid(ACCOUNT_MANAGEMENT_ROLES.contains(requestedRole), "Vai trò không hợp lệ");
         String username = r.username().trim();
@@ -165,7 +165,7 @@ public class WorkspaceService {
         return new String(chars);
     }
     public Map<String,Object> updateUser(long userId, UpdateUser r) {
-        var a = actor(); require(a, "ADMIN", "MANAGER"); requirePermission(a, "USER_MANAGEMENT", "WRITE");
+        var a = actor(); require(a, "ADMIN"); requirePermission(a, "USER_MANAGEMENT", "WRITE");
         valid(ACCOUNT_MANAGEMENT_ROLES.contains(r.role()), "Vai trò không hợp lệ");
         one("SELECT id FROM users WHERE id=? FOR UPDATE", userId);
         state(a.id()!=userId || (r.active() && r.role().equals("ADMIN")), "Không thể tự khóa hoặc hạ quyền tài khoản Admin đang sử dụng");
@@ -189,6 +189,7 @@ public class WorkspaceService {
 
     public Map<String,Object> permissions(String requestedRole) {
         var a = actor();
+        require(a, "ADMIN", "MANAGER");
         String role = normalizePermissionValue(requestedRole, ACCOUNT_MANAGEMENT_ROLES, "Role permission không hợp lệ");
         if (a.role().equals("MANAGER") && !a.role().equals(role))
             throw error(HttpStatus.FORBIDDEN, "Manager chỉ được xem permission của chính mình");
@@ -329,15 +330,14 @@ public class WorkspaceService {
     public List<Map<String,Object>> documents() {
         var a=actor();
         if (a.role().equals("MANAGER")) requirePermission(a, "DOCUMENTS", "READ");
-        String scope = a.role().equals("RESULT_ANALYST") ? "1=1" :
-                "EXISTS (SELECT 1 FROM annotation_tasks t WHERE t.document_id=d.id AND ("+taskScope(a)+"))";
+        String scope = "EXISTS (SELECT 1 FROM annotation_tasks t WHERE t.document_id=d.id AND ("+taskScope(a)+"))";
         if (a.role().equals("MANAGER")) scope="d.uploaded_by="+a.id();
         return db.queryForList("SELECT d.id,d.title,d.original_name,d.document_type,d.status,d.uploaded_by,u.username AS uploaded_by_username,d.file_size,d.content_type,d.created_at FROM documents d JOIN users u ON u.id=d.uploaded_by WHERE "+scope+" AND d.document_type='PDF' ORDER BY d.id DESC");
     }
     public Map<String,Object> document(long documentId) {
         var a=actor(); if (a.role().equals("MANAGER")) requirePermission(a, "DOCUMENTS", "READ");
         var d=one("SELECT * FROM documents WHERE id=?",documentId);
-        boolean access=a.role().equals("RESULT_ANALYST") || (a.role().equals("MANAGER") && Objects.equals(a.id(),nullableId(d,"uploaded_by")))
+        boolean access=(a.role().equals("MANAGER") && Objects.equals(a.id(),nullableId(d,"uploaded_by")))
                 || count("SELECT count(*) FROM annotation_tasks t WHERE t.document_id=? AND ("+taskScope(a)+")",documentId)>0;
         if (!access) throw error(HttpStatus.FORBIDDEN,"Bạn không có quyền xem tài liệu này");
         return d;
@@ -997,7 +997,7 @@ public class WorkspaceService {
     private Map<String,Object> analystCompletion(Actor a,Long sessionId) {
         var args=new ArrayList<Object>();String filter="";
         if(sessionId!=null){filter=" AND t.session_id=?";args.add(sessionId);}
-        var tasks=db.queryForList("SELECT t.id,d.title AS document_title FROM annotation_tasks t JOIN documents d ON d.id=t.document_id WHERE t.task_type='AI'"+filter+" ORDER BY t.id",args.toArray());
+        var tasks=db.queryForList("SELECT t.id,d.title AS document_title FROM annotation_tasks t JOIN documents d ON d.id=t.document_id WHERE t.task_type='AI' AND ("+taskScope(a)+")"+filter+" ORDER BY t.id",args.toArray());
         var documents=new ArrayList<Map<String,Object>>();
         for(var task:tasks) {
             long taskId=id(task,"id");

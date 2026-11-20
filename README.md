@@ -5,10 +5,11 @@ Giao diện sử dụng trực tiếp các trang HTML/CSS hiện có trong `main
 - `frontend/`: công cụ Vite phục vụ/build các trang trong `main/`; mã React cũ không nằm trong luồng chạy hiện tại.
 - `backend/`: Spring Boot, Java 21, JPA, Spring Security, JWT và PostgreSQL.
 - `database/create_database.sql`: tạo database `aair_db`.
+- `deploy/`: Docker/VPS production stack, Caddy reverse proxy và secret template ngoài image.
 - `database/create_users_table.sql`: tạo bảng `users` (không chèn tài khoản mẫu).
 - `API_LOGIN_NOTE.txt`: tài liệu tham số vào/ra của API đăng nhập.
 - `main/HTML/`, `main/Style/`: giao diện đang sử dụng.
-- `main/JavaScript/api.js`: đăng nhập, token, kiểm tra phiên và quyền truy cập trang.
+- `main/JavaScript/api.js`: đăng nhập bằng cookie HttpOnly, kiểm tra phiên và quyền truy cập trang.
 - `main/JavaScript/workspace.js`: nối API vào các bảng, thẻ số liệu, modal và ô nhãn hiện có.
 - `resource/`: tài nguyên giao diện gốc.
 
@@ -28,15 +29,24 @@ Mở PowerShell tại thư mục dự án:
 
 ```powershell
 $env:DB_URL = "jdbc:postgresql://localhost:5432/aair_db"
-$env:DB_USERNAME = "postgres"
+$env:DB_USERNAME = "aair_app"
 $env:DB_PASSWORD = "MAT_KHAU_POSTGRES_CUA_BAN"
-$env:JWT_SECRET = "THAY_BANG_CHUOI_BI_MAT_TOI_THIEU_32_KY_TU"
+$env:JWT_SECRET = "THAY_BANG_CHUOI_NGAU_NHIEN_TOI_THIEU_32_BYTE"
+$env:AUTH_COOKIE_SECURE = "false" # local HTTP; production phải đặt true khi chạy HTTPS
+$env:AUTH_COOKIE_SAMESITE = "Lax" # dùng None chỉ khi frontend/API khác site và đều chạy HTTPS
+$env:CORS_ALLOW_CREDENTIALS = "true"
 $env:MAIL_USERNAME = "tai-khoan-gui@gmail.com"
 $env:MAIL_PASSWORD = "MAT_KHAU_UNG_DUNG_GMAIL"
 $env:MAIL_FROM = "tai-khoan-gui@gmail.com"
 cd backend
 mvn spring-boot:run
 ```
+
+Tài khoản `aair_app` phải là role PostgreSQL riêng cho ứng dụng, không dùng role
+superuser `postgres`. Chạy kiểm tra dependency backend bằng `mvn -Psecurity verify`
+trên JDK 21; profile này dùng OWASP Dependency Check và fail khi CVSS từ 7 trở lên.
+Các endpoint Actuator mặc định bị tắt; chỉ `/actuator/health` được bật công khai để host health probe,
+các endpoint Actuator khác yêu cầu role Admin.
 
 `MAIL_PASSWORD` là App Password của tài khoản Gmail gửi thư, không phải mật khẩu
 đăng nhập Gmail thông thường. Nếu chưa cấu hình SMTP hoặc gửi mail thất bại, API tạo
@@ -47,7 +57,8 @@ backend chỉ kiểm tra cấu trúc và không tự ý sửa bảng bạn tạo
 
 ## API nghiệp vụ và phân quyền
 
-Sau khi đăng nhập, gửi `Authorization: Bearer <accessToken>` cho mọi endpoint dưới đây.
+Sau khi đăng nhập, backend đặt access token trong cookie `HttpOnly; Secure` (production). Trình duyệt tự gửi cookie cho các endpoint; không lưu JWT vào `localStorage` hoặc `sessionStorage`.
+Các request thay đổi dữ liệu dùng thêm cookie `XSRF-TOKEN` và header `X-XSRF-TOKEN` để chống CSRF.
 
 | Nhóm API | Vai trò được phép | Endpoint chính |
 |---|---|---|
@@ -88,6 +99,14 @@ Backend hiện chưa có API thực thi mô hình AI, giám sát CPU/GPU, độ 
 avatar/team/synonyms và quyền chi tiết theo từng tính năng. Các mục đó không dùng dữ liệu giả;
 trường chưa được hỗ trợ được ẩn, thay bằng trường có API hoặc báo chưa có dữ liệu.
 Manager chỉ được xem danh sách user để phân công; chỉ Admin có quyền tạo/khóa tài khoản.
+
+## Triển khai production bằng Docker/VPS
+
+Xem `deploy/README.md`. Production dùng Caddy cho HTTPS và reverse proxy `/api`,
+backend chạy Java 21 non-root, PostgreSQL dùng managed database và secret runtime
+được mount read-only tại `/run/secrets/aair-application.yml`. Không đưa secret YAML
+hoặc JAR trong `backend/.build` lên host; Compose luôn build artifact mới và chặn
+artifact chứa credential file.
 
 ## 3. Chạy giao diện main
 

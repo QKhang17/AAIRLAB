@@ -1,0 +1,23 @@
+{$AAIR_DOMAIN} {
+    root * /srv
+    encode zstd gzip
+
+    @api path /api/*
+    handle @api {
+        reverse_proxy backend:8080
+    }
+
+    @build_metadata path /_headers
+    respond @build_metadata 404
+
+    header {
+        Content-Security-Policy-Report-Only "{$AAIR_CSP}"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    file_server
+}

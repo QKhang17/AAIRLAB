@@ -5,6 +5,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Cookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -21,10 +22,13 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final JwtRevocationService jwtRevocationService;
     private final UserRepository userRepository;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UserRepository userRepository) {
+    public JwtAuthenticationFilter(JwtService jwtService, JwtRevocationService jwtRevocationService,
+                                   UserRepository userRepository) {
         this.jwtService = jwtService;
+        this.jwtRevocationService = jwtRevocationService;
         this.userRepository = userRepository;
     }
 
@@ -35,20 +39,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String token = bearerToken(authorization);
+        if (token == null && request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("AAIR_ACCESS_TOKEN".equals(cookie.getName())) {
+                    token = cookie.getValue();
+                    break;
+                }
+            }
+        }
 
-        if (authorization == null
-                || !authorization.startsWith("Bearer ")
+        if (token == null
                 || SecurityContextHolder.getContext().getAuthentication() != null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = authorization.substring(7);
-
         try {
+            if (jwtRevocationService.isRevoked(jwtService.extractTokenId(token))) {
+                SecurityContextHolder.clearContext();
+                filterChain.doFilter(request, response);
+                return;
+            }
             String username = jwtService.extractUsername(token);
+            String resolvedToken = token;
             userRepository.findByUsernameIgnoreCase(username).ifPresent(user -> {
-                if (jwtService.isTokenValid(token, user)) {
+                if (jwtService.isTokenValid(resolvedToken, user)) {
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
                                     user.getUsername(),
@@ -66,5 +82,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private String bearerToken(String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) return null;
+        String value = authorization.substring(7).trim();
+        return value.isBlank() ? null : value;
     }
 }

@@ -31,12 +31,14 @@ class AuthServiceTest {
     private JwtService jwtService;
 
     private BCryptPasswordEncoder passwordEncoder;
+    private LoginRateLimiter loginRateLimiter;
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder(4);
-        authService = new AuthService(userRepository, passwordEncoder, jwtService);
+        loginRateLimiter = new LoginRateLimiter();
+        authService = new AuthService(userRepository, passwordEncoder, jwtService, loginRateLimiter);
     }
 
     @Test

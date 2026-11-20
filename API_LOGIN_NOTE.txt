@@ -12,7 +12,7 @@ Không chạy lại migration nếu database hiện tại đã có đủ các b�
 -----------------------------------------
 Tạo task (mở rộng API cũ):
 POST /api/tasks
-Authorization: Bearer <JWT>
+Cookie: trình duyệt tự gửi `AAIR_ACCESS_TOKEN`
 Body:
 {
   "documentId": <document_id>,
@@ -37,7 +37,7 @@ chuyển SAVED; khi submit task, section tự chuyển SUBMITTED.
 
 7. WORK TIME TRACKING
 ----------------------
-Tất cả API cần Authorization: Bearer <JWT>.
+Tất cả API cần cookie phiên `AAIR_ACCESS_TOKEN` (hoặc Bearer token khi gọi thủ công).
 
 Bắt đầu lượt làm việc (chỉ được truyền đúng một ID):
 POST /api/work-time/start
@@ -131,18 +131,18 @@ Response giữ nguyên các trường cũ và bổ sung:
 
 10. VÍ DỤ POWERSHELL CHO WORKFLOW MỚI
 --------------------------------------
-$headers = @{ Authorization = "Bearer <JWT>" }
+$session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
 $base = "http://localhost:8080/api"
 
 $timer = Invoke-RestMethod -Method Post -Uri "$base/work-time/start" `
-  -Headers $headers -ContentType "application/json" `
+  -WebSession $session -ContentType "application/json" `
   -Body (@{ taskId = <task_id> } | ConvertTo-Json)
 
 $entryId = $timer.data.id
 Invoke-RestMethod -Method Post -Uri "$base/work-time/$entryId/heartbeat" `
-  -Headers $headers
+  -WebSession $session
 Invoke-RestMethod -Method Post -Uri "$base/work-time/$entryId/stop" `
-  -Headers $headers -ContentType "application/json" `
+  -WebSession $session -ContentType "application/json" `
   -Body (@{ reason = "SAVE" } | ConvertTo-Json)
 
 $caseBody = @{
@@ -152,10 +152,10 @@ $caseBody = @{
   dueAt = "2030-02-01T17:00:00"
 } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri "$base/review-cases" `
-  -Headers $headers -ContentType "application/json" -Body $caseBody
+  -WebSession $session -ContentType "application/json" -Body $caseBody
 
 Invoke-RestMethod -Method Get `
-  -Uri "$base/statistics?sessionId=<session_id>" -Headers $headers
+  -Uri "$base/statistics?sessionId=<session_id>" -WebSession $session
 ================================================================================
 AAIR - NOTE API PHÂN HỆ ĐĂNG NHẬP
 Backend: Spring Boot (Java 21 LTS)
@@ -171,8 +171,10 @@ Biến môi trường backend:
 - DB_URL      : jdbc:postgresql://localhost:5432/aair_db
 - DB_USERNAME : tên user PostgreSQL, ví dụ postgres
 - DB_PASSWORD : mật khẩu của user PostgreSQL
-- JWT_SECRET  : chuỗi bí mật tối thiểu 32 ký tự (bắt buộc đổi khi triển khai thật)
+- JWT_SECRET  : secret ngẫu nhiên tối thiểu 32 bytes; backend fail-fast nếu thiếu
 - FRONTEND_ORIGIN: http://localhost:5173
+- AUTH_COOKIE_SECURE: false khi local HTTP; bắt buộc true khi production chạy HTTPS
+- CORS_ALLOW_CREDENTIALS: true khi frontend gọi API khác origin
 
 
 1. API ĐĂNG NHẬP
@@ -202,8 +204,8 @@ Tham số trả về khi thành công - HTTP 200:
 +------------------------+---------+----------------------------------------------+
 | success                | boolean | true                                         |
 | message                | string  | Thông báo kết quả                            |
-| data.accessToken       | string  | JWT dùng cho API cần đăng nhập               |
-| data.tokenType         | string  | Luôn là Bearer                               |
+| data.accessToken       | string  | Không trả về trong JSON; JWT nằm trong cookie HttpOnly |
+| data.tokenType         | string  | Cookie; Bearer chỉ dùng cho client gọi thủ công |
 | data.expiresIn         | number  | Thời gian hiệu lực token, đơn vị giây        |
 | data.user.id           | number  | ID tài khoản                                 |
 | data.user.username     | string  | Tên tài khoản                                |
@@ -218,8 +220,8 @@ Ví dụ response thành công:
   "success": true,
   "message": "Đăng nhập thành công",
   "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
-    "tokenType": "Bearer",
+    "accessToken": null,
+    "tokenType": "Cookie",
     "expiresIn": 28800,
     "user": {
       "id": 1,
@@ -251,7 +253,7 @@ Ví dụ response sai tài khoản hoặc mật khẩu - HTTP 401:
 ------------------------------------------------
 Method: GET
 URL: /api/auth/me
-Authorization: Bearer <accessToken>
+Cookie: trình duyệt tự gửi `AAIR_ACCESS_TOKEN` (HttpOnly, Secure ở production)
 Body: Không có
 
 Tham số trả về khi thành công - HTTP 200:
@@ -279,18 +281,19 @@ Không có tài khoản hoặc mật khẩu mẫu được tạo sẵn.
 
 4. CÁCH GỌI API NHANH BẰNG POWERSHELL
 -------------------------------------
+$session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
 $body = @{ username = "<username>"; password = "<password>" } | ConvertTo-Json
 $login = Invoke-RestMethod `
   -Method Post `
   -Uri "http://localhost:8080/api/auth/login" `
+  -WebSession $session `
   -ContentType "application/json" `
   -Body $body
 
-$token = $login.data.accessToken
 Invoke-RestMethod `
   -Method Get `
   -Uri "http://localhost:8080/api/auth/me" `
-  -Headers @{ Authorization = "Bearer $token" }
+  -WebSession $session
 
 ================================================================================
 

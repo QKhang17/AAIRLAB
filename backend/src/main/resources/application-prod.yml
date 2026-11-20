@@ -1,0 +1,5 @@
+spring:
+  config:
+    # Production must receive this file from a read-only Docker secret mount.
+    # Do not add "optional:" here: a missing secret must stop startup.
+    import: file:${AI_KEYS_FILE:/run/secrets/aair-application.yml}

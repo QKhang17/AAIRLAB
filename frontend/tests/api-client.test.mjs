@@ -11,90 +11,77 @@ test('an API 401 clears the session and redirects to login', async () => {
   const dom = new JSDOM('', { url: 'http://localhost:5173/main/HTML/User/AILabeling/Task.html', runScripts: 'outside-only' })
   const w = dom.window
   w.Headers = Headers
-  w.sessionStorage.setItem('aair_access_token', 'session-token')
-  w.localStorage.setItem('aair_access_token', 'session-token')
+  w.sessionStorage.setItem('aair_user', JSON.stringify({ id: 1, role: 'AI_LABELER' }))
   w.fetch = async () => ({ ok: false, status: 401, json: async () => ({ message: 'Unauthorized' }) })
   w.eval(source)
 
   await assert.rejects(w.AAIR.request('/documents/1/file', { blob: true }), /Unauthorized/)
-  assert.equal(w.sessionStorage.getItem('aair_access_token'), null)
-  assert.equal(w.localStorage.getItem('aair_access_token'), null)
+  assert.equal(w.sessionStorage.getItem('aair_user'), null)
   dom.window.close()
 })
 
-test('a feature 401 does not log out a user whose AAIR session is still valid', async () => {
+test('API requests use browser-managed cookies and never attach a bearer token', async () => {
   const dom = new JSDOM('', { url: 'http://localhost:5173/main/HTML/User/AILabeling/Task.html?id=4', runScripts: 'outside-only' })
   const w = dom.window
   w.Headers = Headers
-  w.sessionStorage.setItem('aair_access_token', 'valid-session-token')
-  w.localStorage.setItem('aair_access_token', 'valid-session-token')
-  const paths = []
-  w.fetch = async (url) => {
-    const path = new URL(url).pathname
-    paths.push(path)
-    if (path === '/api/auth/me') {
-      return { ok: true, status: 200, json: async () => ({ success: true, data: { id: 10, username: 'ai_labeler01', role: 'AI_LABELER' } }) }
-    }
-    return { ok: false, status: 401, json: async () => ({ message: 'Nhà cung cấp AI từ chối API key.' }) }
+  w.document.cookie = 'XSRF-TOKEN=csrf-token'
+  let capturedInit
+  w.fetch = async (_url, init) => {
+    capturedInit = init
+    return { ok: true, status: 200, json: async () => ({ success: true, data: { ok: true } }) }
   }
   w.eval(source)
 
-  await assert.rejects(
-    w.AAIR.request('/tasks/4/run-ai', { method: 'POST', json: { provider: 'Gemini' } }),
-    /Nhà cung cấp AI/,
-  )
-  assert.deepEqual(paths, ['/api/tasks/4/run-ai', '/api/auth/me'])
-  assert.equal(w.sessionStorage.getItem('aair_access_token'), 'valid-session-token')
-  assert.equal(w.localStorage.getItem('aair_access_token'), 'valid-session-token')
+  await w.AAIR.request('/tasks/4/run-ai', { method: 'POST', json: { provider: 'Gemini' } })
+  assert.equal(capturedInit.credentials, 'include')
+  assert.equal(capturedInit.headers.get('Authorization'), null)
+  assert.equal(capturedInit.headers.get('X-XSRF-TOKEN'), 'csrf-token')
   dom.window.close()
 })
 
-test('an optional API 401 keeps the session for fallback data', async () => {
+test('a suppressed API 401 still clears no token because tokens are not stored in web storage', async () => {
   const dom = new JSDOM('', { url: 'http://localhost:5173/main/HTML/User/ResultAnalysis/Task.html', runScripts: 'outside-only' })
   const w = dom.window
   w.Headers = Headers
-  w.sessionStorage.setItem('aair_access_token', 'session-token')
-  w.localStorage.setItem('aair_access_token', 'session-token')
+  w.sessionStorage.setItem('aair_user', JSON.stringify({ id: 1, role: 'RESULT_ANALYST' }))
   w.fetch = async () => ({ ok: false, status: 401, json: async () => ({ message: 'Unauthorized' }) })
   w.eval(source)
 
   await assert.rejects(w.AAIR.request('/tasks/7/ai-results', { suppressAuthRedirect: true }), /Unauthorized/)
-  assert.equal(w.sessionStorage.getItem('aair_access_token'), 'session-token')
-  assert.equal(w.localStorage.getItem('aair_access_token'), 'session-token')
+  assert.deepEqual(JSON.parse(w.sessionStorage.getItem('aair_user')), { id: 1, role: 'RESULT_ANALYST' })
   dom.window.close()
 })
 
-test('API client restores the page session from the persistent login token', async () => {
+test('API client restores the page session from the HttpOnly cookie', async () => {
   const dom = new JSDOM('', { url: 'http://localhost:5173/main/HTML/User/AILabeling/Prompt.html', runScripts: 'outside-only' })
   const w = dom.window
   w.Headers = Headers
-  w.localStorage.setItem('aair_access_token', 'persistent-token')
   w.fetch = async (_url, init) => {
-    assert.equal(init.headers.get('Authorization'), 'Bearer persistent-token')
+    assert.equal(init.credentials, 'include')
+    assert.equal(init.headers.get('Authorization'), null)
     return { ok: true, status: 200, json: async () => ({ success: true, data: { id: 1, username: 'yes', role: 'AI_LABELER' } }) }
   }
   w.eval(source)
 
   const user = await w.AAIR.guard()
   assert.equal(user.role, 'AI_LABELER')
-  assert.equal(w.sessionStorage.getItem('aair_access_token'), 'persistent-token')
+  assert.equal(w.sessionStorage.getItem('aair_access_token'), null)
   dom.window.close()
 })
 
-test('AI labeler task reuses the cached login user without an extra auth redirect', async () => {
+test('guard does not trust a cached user when the cookie session is unavailable', async () => {
   const dom = new JSDOM('', { url: 'http://localhost:5173/main/HTML/User/AILabeling/Task.html?id=4', runScripts: 'outside-only' })
   const w = dom.window
   w.Headers = Headers
-  w.localStorage.setItem('aair_access_token', 'persistent-token')
   w.localStorage.setItem('aair_user', JSON.stringify({ id: 4, username: 'ai_labeler01', role: 'AI_LABELER' }))
   let requests = 0
   w.fetch = async () => { requests += 1; return { ok: false, status: 401, json: async () => ({ message: 'Unauthorized' }) } }
   w.eval(source)
 
   const user = await w.AAIR.guard()
-  assert.equal(user.role, 'AI_LABELER')
-  assert.equal(requests, 0)
-  assert.equal(w.sessionStorage.getItem('aair_access_token'), 'persistent-token')
+  assert.equal(user, null)
+  assert.equal(requests, 1)
+  assert.equal(w.sessionStorage.getItem('aair_user'), null)
   dom.window.close()
 })
 
@@ -102,16 +89,16 @@ test('cached user cannot bypass the role directory check', async () => {
   const dom = new JSDOM('', { url: 'http://localhost:5173/main/HTML/User/AILabeling/Task.html?id=4', runScripts: 'outside-only' })
   const w = dom.window
   w.Headers = Headers
-  w.localStorage.setItem('aair_access_token', 'persistent-token')
   w.localStorage.setItem('aair_user', JSON.stringify({ id: 7, username: 'reviewer01', role: 'REVIEWER' }))
   w.fetch = async (_url, init) => {
-    assert.equal(init.headers.get('Authorization'), 'Bearer persistent-token')
+    assert.equal(init.credentials, 'include')
+    assert.equal(init.headers.get('Authorization'), null)
     return { ok: true, status: 200, json: async () => ({ success: true, data: { id: 7, username: 'reviewer01', role: 'REVIEWER' } }) }
   }
   w.eval(source)
 
   const user = await w.AAIR.guard()
   assert.equal(user, null)
-  assert.equal(w.localStorage.getItem('aair_access_token'), 'persistent-token')
+  assert.equal(w.sessionStorage.getItem('aair_user'), null)
   dom.window.close()
 })
