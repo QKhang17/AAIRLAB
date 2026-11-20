@@ -15,26 +15,42 @@ import vn.edu.aair.security.JwtService;
 @Service
 public class AuthService {
 
+    public record LoginResult(String accessToken, long expiresIn, UserResponse user) {}
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final LoginRateLimiter loginLimiter;
 
     public AuthService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            JwtService jwtService
+            JwtService jwtService,
+            LoginRateLimiter loginLimiter
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.loginLimiter = loginLimiter;
     }
 
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
+        var result = login(request, "unknown");
+        return new LoginResponse(result.accessToken(), "Bearer", result.expiresIn(), result.user());
+    }
+
+    @Transactional(readOnly = true)
+    public LoginResult login(LoginRequest request, String clientIp) {
         String username = request.username().trim();
+        if (loginLimiter.isBlocked(clientIp, username)) {
+            throw new AuthException("TOO_MANY_ATTEMPTS", HttpStatus.TOO_MANY_REQUESTS,
+                    "Quá nhiều lần đăng nhập thất bại. Vui lòng thử lại sau.");
+        }
         User user = userRepository.findByUsernameIgnoreCase(username).orElse(null);
 
         if (user == null || !passwordEncoder.matches(request.password(), user.getPassword())) {
+            loginLimiter.recordFailure(clientIp, username);
             throw new AuthException(
                     "INVALID_CREDENTIALS",
                     HttpStatus.UNAUTHORIZED,
@@ -43,6 +59,7 @@ public class AuthService {
         }
 
         if (!Boolean.TRUE.equals(user.getIsActive())) {
+            loginLimiter.recordFailure(clientIp, username);
             throw new AuthException(
                     "ACCOUNT_INACTIVE",
                     HttpStatus.FORBIDDEN,
@@ -51,9 +68,9 @@ public class AuthService {
         }
 
         String accessToken = jwtService.generateToken(user);
-        return new LoginResponse(
+        loginLimiter.reset(clientIp, username);
+        return new LoginResult(
                 accessToken,
-                "Bearer",
                 jwtService.getExpirationMs() / 1000,
                 UserResponse.from(user)
         );

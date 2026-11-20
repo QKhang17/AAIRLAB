@@ -6,6 +6,9 @@
     const text = el => el?.textContent.replace(/\s+/g, ' ').trim() || '';
     const page = location.pathname.split('/').pop();
     const request = AAIR.request;
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[char]));
     const tableStyles = new WeakMap();
     const taskSuccessNotices = new Set(['Lưu dữ liệu thành công.', 'Data saved successfully.', 'Submit task thành công.', 'Task submitted successfully.']);
     let noticeTimer;
@@ -37,7 +40,42 @@
     async function run(button, fn) {
         if (button?.disabled || (button && busy.has(button))) return;
         if (button) { busy.add(button); button.setAttribute('aria-busy','true'); button.style.pointerEvents='none'; }
-        try { await fn(); } catch (error) { notice(error.message, true); }
+        try { await fn(); } catch (error) {
+            const modal = button?.closest?.('#modalOverlay');
+            if (modal) {
+                const message = String(error?.message || 'Request failed.');
+                const summary = modal.querySelector('[data-modal-error]');
+                if (summary) {
+                    summary.textContent = message;
+                    summary.hidden = false;
+                }
+                const reviewerSelector = modal.querySelector('#aiAssignContainer:not([hidden])') ? '#aiReviewer' : '#manualReviewer';
+                const fieldMap = [
+                    [/name|session name/i, 'input[placeholder^="e.g."]'],
+                    [/due date|deadline|future/i, '[aria-label="Session due date"]'],
+                    [/document/i, 'input[name="documents"]'],
+                    [/manual labeler 1/i, '#manualLabeler1'],
+                    [/manual labeler 2/i, '#manualLabeler2'],
+                    [/reviewer/i, reviewerSelector],
+                    [/ai labeler/i, '#aiLabeler'],
+                ];
+                const target = fieldMap.find(([pattern]) => pattern.test(message))?.[1];
+                const field = target ? modal.querySelector(target) : null;
+                if (field) {
+                    field.setAttribute('aria-invalid', 'true');
+                    let fieldError = field.parentElement?.querySelector('[data-field-error]');
+                    if (!fieldError) {
+                        fieldError = document.createElement('p');
+                        fieldError.dataset.fieldError = 'true';
+                        fieldError.className = 'session-field-error';
+                        field.parentElement?.append(fieldError);
+                    }
+                    fieldError.textContent = message;
+                    field.focus?.();
+                }
+            }
+            notice(error.message, true);
+        }
         finally { if (button) { busy.delete(button); button.removeAttribute('aria-busy'); button.style.pointerEvents=''; } }
     }
     function bind(button, fn) {
@@ -52,13 +90,19 @@
         el.removeAttribute('onclick'); el.disabled = true; el.title = message;
         el.setAttribute('aria-label', `${text(el)} — ${message}`); el.style.opacity = '0.5';
     }
-    const date = value => value ? new Date(value).toLocaleString('vi-VN') : '—';
-    const userRoleLabels = { ADMIN: 'Admin', MANAGER: 'Manager', AI_LABELER: 'AI Labeler', MANUAL_LABELER: 'Manual Labeler', REVIEWER: 'Reviewer', RESULT_ANALYST: 'Result Analyst', TERMINOLOGY: 'Terminology', LABELER: 'Labeler', ANALYST: 'Analyst' };
+    const date = value => value ? new Intl.DateTimeFormat('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }).format(new Date(value)) : '—';
+    const userRoleLabels = { ADMIN: 'Administrator', MANAGER: 'Manager', USER: 'User', AI_LABELER: 'AI Labeler', MANUAL_LABELER: 'Manual Labeler', REVIEWER: 'Reviewer', RESULT_ANALYST: 'Result Analyst', TERMINOLOGY: 'Terminology', LABELER: 'Labeler', ANALYST: 'Result Analyst' };
     const userRoleLabel = value => userRoleLabels[String(value || '').toUpperCase()] || String(value || 'User');
     const userDate = value => { const parsed = new Date(value); if (Number.isNaN(parsed.getTime())) return '—'; const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${parsed.getDate()} ${months[parsed.getMonth()]} ${parsed.getFullYear()}, ${String(parsed.getHours()).padStart(2,'0')}:${String(parsed.getMinutes()).padStart(2,'0')}`; };
     function userBadge(label, tone) { const badge = document.createElement('span'); badge.className = `users-badge users-badge--${tone}`; badge.textContent = label; return badge; }
     const userRoleBadge = value => userBadge(userRoleLabel(value), String(value || '').toLowerCase());
-    const userStatusBadge = value => { const active = String(value).toUpperCase() === 'ACTIVE'; return userBadge(active ? 'Active' : 'Inactive', active ? 'active' : 'inactive'); };
+    const userStatusBadge = row => {
+        if (row?.is_active === false) return userBadge('INACTIVE', 'inactive');
+        const workload = String(row?.status || '').toUpperCase();
+        if (workload === 'BUSY') return userBadge('BUSY', 'busy');
+        if (workload === 'AVAILABLE') return userBadge('AVAILABLE', 'available');
+        return userBadge('Active', 'active');
+    };
     function formattedLabelValue(labelName, value) {
         const input = String(value ?? '');
         if (/year|năm/i.test(labelName || '')) return input;
@@ -85,13 +129,13 @@
             sourceLabel,
         };
     }
-    function viDateToIso(value) {
-        const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim());
-        if (!match) throw new Error('Ngày hết hạn phải theo định dạng dd/mm/yyyy.');
-        const [, day, month, year] = match;
+    function dueDateToIso(value) {
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+        if (!match) throw new Error('Please select a valid due date.');
+        const [, year, month, day] = match;
         const parsed = new Date(Number(year), Number(month) - 1, Number(day), 23, 59, 0);
         if (parsed.getFullYear() !== Number(year) || parsed.getMonth() !== Number(month) - 1 || parsed.getDate() !== Number(day))
-            throw new Error('Ngày hết hạn không hợp lệ.');
+            throw new Error('The due date is invalid.');
         return { parsed, iso: `${year}-${month}-${day}T23:59:00` };
     }
     const status = row => (row.is_active === false ? 'INACTIVE' : (row.status ?? (row.is_active ? 'ACTIVE' : '—')));
@@ -337,15 +381,12 @@
         if (!el?.classList.contains('document-table')) return;
         $$('tbody tr', el).forEach(tr => {
             const cells = $$('td', tr);
-            if (cells.length < 6) return;
+            if (cells.length < 4) return;
             cells[0].classList.add('document-id');
             const fileName = cells[1].textContent.trim();
-            const original = cells[2].textContent.trim();
             const name = document.createElement('span'); name.className = 'document-name'; name.title = fileName; name.textContent = fileName; cells[1].replaceChildren(name);
-            const originalText = document.createElement('span'); originalText.className = 'document-secondary'; originalText.textContent = original && original !== fileName ? original : '—'; cells[2].replaceChildren(originalText);
-            const type = document.createElement('span'); type.className = 'document-type'; type.textContent = cells[3].textContent.trim() || '—'; cells[3].replaceChildren(type);
-            cells[4].classList.add('document-date');
-            $$('button',cells[5]).forEach(button => {button.classList.add('document-action');const icon=text(button);const label=icon==='visibility'?'View':icon==='edit'?'Edit':icon==='delete'?'Delete':icon;button.title=label;button.setAttribute('aria-label',label);if(label==='Delete')button.classList.add('document-delete');});
+            cells[2].classList.add('document-date');
+            $$('button',cells[3]).forEach(button => {button.classList.add('document-action');const icon=text(button);const label=icon==='visibility'?'View':icon==='edit'?'Edit':icon==='delete'?'Delete':icon;button.title=label;button.setAttribute('aria-label',label);if(label==='Delete')button.classList.add('document-delete');});
         });
     }
     function formatSessionDate(value) {
@@ -403,7 +444,7 @@
         const filterOptions = spec => Array.isArray(spec) && spec[1]
             ? spec[1]
             : [...new Set(rows.map(r => filterValue(spec, r)).filter(Boolean))].sort();
-        let current = 0, folderFilter = '', sortIndex = config.defaultSortIndex ?? -1, sortDirection = 1;
+        let current = 0, folderFilter = '', sortIndex = config.defaultSortIndex ?? -1, sortDirection = config.defaultSortDirection ?? 1;
         selects.forEach((select, index) => {
             const field = filterFields[index];
             if (field) options(select, filterOptions(field), true);
@@ -447,6 +488,7 @@
             if(config.sortable)$$('thead th',el).forEach((th,index)=>{
                 if(!config.sortKeys?.[index])return;
                 th.style.cursor='pointer';th.title='Sắp xếp cột này';th.setAttribute('aria-sort',sortIndex===index?(sortDirection===1?'ascending':'descending'):'none');
+                const indicator=document.createElement('span');indicator.className='table-sort-indicator material-symbols-outlined';indicator.textContent=sortIndex===index?(sortDirection===1?'arrow_upward':'arrow_downward'):'unfold_more';th.append(indicator);
                 th.onclick=()=>{sortDirection=sortIndex===index?-sortDirection:1;sortIndex=index;current=0;render();};
             });
             pagers.forEach(b => {
@@ -477,7 +519,7 @@
         field.setAttribute('aria-label', label);
     }
     function required(field, label) {
-        if (!field.value.trim()) throw new Error(`Vui lòng nhập ${label}.`);
+        if (!field.value.trim()) throw new Error(`${label} is required.`);
         return field.value.trim();
     }
     async function termsPage() {
@@ -530,14 +572,8 @@
     }
     async function promptsPage() {
         let editing = null;
-        let systemPrompt = '';
-        const loadSystemPrompt = async () => {
-            const value = await request('/prompts/system-default');
-            systemPrompt = typeof value === 'string' ? value : String(value?.content || '');
-            return systemPrompt;
-        };
+        const systemPrompt = await request('/prompts/system-default').catch(() => '');
         const modal = $('#modalContent'), name = $('input', modal), [description, content] = $$('textarea', modal), [active, model] = $$('select', modal);
-        content.wrap = 'off'; content.maxLength = 30000; content.classList.add('aair-prompt-editor');
         fieldLabel(active, 'Status'); options(active, [['true','ACTIVE'],['false','INACTIVE']]);
         const save = buttons(/^Create Prompt$/, modal)[0];
         const reset = () => { editing = null; name.value = ''; description.value = ''; content.value = systemPrompt; active.value = 'true'; model.selectedIndex = 0; save.textContent = 'Create Prompt'; };
@@ -552,17 +588,7 @@
             action('edit',()=>edit(row)), action(row.is_active ? 'Disable' : 'Enable', async()=>{ await request(`/prompts/${row.id}`,{method:'PUT',json:{name:row.name,description:row.description,content:row.content,model:row.model,active:!row.is_active}}); await refresh(); }),
             action('delete',async()=>{if(confirm(`Xóa prompt “${row.name}”?`)){await request(`/prompts/${row.id}`,{method:'DELETE'});await refresh();}}),
         ], [status]);
-        bindText(/New Prompt/, async () => {
-            try {
-                await loadSystemPrompt();
-                reset();
-                modalOpen();
-            } catch (error) {
-                reset();
-                modalOpen();
-                notice(`Không tải được prompt mặc định: ${error.message}`);
-            }
-        });
+        bindText(/New Prompt/, () => { reset(); modalOpen(); });
         bind(save, async () => {
             await request(editing ? `/prompts/${editing}` : '/prompts', {method: editing ? 'PUT':'POST', json:{name:required(name,'tên prompt'),description:description.value,content:required(content,'nội dung prompt'),model:model.selectedIndex ? model.value : '',active:active.value==='true'}});
             modalClose(); reset(); await refresh(); notice('Đã lưu prompt.');
@@ -578,7 +604,7 @@
         if (search) { search.classList.add('users-search'); search.placeholder = 'Search users…'; }
         const filters = $$('header select'); filters.forEach(select => select.classList.add('filter-select'));
         const paginationContainer = usersTable?.nextElementSibling;
-        const list = listTable(await request(endpoint), [['#',r=>r.__rowNumber],['Username',userIdentity],['Email','email'],['Role',r=>userRoleBadge(r.role)],['Status',r=>canManageUsers ? userStatusBadge(status(r)) : status(r)],['Created',r=>userDate(r.created_at)],['Actions','$actions']], row => canManageUsers ? [
+        const list = listTable(await request(endpoint), [['#',r=>r.__rowNumber],['Username',userIdentity],['Email','email'],['Role',r=>userRoleBadge(r.role)],['Status',r=>canManageUsers ? userStatusBadge(r) : status(r)],['Created',r=>userDate(r.created_at)],['Actions','$actions']], row => canManageUsers ? [
             (() => { const button = action('edit',()=>edit(row)); button.classList.add('users-action'); button.title = 'Edit user'; button.setAttribute('aria-label','Edit user'); return button; })(),
             (() => { const label = row.is_active ? 'Deactivate user' : 'Activate user'; const button = action(row.is_active?'block':'check_circle',async()=>{
                 if (!confirm(`${row.is_active?'Deactivate':'Activate'} user ${row.username}?`)) return;
@@ -609,32 +635,37 @@
         const documentDate=value=>{if(!value)return 'Date unavailable';const parsed=new Date(value);return Number.isNaN(parsed.getTime())?'Date unavailable':new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(parsed);};
         let pendingFiles=[];
         const refresh = async()=>list.reload([...pendingFiles.map((file,index)=>({id:-(index+1),title:file.name,original_name:file.name,document_type:'PDF',uploaded_by_username:user.username,created_at:new Date().toISOString(),status:'NEW',pending:true})),...await request('/documents')]);
-        const list=listTable(await request('/documents'),[['ID','id'],['File Name','title'],['Original File','original_name'],['Type','document_type'],['Upload Date',r=>documentDate(r.created_at)],['Actions','$actions']],row=>row.pending?[]:[
+        const list=listTable(await request('/documents'),[['ID','id'],['File Name','title'],['Upload Date',r=>documentDate(r.created_at)],['Actions','$actions']],row=>row.pending?[]:[
             action('visibility',()=>documentFile(row)),action('edit',async()=>{
                 const title=prompt('Tên tài liệu',row.title);if(title===null)return;if(!title.trim())throw new Error('Tên tài liệu không được trống.');
                 await request(`/documents/${row.id}`,{method:'PUT',json:{title:title.trim(),documentType:row.document_type}});await refresh();
             }),action('delete',async()=>{if(confirm(`Xóa tài liệu “${row.title}”?`)){await request(`/documents/${row.id}`,{method:'DELETE'});await refresh();}}),
-        ],['document_type'],{table:documentTable});
+        ],['document_type'],{table:documentTable,sortable:true,sortKeys:[null,'title',r=>r.created_at,null],defaultSortIndex:2,defaultSortDirection:-1,paginationContainer:$('#documentPagination')});
         const input=$('#documentInput');input.accept='.pdf,application/pdf';input.multiple=true;
+        const saveButton=$('#saveDocumentsButton');
+        const syncSaveState=()=>{saveButton.disabled=!pendingFiles.length;saveButton.setAttribute('aria-disabled',String(saveButton.disabled));saveButton.classList.toggle('opacity-50',saveButton.disabled);saveButton.classList.toggle('cursor-not-allowed',saveButton.disabled);};
+        syncSaveState();
         input.addEventListener('change',()=>run(input,async()=>{
             const files=[...input.files];if(!files.length)return;
             try {
                 const invalid=files.find(file=>!/\.pdf$/i.test(file.name)||file.size===0||file.size>50*1024*1024);
                 if(invalid)throw new Error(`File “${invalid.name}” không hợp lệ. Chỉ chọn PDF có nội dung, tối đa 50 MB mỗi file.`);
-                pendingFiles.push(...files); await refresh();
+                pendingFiles.push(...files);syncSaveState();await refresh();
             } finally {input.value='';}
         }));
-        const saveButton=$('#saveDocumentsButton');
         bind(saveButton,async()=>{
             if(!pendingFiles.length)return;
             const files=[...pendingFiles];let uploaded=0;
             for(const file of files){const data=new FormData();data.append('file',file);data.append('metadata',new Blob([JSON.stringify({title:file.name,documentType:'PDF'})],{type:'application/json'}));await request('/documents',{method:'POST',body:data});uploaded++;}
-            pendingFiles=[];await refresh();notice(`Đã lưu ${uploaded} tài liệu vào cơ sở dữ liệu.`);
+            pendingFiles=[];syncSaveState();notice(`Đã lưu ${uploaded} tài liệu vào cơ sở dữ liệu.`);window.location.reload();
         });
         window.addEventListener('beforeunload',event=>{if(!pendingFiles.length)return;event.preventDefault();event.returnValue='Xác nhận lưu thay đổi?';});
     }
     async function sessionsPage() {
-        const [documents, assignees] = await Promise.all([request('/documents'),request('/assignees')]);
+        // Use the assignment endpoint so availability is calculated from active sessions,
+        // even when the users.status column has not been refreshed yet.
+        const [documents, userRows] = await Promise.all([request('/documents'),request('/assignees')]);
+        const assignees=(userRows||[]).filter(row=>['USER','AI_LABELER','MANUAL_LABELER','REVIEWER','RESULT_ANALYST'].includes(String(row.role||'').toUpperCase()));
         const modal=$('#modalContent'), name=$('input[placeholder^="e.g."]',modal), description=$('textarea',modal);
         const lists=$$('div.max-h-48',modal);
         const [documentList,typeList,memberList]=lists;
@@ -655,9 +686,11 @@
         $('p',modelSection).textContent='Session Type';
         $$('p',modelSection)[1].textContent='Chọn gán nhãn AI, thủ công hoặc cả hai.';
         const modelSearch=$('input[placeholder="Search AI models..."]',modal);modelSearch.parentElement.hidden=true;
-        checkList(memberList,assignees.map(u=>({id:u.id,name:`${u.username} — ${u.role}`})),'members');
+        const assignmentRoleLabel=u=>userRoleLabel(u?.role);
+        checkList(memberList,assignees.map(u=>({id:u.id,name:`${u.username} — ${assignmentRoleLabel(u)}`})),'members');
         const userSection=memberList.parentElement;
         const userSearchRow=memberList.previousElementSibling;
+        userSearchRow?.remove();
         const userCountSpan=$$('span',userSection).find(s=>/Selected$/.test(text(s)));
 
         const manualAssignContainer=document.createElement('div');
@@ -674,10 +707,10 @@
             </div>
             <div class="space-y-1.5">
                 <label class="text-label-md text-on-surface-variant uppercase tracking-wider font-bold">
-                    Manual Labeler 2 <span class="font-normal normal-case text-on-surface-variant">(Required)</span>
+                    Manual Labeler 2 <span class="text-error font-normal">*</span>
                 </label>
                 <select id="manualLabeler2" class="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-body-md cursor-pointer">
-                    <option value="">Select user (optional)...</option>
+                    <option value="">Select user...</option>
                 </select>
             </div>
             <div class="space-y-1.5">
@@ -713,6 +746,12 @@
             </div>
         `;
         userSection.appendChild(aiAssignContainer);
+        const sessionFormNotice=document.createElement('p');
+        sessionFormNotice.dataset.modalError='true';
+        sessionFormNotice.className='session-form-error';
+        sessionFormNotice.setAttribute('role','alert');
+        sessionFormNotice.hidden=true;
+        userSection.insertBefore(sessionFormNotice,manualAssignContainer);
 
         const m1Select=$('#manualLabeler1',manualAssignContainer);
         const m2Select=$('#manualLabeler2',manualAssignContainer);
@@ -720,15 +759,30 @@
 
         const aiLabelerSelect=$('#aiLabeler',aiAssignContainer);
         const aiReviewerSelect=$('#aiReviewer',aiAssignContainer);
+        const clearSessionFieldError=field=>{
+            field?.removeAttribute('aria-invalid');
+            field?.parentElement?.querySelector('[data-field-error]')?.remove();
+            sessionFormNotice.hidden=true;sessionFormNotice.textContent='';
+        };
+        [name,m1Select,m2Select,reviewerSelect,aiLabelerSelect,aiReviewerSelect].forEach(field=>field?.addEventListener('input',()=>clearSessionFieldError(field)));
+        [m1Select,m2Select,reviewerSelect,aiLabelerSelect,aiReviewerSelect].forEach(field=>field?.addEventListener('change',()=>clearSessionFieldError(field)));
 
         let currentAssignees=assignees;
-        let manualLabelers=currentAssignees.filter(u=>u.role==='MANUAL_LABELER');
-        let aiLabelers=currentAssignees.filter(u=>u.role==='AI_LABELER');
-        let reviewers=currentAssignees.filter(u=>u.role==='REVIEWER');
+        const roleOf=user=>String(user?.role||'').toUpperCase();
+        const isUnavailable=user=>user?.is_active===false||String(user?.status||'UNKNOWN').toUpperCase()!=='AVAILABLE';
+        const selectableUser=user=>['USER','AI_LABELER','MANUAL_LABELER','REVIEWER','RESULT_ANALYST'].includes(roleOf(user));
+        const canManual=user=>selectableUser(user)&&roleOf(user)==='MANUAL_LABELER';
+        const canAi=user=>selectableUser(user)&&roleOf(user)==='AI_LABELER';
+        const canManualReview=user=>selectableUser(user)&&roleOf(user)==='REVIEWER';
+        const canAiReview=user=>selectableUser(user)&&roleOf(user)==='REVIEWER';
+        let manualLabelers=currentAssignees.filter(canManual);
+        let aiLabelers=currentAssignees.filter(canAi);
+        let manualReviewers=currentAssignees.filter(canManualReview);
+        let aiReviewers=currentAssignees.filter(canAiReview);
 
         function formatUserOptionLabel(user){
             if(!user)return '';
-            const status=user.is_active===false?'INACTIVE':(user.status||'UNKNOWN');
+            const status=user.is_active===false?'INACTIVE':String(user.status||'UNKNOWN').toUpperCase();
             return `${user.username} — ${status}`;
         }
 
@@ -743,6 +797,7 @@
                 const opt=document.createElement('option');
                 opt.value=String(u.id);
                 opt.textContent=formatUserOptionLabel(u);
+                opt.disabled=isUnavailable(u);
                 if(String(u.id)===currentVal)opt.selected=true;
                 select.appendChild(opt);
             }
@@ -751,21 +806,22 @@
         function populateManualOptions(){
             populateSelect(m1Select,manualLabelers,'Select user...');
             populateSelect(m2Select,manualLabelers,'Select user...');
-            populateSelect(reviewerSelect,reviewers,'Select user...');
+            populateSelect(reviewerSelect,manualReviewers,'Select user...');
             syncAssignmentOptions();
         }
 
         function populateAiOptions(){
             populateSelect(aiLabelerSelect,aiLabelers,'Select user...');
-            populateSelect(aiReviewerSelect,reviewers,'Select user...');
+            populateSelect(aiReviewerSelect,aiReviewers,'Select user...');
             syncAiAssignmentOptions();
         }
 
         function renderAssignmentDropdowns(assigneeList=currentAssignees){
             currentAssignees=assigneeList||[];
-            manualLabelers=currentAssignees.filter(u=>u.role==='MANUAL_LABELER');
-            aiLabelers=currentAssignees.filter(u=>u.role==='AI_LABELER');
-            reviewers=currentAssignees.filter(u=>u.role==='REVIEWER');
+            manualLabelers=currentAssignees.filter(canManual);
+            aiLabelers=currentAssignees.filter(canAi);
+            manualReviewers=currentAssignees.filter(canManualReview);
+            aiReviewers=currentAssignees.filter(canAiReview);
             populateManualOptions();
             populateAiOptions();
         }
@@ -779,8 +835,8 @@
             $$('option',m1Select).forEach(opt=>{
                 if(!opt.value)return;
                 const taken=(opt.value===val2 && val2!=='')||(opt.value===valRev && valRev!=='');
-                opt.disabled=taken;
                 const user=manualLabelers.find(u=>String(u.id)===opt.value);
+                opt.disabled=isUnavailable(user)||taken;
                 if(user){
                     const label=formatUserOptionLabel(user);
                     opt.textContent=taken?`${label} (Selected)`:label;
@@ -790,8 +846,8 @@
             $$('option',m2Select).forEach(opt=>{
                 if(!opt.value)return;
                 const taken=(opt.value===val1 && val1!=='')||(opt.value===valRev && valRev!=='');
-                opt.disabled=taken;
                 const user=manualLabelers.find(u=>String(u.id)===opt.value);
+                opt.disabled=isUnavailable(user)||taken;
                 if(user){
                     const label=formatUserOptionLabel(user);
                     opt.textContent=taken?`${label} (Selected)`:label;
@@ -801,8 +857,8 @@
             $$('option',reviewerSelect).forEach(opt=>{
                 if(!opt.value)return;
                 const taken=(opt.value===val1 && val1!=='')||(opt.value===val2 && val2!=='');
-                opt.disabled=taken;
-                const user=reviewers.find(u=>String(u.id)===opt.value);
+                const user=manualReviewers.find(u=>String(u.id)===opt.value);
+                opt.disabled=isUnavailable(user)||taken;
                 if(user){
                     const label=formatUserOptionLabel(user);
                     opt.textContent=taken?`${label} (Selected)`:label;
@@ -820,8 +876,8 @@
             $$('option',aiLabelerSelect).forEach(opt=>{
                 if(!opt.value)return;
                 const taken=(opt.value===valRev && valRev!=='');
-                opt.disabled=taken;
                 const user=aiLabelers.find(u=>String(u.id)===opt.value);
+                opt.disabled=isUnavailable(user)||taken;
                 if(user){
                     const label=formatUserOptionLabel(user);
                     opt.textContent=taken?`${label} (Selected)`:label;
@@ -831,8 +887,8 @@
             $$('option',aiReviewerSelect).forEach(opt=>{
                 if(!opt.value)return;
                 const taken=(opt.value===valAi && valAi!=='');
-                opt.disabled=taken;
-                const user=reviewers.find(u=>String(u.id)===opt.value);
+                const user=aiReviewers.find(u=>String(u.id)===opt.value);
+                opt.disabled=isUnavailable(user)||taken;
                 if(user){
                     const label=formatUserOptionLabel(user);
                     opt.textContent=taken?`${label} (Selected)`:label;
@@ -915,14 +971,18 @@
         const startDate=$('#sessionStartDate',modal), dueDate=$('#sessionDueDate',modal);
         startDate.closest('[class~="space-y-1.5"]').hidden=true;
         dueDate.setAttribute('aria-label','Session due date');dueDate.required=true;
-        dueDate.pattern='\\d{2}/\\d{2}/\\d{4}';
-        dueDate.addEventListener('input',()=>{
-            const digits=dueDate.value.replace(/\D/g,'').slice(0,8);
-            dueDate.value=[digits.slice(0,2),digits.slice(2,4),digits.slice(4,8)].filter(Boolean).join('/');
-        });
+        dueDate.addEventListener('change',()=>clearSessionFieldError(dueDate));
+        const setDueDateMinimum=()=>{
+            const tomorrow=new Date();
+            tomorrow.setHours(0,0,0,0);
+            tomorrow.setDate(tomorrow.getDate()+1);
+            const month=String(tomorrow.getMonth()+1).padStart(2,'0');
+            const day=String(tomorrow.getDate()).padStart(2,'0');
+            dueDate.min=`${tomorrow.getFullYear()}-${month}-${day}`;
+        };
         const dueLabel=$('label',dueDate.parentElement.parentElement);if(dueLabel)dueLabel.textContent='Session Due Date *';
         const reset=()=>{
-            editing=null;name.value='';description.value='';dueDate.value='';name.disabled=false;description.disabled=false;
+            editing=null;name.value='';description.value='';dueDate.value='';setDueDateMinimum();name.disabled=false;description.disabled=false;
             $$('input',documentList).forEach(i=>i.checked=false);$$('input',memberList).forEach(i=>i.checked=false);
             documentList.parentElement.hidden=false;typeList.parentElement.hidden=false;dueDate.parentElement.parentElement.hidden=false;
             m1Select.value='';m2Select.value='';reviewerSelect.value='';
@@ -930,6 +990,9 @@
             const typeInputs=$$('input',typeList);if(typeInputs[0])typeInputs[0].checked=true;
             previousType='MANUAL';
             syncSessionType();
+            sessionFormNotice.hidden=true;sessionFormNotice.textContent='';
+            $$('[data-field-error]',modal).forEach(error=>error.remove());
+            $$('[aria-invalid="true"]',modal).forEach(field=>field.removeAttribute('aria-invalid'));
             save.textContent='Create Session';$('h3',modal).textContent='Create Session';
         };
         const edit=row=>{
@@ -940,9 +1003,10 @@
         };
         const reloadAssignees=async()=>{
             try{
-                const fetched=await request('/assignees');
+                const fetchedRows=await request('/assignees');
+                const fetched=(fetchedRows||[]).filter(row=>['USER','AI_LABELER','MANUAL_LABELER','REVIEWER','RESULT_ANALYST'].includes(String(row.role||'').toUpperCase()));
                 renderAssignmentDropdowns(fetched);
-                checkList(memberList,currentAssignees.map(u=>({id:u.id,name:`${u.username} — ${u.role}`})),'members');
+                checkList(memberList,currentAssignees.map(u=>({id:u.id,name:`${u.username} — ${assignmentRoleLabel(u)}`})),'members');
             }catch{}
         };
         const refresh=async()=>{list.reload(await request('/sessions'));await reloadAssignees();};
@@ -961,34 +1025,36 @@
         bindText(/New Session|Create First Session/,async()=>{reset();modalOpen();await reloadAssignees();});
         bind(save,async()=>{
             const userIds=selected(memberList).map(Number);
-            if(editing){await request(`/sessions/${editing.id}/members`,{method:'PUT',json:{userIds}});modalClose();await refresh();notice('Đã cập nhật thành viên.');return;}
+            if(editing){await request(`/sessions/${editing.id}/members`,{method:'PUT',json:{userIds}});modalClose();await refresh();notice('Session members updated.');return;}
             const type=selected(typeList)[0]||'MANUAL', docIds=selected(documentList).map(Number);
 
             if(type==='MANUAL'){
-                required(name,'tên phiên');
-                required(dueDate,'ngày hết hạn');
-                const sessionDue=viDateToIso(dueDate.value);
-                if(sessionDue.parsed<=new Date())throw new Error('Ngày hết hạn phải ở tương lai.');
-                if(!docIds.length)throw new Error('Vui lòng chọn ít nhất một tài liệu PDF.');
+                required(name,'Session name');
+                required(dueDate,'Due date');
+                if(dueDate.value<dueDate.min)throw new Error('The due date must be in the future.');
+                const sessionDue=dueDateToIso(dueDate.value);
+                if(sessionDue.parsed<=new Date())throw new Error('The due date must be in the future.');
+                if(!docIds.length)throw new Error('Please select at least one PDF document.');
 
-                if(!m1Select.value)throw new Error('Vui lòng chọn Manual Labeler 1.');
-                if(!m2Select.value)throw new Error('Vui lòng chọn Manual Labeler 2.');
-                if(!reviewerSelect.value)throw new Error('Vui lòng chọn Reviewer.');
+                if(!m1Select.value)throw new Error('Please select Manual Labeler 1.');
+                if(!m2Select.value)throw new Error('Please select Manual Labeler 2.');
+                if(!reviewerSelect.value)throw new Error('Please select a Reviewer.');
 
                 const m1Id=Number(m1Select.value);
                 const m2Id=Number(m2Select.value);
                 const revId=Number(reviewerSelect.value);
 
                 const chosenIds=[m1Id,m2Id,revId].filter(Boolean);
-                if(new Set(chosenIds).size!==chosenIds.length)throw new Error('Không được chọn trùng người dùng giữa các vai trò.');
+                if(new Set(chosenIds).size!==chosenIds.length)throw new Error('A user cannot be assigned to multiple roles in the same session.');
 
                 const m1User=currentAssignees.find(u=>u.id===m1Id);
                 const m2User=currentAssignees.find(u=>u.id===m2Id);
                 const revUser=currentAssignees.find(u=>u.id===revId);
 
-                if(!m1User || m1User.role!=='MANUAL_LABELER')throw new Error('Manual Labeler 1 phải có vai trò MANUAL_LABELER.');
-                if(!m2User || m2User.role!=='MANUAL_LABELER')throw new Error('Manual Labeler 2 phải có vai trò MANUAL_LABELER.');
-                if(!revUser || revUser.role!=='REVIEWER')throw new Error('Reviewer phải có vai trò REVIEWER.');
+                const hasRole=(candidate,...roles)=>candidate&&roles.includes(String(candidate.role||'').toUpperCase());
+                if(!hasRole(m1User,'USER','MANUAL_LABELER'))throw new Error('Manual Labeler 1 must have the Manual Labeler role.');
+                if(!hasRole(m2User,'USER','MANUAL_LABELER'))throw new Error('Manual Labeler 2 must have the Manual Labeler role.');
+                if(!hasRole(revUser,'USER','REVIEWER'))throw new Error('The selected user must have the Reviewer role.');
 
                 const manualLabelerIds=[m1Id,m2Id];
 
@@ -1005,30 +1071,32 @@
                 };
 
                 await request('/sessions',{method:'POST',json:payload});
-                modalClose();reset();await refresh();notice('Đã tạo session thành công');
+                modalClose();reset();await refresh();notice('Session created successfully.');
                 return;
             }
 
             if(type==='AI'){
-                required(name,'tên phiên');
-                required(dueDate,'ngày hết hạn');
-                const sessionDue=viDateToIso(dueDate.value);
-                if(sessionDue.parsed<=new Date())throw new Error('Ngày hết hạn phải ở tương lai.');
-                if(!docIds.length)throw new Error('Vui lòng chọn ít nhất một tài liệu PDF.');
+                required(name,'Session name');
+                required(dueDate,'Due date');
+                if(dueDate.value<dueDate.min)throw new Error('The due date must be in the future.');
+                const sessionDue=dueDateToIso(dueDate.value);
+                if(sessionDue.parsed<=new Date())throw new Error('The due date must be in the future.');
+                if(!docIds.length)throw new Error('Please select at least one PDF document.');
 
-                if(!aiLabelerSelect.value)throw new Error('Vui lòng chọn AI Labeler.');
-                if(!aiReviewerSelect.value)throw new Error('Vui lòng chọn Reviewer.');
+                if(!aiLabelerSelect.value)throw new Error('Please select an AI Labeler.');
+                if(!aiReviewerSelect.value)throw new Error('Please select a Reviewer.');
 
                 const aiId=Number(aiLabelerSelect.value);
                 const revId=Number(aiReviewerSelect.value);
 
-                if(aiId===revId)throw new Error('Không được chọn trùng người dùng giữa các vai trò.');
+                if(aiId===revId)throw new Error('A user cannot be assigned to multiple roles in the same session.');
 
                 const aiUser=currentAssignees.find(u=>u.id===aiId);
                 const revUser=currentAssignees.find(u=>u.id===revId);
 
-                if(!aiUser || aiUser.role!=='AI_LABELER')throw new Error('AI Labeler phải có vai trò AI_LABELER.');
-                if(!revUser || revUser.role!=='REVIEWER')throw new Error('Reviewer phải có vai trò REVIEWER.');
+                const hasRole=(candidate,...roles)=>candidate&&roles.includes(String(candidate.role||'').toUpperCase());
+                if(!hasRole(aiUser,'USER','AI_LABELER'))throw new Error('AI Labeler must have the AI Labeler role.');
+                if(!hasRole(revUser,'USER','REVIEWER'))throw new Error('The selected user must have the Reviewer role.');
 
                 const payload={
                     name:name.value.trim(),
@@ -1039,17 +1107,18 @@
                     manualLabelerIds:[],
                     aiLabelerId:aiId,
                     reviewerId:revId,
-                    assistanceMode:'AI_ASSISTED'
+                    assistanceMode:'NONE'
                 };
 
                 await request('/sessions',{method:'POST',json:payload});
-                modalClose();reset();await refresh();notice('Đã tạo session thành công');
+                modalClose();reset();await refresh();notice('Session created successfully.');
                 return;
             }
         });
     }
     async function taskList() {
         const rows=(await request('/tasks')).filter(row=>user.role!=='REVIEWER'||String(row.task_type||row.type||'').toUpperCase()==='MANUAL');
+        const taskIdOf=row=>row.task_id??row.id;
         const isLabeler=['MANUAL_LABELER','LABELER','AI_LABELER'].includes(user.role);
         const isReviewer=user.role==='REVIEWER';
         if(isReviewer){
@@ -1060,8 +1129,92 @@
                 if(!Array.isArray(detail.fields)&&detail.id)detail=await request(`/review-cases/${detail.id}`).catch(()=>reviewCase);
                 const count=Array.isArray(detail.fields)?detail.fields.filter(field=>String(field.comparisonType||'').toUpperCase()!=='EXACT').length:Number(detail.conflict_count??detail.conflicts??0)||0;
                 [detail.left_task_id,detail.right_task_id].filter(Boolean).forEach(taskId=>conflictCounts.set(String(taskId),count));
+                conflictCounts.set(`case:${reviewCase.id}`,count);
             }));
-            rows.forEach(row=>{if(row.conflict_count==null)row.conflict_count=conflictCounts.get(String(row.id))??0;});
+            rows.forEach(row=>{if(row.conflict_count==null)row.conflict_count=conflictCounts.get(String(taskIdOf(row)))??0;});
+            if(page==='ViewAll.html'){
+                const tableTarget=$('#taskTable'),body=$('#taskRows');
+                const caseByTask=new Map();cases.forEach(reviewCase=>[reviewCase.left_task_id,reviewCase.right_task_id].filter(Boolean).forEach(taskId=>caseByTask.set(String(taskId),reviewCase)));
+                const statusLabel={PENDING:'Pending',IN_PROGRESS:'In progress',SUBMITTED:'Submitted',APPROVED:'Approved',COMPLETED:'Completed',REJECTED:'Rejected'};
+                const statusClass={PENDING:'pending',IN_PROGRESS:'progress',SUBMITTED:'submitted',APPROVED:'approved',COMPLETED:'approved',REJECTED:'rejected'};
+                const formatDate=value=>{if(!value)return '—';const parsed=new Date(value);if(Number.isNaN(parsed.getTime()))return '—';return new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(parsed);};
+                tableTarget?.classList.add('task-list-table');
+                if(body){
+                    body.replaceChildren();
+                    const groups=new Map();
+                    rows.forEach(task=>{
+                        const key=`${task.document_id??task.document_title??'document'}::${task.session_id??task.session_name??'session'}`;
+                        if(!groups.has(key))groups.set(key,[]);
+                        groups.get(key).push(task);
+                    });
+                    [...groups.values()].forEach(group=>{
+                        const ordered=[...group].sort((left,right)=>String(left.assignee||'').localeCompare(String(right.assignee||'')));
+                        const reviewTask=ordered.find(task=>String(task.status||'').toUpperCase()==='SUBMITTED')||ordered.find(task=>String(task.status||'').toUpperCase()==='IN_PROGRESS')||ordered[0];
+                        const taskId=taskIdOf(reviewTask),status=String(reviewTask.status||'PENDING').toUpperCase(),reviewCase=caseByTask.get(String(taskId));
+                        const documentTitle=reviewTask.document_title||'Untitled document';
+                        const targetHref=reviewCase&&Number(reviewCase.id)>0
+                            ?`Task.html?caseId=${encodeURIComponent(reviewCase.id)}`
+                            :`Task.html?taskId=${encodeURIComponent(taskId)}`;
+                        const actionText=status==='SUBMITTED'?'Review':status==='APPROVED'?'View':status==='PENDING'?'Start':'Continue';
+                        const conflict=reviewCase?conflictCounts.get(`case:${reviewCase.id}`)??0:Math.max(...group.map(task=>Number(task.conflict_count)||0));
+                        const row=body.insertRow();
+                        const doc=row.insertCell();const docLink=document.createElement('a');docLink.className='cell-primary';docLink.href=targetHref;docLink.textContent=documentTitle;docLink.title=documentTitle;doc.append(docLink);
+                        row.insertCell().textContent=reviewTask.session_name||'—';
+                        row.insertCell().textContent=ordered.map(task=>task.assignee||task.assignee_username).filter(Boolean).join(' / ')||'—';
+                        row.insertCell().textContent='Manual';
+                        const statusCell=row.insertCell();[...new Set(ordered.map(task=>String(task.status||'PENDING').toUpperCase()))].forEach(taskStatus=>{const badge=document.createElement('span');badge.className=`task-status task-status--${statusClass[taskStatus]||'pending'}`;badge.textContent=statusLabel[taskStatus]||taskStatus;statusCell.append(badge);});
+                        row.insertCell().textContent=formatDate(ordered.map(task=>task.due_at).filter(Boolean).sort()[0]);
+                        const conflictCell=row.insertCell();const conflictBadge=document.createElement('span');conflictBadge.className=`task-conflicts${conflict?' task-conflicts--active':''}`;conflictBadge.textContent=conflict?`${conflict} conflict${conflict===1?'':'s'}`:'None';conflictCell.append(conflictBadge);
+                        const actionCell=row.insertCell();actionCell.className='task-action-cell';const actionLink=document.createElement('a');actionLink.className=`task-action task-action--${actionText.toLowerCase()}`;actionLink.href=docLink.href;actionLink.textContent=actionText;actionCell.append(actionLink);
+                    });
+                    if(!rows.length){const empty=body.insertRow().insertCell();empty.colSpan=8;empty.className='task-empty-state';empty.textContent='No review tasks assigned.';}
+                }
+                $('#taskPagination')?.parentElement?.setAttribute('hidden','');
+                return;
+            }
+        }
+        if(isLabeler && page==='ViewAll.html'){
+            const tableTarget=$('#taskTable'), body=$('#taskRows'), search=$('#taskSearch'), sessionSelect=$('#taskSessionFilter'), statusSelect=$('#taskStatusFilter'), pagination=$('#taskPagination')?.parentElement;
+            const statusLabels={PENDING:'Pending',IN_PROGRESS:'In progress',SUBMITTED:'Submitted',APPROVED:'Approved',REJECTED:'Returned'};
+            const statusPriority={PENDING:0,IN_PROGRESS:1,REJECTED:2,SUBMITTED:3,APPROVED:4};
+            const dateValue=value=>{const parsed=new Date(value||'');return Number.isNaN(parsed.getTime())?null:parsed;};
+            const formatDate=value=>{const parsed=dateValue(value);if(!parsed)return 'No due date';return new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(parsed);};
+            const statusOf=row=>String(row.status||'PENDING').toUpperCase();
+            const isOverdue=row=>{const due=dateValue(row.due_at);return Boolean(due&&due.getTime()<Date.now()&&statusOf(row)!=='APPROVED');};
+            const sessionKey=row=>row.session_name||String(row.session_id??'unassigned');
+            const sessionName=row=>row.session_name||'Unassigned session';
+            const actionFor=status=>status==='PENDING'?['Start','task-action--start']:['Continue','task-action--continue'];
+            const renderAction=(row)=>{const status=statusOf(row);if(status==='SUBMITTED'||status==='APPROVED')return ['View','task-action--view'];if(status==='PENDING')return ['Start','task-action--start'];return ['Continue','task-action--continue'];};
+            const populateSessions=()=>{const current=sessionSelect?.value||'';if(!sessionSelect)return;const options=[...new Map(rows.map(row=>[sessionKey(row),sessionName(row)])).entries()].sort((a,b)=>a[1].localeCompare(b[1],'en',{sensitivity:'base'}));sessionSelect.replaceChildren(new Option('All',''),...options.map(([value,label])=>new Option(label,value)));sessionSelect.value=options.some(([value])=>value===current)?current:'';};
+            const setActive=(selector,attribute,value)=>$$(selector).forEach(button=>{button.classList.toggle('is-active',button.dataset[attribute]===value);});
+            let statusFilter='',dueFilter='',sortMode='priority';
+            populateSessions();
+            const render=()=>{
+                const query=(search?.value||'').trim().toLocaleLowerCase();
+                const filtered=rows.filter(row=>{
+                    const status=statusOf(row),dueMatch=!dueFilter||(dueFilter==='OVERDUE'?isOverdue(row):!isOverdue(row));
+                    const sessionMatch=!sessionSelect?.value||sessionKey(row)===sessionSelect.value||String(row.session_id)===sessionSelect.value||row.session_name===sessionSelect.value;
+                    const text=[row.document_title,row.session_name,row.assignee,statusLabels[status]].filter(Boolean).join(' ').toLocaleLowerCase();
+                    return (!statusFilter||status===statusFilter)&&dueMatch&&sessionMatch&&(!query||text.includes(query));
+                });
+                const groups=new Map();filtered.forEach(row=>{const key=sessionKey(row);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row);});
+                const groupItems=[...groups.entries()].map(([key,items])=>{const due=items.map(row=>dateValue(row.due_at)).filter(Boolean).sort((a,b)=>a-b)[0]||null;const completed=items.filter(row=>statusOf(row)==='APPROVED').length;const overdue=Boolean(due&&due.getTime()<Date.now()&&completed<items.length);const itemPriority=Math.min(...items.map(row=>statusPriority[statusOf(row)]??5));return {key,items,due,completed,overdue,itemPriority};});
+                groupItems.sort((a,b)=>{if(sortMode==='due')return (a.due?.getTime()??Infinity)-(b.due?.getTime()??Infinity);if(sortMode==='status')return a.itemPriority-b.itemPriority;const overdueOrder=Number(b.overdue)-Number(a.overdue);return overdueOrder||a.itemPriority-b.itemPriority||(a.due?.getTime()??Infinity)-(b.due?.getTime()??Infinity);});
+                body.replaceChildren();
+                groupItems.forEach(group=>{
+                    const header=body.insertRow();header.className='task-session-header';const cell=header.insertCell();cell.colSpan=5;const unfinished=group.items.filter(row=>statusOf(row)!=='APPROVED');const submitted=group.items.filter(row=>statusOf(row)==='SUBMITTED').length;const statusText=group.completed===group.items.length?'Completed':group.overdue?'Overdue':unfinished.length&&unfinished.every(row=>statusOf(row)==='SUBMITTED')?'Submitted':'In progress';const statusClass=statusText==='Completed'?'task-session-header__meta--complete':statusText==='Overdue'?'task-session-header__meta--overdue':'';const percent=group.items.length?Math.round((group.completed+submitted)/group.items.length*100):0;const progressText=`${group.completed} approved · ${submitted} submitted · ${group.items.length} total`;cell.innerHTML=`<div class="task-session-header__top"><span class="task-session-header__name">${escapeHtml(sessionName(group.items[0]))}</span><span class="task-session-header__meta ${statusClass}">Due ${escapeHtml(formatDate(group.due))} · ${statusText} · ${progressText}</span></div><div class="task-session-progress" aria-label="${escapeHtml(progressText)}"><span style="width:${percent}%"></span></div>`;
+                    group.items.sort((a,b)=>{const priority=(statusPriority[statusOf(a)]??5)-(statusPriority[statusOf(b)]??5);if(priority)return priority;return (dateValue(b.updated_at||b.created_at)?.getTime()??0)-(dateValue(a.updated_at||a.created_at)?.getTime()??0);}).forEach(row=>{const tr=body.insertRow();tr.className='task-session-file';const status=statusOf(row),action=renderAction(row),taskId=taskIdOf(row),documentCell=tr.insertCell(),statusCell=tr.insertCell(),dueCell=tr.insertCell(),updatedCell=tr.insertCell(),actionCell=tr.insertCell();const link=document.createElement('a');link.className='cell-primary';link.href=`Task.html?id=${encodeURIComponent(taskId)}`;link.textContent=row.document_title||'Untitled document';link.title=link.textContent;documentCell.append(link);const badge=document.createElement('span');badge.className=`task-status task-status--${status==='SUBMITTED'?'awaiting-review':status==='REJECTED'?'returned':status.toLowerCase()}`;badge.textContent=statusLabels[status]||statusLabels.PENDING;statusCell.append(badge);const due=dateValue(row.due_at),overdue=Boolean(due&&due.getTime()<Date.now()&&status!=='APPROVED');dueCell.textContent=due?formatDate(row.due_at):'—';dueCell.className=`task-due${overdue?' task-due--overdue':''}`;if(overdue)dueCell.title='Overdue';const updated=row.updated_at||row.created_at||row.updatedAt;updatedCell.textContent=updated?new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(updated)):'—';const actionLink=document.createElement('a');actionLink.className=`task-action ${action[1]}`;actionLink.href=link.href;actionLink.textContent=action[0];actionCell.className='task-action-cell';actionCell.append(actionLink);});
+                });
+                if(!groupItems.length){const row=body.insertRow(),cell=row.insertCell();cell.colSpan=5;cell.className='task-empty-state';cell.textContent=rows.length?'No tasks match the selected filters.':'You have no tasks assigned right now.';}
+                if(pagination)pagination.hidden=true;
+                const count=$('[data-task-count]');if(count)count.textContent=`${filtered.length} task${filtered.length===1?'':'s'} assigned to you`;
+            };
+            $$('[data-task-status]').forEach(button=>button.addEventListener('click',()=>{statusFilter=button.dataset.taskStatus||'';setActive('[data-task-status]','taskStatus',statusFilter);render();}));
+            $$('[data-task-due]').forEach(button=>button.addEventListener('click',()=>{dueFilter=button.dataset.taskDue||'';setActive('[data-task-due]','taskDue',dueFilter);render();}));
+            search?.addEventListener('input',render);sessionSelect?.addEventListener('change',render);statusSelect?.addEventListener('change',event=>{statusFilter=event.target.value;render();});$('#taskSortSelect')?.addEventListener('change',event=>{sortMode=event.target.value;render();});
+            $('#clearTaskFilters')?.addEventListener('click',()=>{if(search)search.value='';if(sessionSelect)sessionSelect.value='';statusFilter='';dueFilter='';sortMode='priority';const sort=$('#taskSortSelect');if(sort)sort.value=sortMode;setActive('[data-task-status]','taskStatus','');setActive('[data-task-due]','taskDue','');render();});
+            render();
+            return;
         }
         const formatTaskDate=value=>{if(!value)return '—';const parsed=new Date(value);if(Number.isNaN(parsed.getTime()))return '—';const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];const pad=number=>String(number).padStart(2,'0');return `${parsed.getDate()} ${months[parsed.getMonth()]} ${parsed.getFullYear()}, ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;};
         const tableTarget=$('#taskTable');
@@ -1074,15 +1227,22 @@
             pagers:$('#taskPagination')?$$('button',$('#taskPagination')):[],
             paginationContainer:$('#taskPagination')?.parentElement,
         }:{};
-        const documentCell=row=>{const link=document.createElement('a');link.href=`Task.html?id=${row.id}`;link.textContent=row.document_title||'Untitled document';return link;};
+        const documentCell=row=>{const link=document.createElement('a');link.href=`Task.html?id=${encodeURIComponent(taskIdOf(row))}`;link.textContent=row.document_title||'Untitled document';return link;};
         const columns=isLabeler?[['Document',documentCell],['Session','session_name'],['Status','status'],['Due',r=>formatTaskDate(r.due_at)],['Action','$actions']]:isReviewer?[['Document',documentCell],['Session','session_name'],['Annotator','assignee'],['Type','task_type'],['Status','status'],['Due',r=>formatTaskDate(r.due_at)],['Conflicts',r=>r.conflict_count??r.conflicts??0],['Action','$actions']]:[['Document',documentCell],['Session','session_name'],['Annotator','assignee'],['Type','task_type'],['Status','status'],['Due',r=>formatTaskDate(r.due_at)],['Action','$actions']];
         const list=listTable(rows,columns,row=>{
-            const status=String(row.status||'PENDING').toUpperCase();const label=status==='PENDING'?'Start':status==='IN_PROGRESS'?'Continue':status==='SUBMITTED'?'Review':status==='APPROVED'?'View':'Open';return [action(label,()=>go(`Task.html?id=${row.id}`))];
+            const status=String(row.status||'PENDING').toUpperCase();const label=status==='PENDING'?'Start':status==='IN_PROGRESS'?'Continue':status==='SUBMITTED'?'Review':status==='APPROVED'?'View':'Open';const taskId=taskIdOf(row);return [action(label,()=>go(`Task.html?id=${encodeURIComponent(taskId)}`))];
         },['session_name','status'],{...pageTargets,table:tableTarget,numbered:false});
         const count=$('[data-task-count]');if(count)count.textContent=`${rows.length} task${rows.length===1?'':'s'} assigned to you`;
     }
     async function legacyResultAnalysisPage() {
         window.AAIRSharedHeader?.mount(user);
+        const analystUsername=user?.username||'User';
+        const analystAvatar=$('#raAvatar');
+        const analystName=$('#raUsername');
+        const analystRole=$('#raRole')||document.querySelector('.ra-account small');
+        if(analystAvatar)analystAvatar.textContent=analystUsername.slice(0,2).toUpperCase();
+        if(analystName)analystName.textContent=analystUsername;
+        if(analystRole)analystRole.textContent=userRoleLabel(user?.role);
         const logoutButton=$('#raLogout');
         logoutButton?.addEventListener('click',()=>{
             if(window.confirm('Are you sure you want to log out?')) AAIR.logout();
@@ -1096,11 +1256,8 @@
         });
         const qs=new URLSearchParams(location.search);
         const requestedId=qs.get('id');
-        const tasks=(await request('/tasks')).filter(task=>{
-            const session=String(task.session_name||task.session||'').trim();
-            const assignee=String(task.assignee||task.assigned_to||'').trim().toLowerCase();
-            return !/^test\d*$/i.test(session)&&assignee!=='yes';
-        });
+        // Keep all API-scoped Analyst tasks, including sessions named "test".
+        const tasks=(await request('/tasks')).filter(task=>String(task.assignee||task.assigned_to||'').trim().toLowerCase()!=='yes');
         const taskSelect=$('#raTaskSelect');
         const durationEl=$('#raSessionDuration');
         let currentTimerSessionId=Symbol('initial');
@@ -1143,6 +1300,8 @@
         const correctionResult=$('#raCorrectionResult');
         const pdf=$('#raPdf');
         const pdfEmpty=$('#raPdfEmpty');
+        const pdfState=$('#raPdfState');
+        pdf?.addEventListener('load',()=>{if(pdfState){pdfState.hidden=true;pdfState.textContent='';}});
         const state={tasks,task:null,rows:[],models:[],modelA:'',modelB:'',analyzed:false,page:1,pdfUrl:null,noteRow:null,noteCompare:null,redoRunId:null,completionGuard:null};
         const fieldLabels={company_name:'Company Name',ticker:'Ticker',industry:'Industry',report_period:'Report Period',report_year:'Report Year',revenue:'Revenue'};
         const value=row=>row?.indicator_value??row?.label_value??row?.value??'No value';
@@ -1175,7 +1334,7 @@
                 const button=document.createElement('button');
                 button.type='button';button.className=state.task?.id===row.id?'active':'';button.dataset.taskId=String(row.id);
                 button.title=name(row);
-            const label=document.createElement('span');label.innerHTML=`${name(row)}<small>${row.session_name||'Unknown session'} · Task #${row.id}</small>`;button.dataset.status=row.status==='APPROVED'||row.status==='SUBMITTED'?'done':'pending';
+            const label=document.createElement('span');label.innerHTML=`${escapeHtml(name(row))}<small>${escapeHtml(row.session_name||'Unknown session')} · Task #${escapeHtml(row.id)}</small>`;button.dataset.status=row.status==='APPROVED'||row.status==='SUBMITTED'?'done':'pending';
             button.append(label);button.onclick=()=>selectTask(row.id);documents.append(button);
             });
         };
@@ -1218,25 +1377,33 @@
         const renderResults=()=>{
             const a=rowsFor(state.modelA),b=rowsFor(state.modelB);
             const selectedA=state.models.find(model=>model.key===state.modelA),selectedB=state.models.find(model=>model.key===state.modelB);
-            $('#raModelAMeta').textContent=selectedA?`${selectedA.provider} · ${selectedA.model}`:'';$('#raModelBMeta').textContent=selectedB?`${selectedB.provider} · ${selectedB.model}`:'';
+            const metaA=$('#raModelAMeta'),metaB=$('#raModelBMeta');if(metaA)metaA.textContent=selectedA?`${selectedA.provider} · ${selectedA.model}`:'';if(metaB)metaB.textContent=selectedB?`${selectedB.provider} · ${selectedB.model}`:'';
             draw(resultsA,a,b,'A');draw(resultsB,b,a,'B');
             const all=[...new Set([...a,...b].map(key).filter(Boolean))];
             const differences=state.analyzed?all.filter(indicator=>{const left=rowFor(a,indicator),right=rowFor(b,indicator);return !left||!right||String(value(left))!==String(value(right));}):[];
-            $('#raDifferenceCount').textContent=String(differences.length);
+            const differenceCount=$('#raDifferenceCount');if(differenceCount)differenceCount.textContent=String(differences.length);
             $('.ra-footer')?.classList.toggle('has-differences',differences.length>0);
         };
+        const pdfViewerUrl=page=>`/resource/pdfjs/viewer.html?file=${encodeURIComponent(state.pdfUrl)}#page=${page}&zoom=page-width`;
         const openPage=page=>{
             const next=Number(page);if(!Number.isInteger(next)||next<1)return;
+            if(!state.pdfUrl){setMessage('The PDF is still loading. Please try again.');return;}
             state.page=next;
             $('#raPageLabel').textContent=`Page ${next} / ${pageCount(state.task)}`;
-            if(state.pdfUrl)pdf.src=`${state.pdfUrl}#page=${next}`;
+            let moved=false;
+            try{
+                const viewer=pdf.contentWindow?.AAIRPdfViewer||pdf.contentWindow?.PDFViewerApplication?.pdfViewer;
+                if(viewer){viewer.currentPageNumber=next;moved=true;}
+            }catch{}
+            if(!moved)pdf.src=pdfViewerUrl(next);
+            pdf.scrollIntoView?.({block:'nearest',inline:'nearest'});
         };
         const loadPdf=async()=>{
             if(state.pdfUrl)URL.revokeObjectURL(state.pdfUrl);state.pdfUrl=null;
             pdf.removeAttribute('src');pdf.hidden=true;pdfEmpty.hidden=false;
             if(!state.task?.document_id)return;
             const blob=await request(`/documents/${state.task.document_id}/file`,{blob:true});
-            state.pdfUrl=URL.createObjectURL(blob);pdf.src=`${state.pdfUrl}#page=${state.page}&zoom=100&toolbar=0`;pdf.hidden=false;pdfEmpty.hidden=true;
+            state.pdfUrl=URL.createObjectURL(blob);pdf.src=pdfViewerUrl(state.page);pdf.hidden=false;pdfEmpty.hidden=true;
         };
         const loadTaskResults=async()=>{
             const taskId=state.task.id;
@@ -1246,16 +1413,27 @@
             ]);
             if(state.task.id!==taskId)return;
             state.task=Object.assign(state.task,detail);
-            const savedProvider=state.task.task_type==='MANUAL'?'Manual Labeler':'AI Labeler';
-            const savedModel='Saved result';
-            const savedRows=Array.isArray(detail.labels)?detail.labels.map(row=>({
-                provider:savedProvider,model:savedModel,indicator_name:row.label_name,
-                indicator_value:row.label_value,source_page:row.source_page,confidence:row.confidence,
-            })):[];
-            state.rows=[...aiRows,...savedRows];
+            const manualRows = (detail.labels || []).map(label => ({
+                ...label,
+                provider: 'Manual Labeler',
+                model: 'Manual Labeler',
+                run_id: null
+            }));
+            const validAiRows = Array.isArray(aiRows) ? aiRows.filter(row => row?.run_id) : [];
+            state.rows = [...validAiRows, ...manualRows];
             state.models=[...new Map(state.rows.map(row=>[modelKey(row),{key:modelKey(row),provider:row.provider||'AI',model:row.model||row.provider||'Model',runId:row.run_id||null}])).values()];
             state.modelA='';state.modelB='';renderModels();syncModelOptions();renderResults();setMessage('');
-            try{await loadPdf();}catch(error){setMessage(error.message); }
+            try{await loadPdf();}catch(error){
+                if(pdfState){
+                    pdfState.hidden=false;
+                    pdfState.replaceChildren(document.createTextNode('PDF unavailable. '));
+                    const retry=document.createElement('button');
+                    retry.type='button';retry.textContent='Retry';retry.className='pdf-retry-button';
+                    retry.onclick=()=>loadTaskResults().catch(failure=>setMessage(failure.message));
+                    pdfState.append(retry);
+                }
+                setMessage(error.message);
+            }
             await state.completionGuard?.refresh();
         };
         const openNote=(row,compare)=>{
@@ -1288,15 +1466,21 @@
         window.addEventListener('pagehide',()=>{if(state.pdfUrl)URL.revokeObjectURL(state.pdfUrl);if(sessionTimerInterval)clearInterval(sessionTimerInterval);});
         state.completionGuard=AAIR.SessionCompletion?.create({button:$('#raCompleteAnalysis'),loadStatus:()=>request(`/session-completion${state.task?.session_id?`?sessionId=${state.task.session_id}`:''}`),findItem:item=>$(`[data-task-id="${item.id}"]`,documents),blockedTitle:'Resolve all differences in all documents before completing the analysis'});
         $('#raCompleteAnalysis').onclick=async()=>{if(state.completionGuard&&!await state.completionGuard.ensure('Analysis cannot be completed yet'))return;await request('/analysis/complete',{method:'POST',json:{sessionId:state.task?.session_id||null}});await state.completionGuard?.refresh();setMessage('The session analysis is complete.');};
+        if(pdfState){pdfState.hidden=false;pdfState.textContent='Loading PDF…';}
         syncModelOptions();selectTask(initial.id);
     }
     async function taskPage() {
+        if (user?.role === 'ADMIN') {
+            await request('/tasks').catch(() => []);
+            go('Dashboard.html');
+            return;
+        }
         if(document.body.matches('.ai-task-page,.manual-task-page')){
             setupDocumentSidebar();
             setupTaskWorkspace();
         }
         if(user?.role==='RESULT_ANALYST'&&document.body.classList.contains('result-analysis-page')){await legacyResultAnalysisPage();return;}
-        // The old processing strip contained static demo values, not live API progress.
+        // The legacy processing strip had no live API source, so it is removed.
         $('#processingPanel')?.remove();
         const [tasks,prompts,systemPrompt]=await Promise.all([
             request('/tasks'),
@@ -1362,7 +1546,7 @@
         }
         updateSelection();
         const heading=$$('main h2,main h3').find(h=>['Extracted Information','Thông tin trích xuất'].includes(text(h)));
-        let panel=$('[data-annotation-panel]')||heading?.parentElement;
+        let panel=$('[data-annotation-panel]')||heading?.closest('[data-annotation-panel]')||heading?.parentElement;
         const reviewBodies=$$('main .overflow-y-auto').filter(el=>$('input[type="checkbox"]',el));
         if(!panel)panel=reviewBodies[0];
         if(!panel)throw new Error('Không tìm thấy vùng nhãn của tác vụ.');
@@ -1391,36 +1575,39 @@
             const editButton=document.createElement('button');editButton.type='button';editButton.className='annotation-icon-button';editButton.title=readonly?'Bấm Mở khóa để chỉnh sửa':'Sửa field';editButton.disabled=readonly;editButton.innerHTML='<span class="material-symbols-outlined">edit</span>';
             const confirmButton=document.createElement('button');confirmButton.type='button';confirmButton.className='annotation-icon-button annotation-icon-button--confirm';confirmButton.title='Xác nhận (Enter)';confirmButton.innerHTML='<span class="material-symbols-outlined">check</span>';
             top.append(labelBlock,termInput,stateBadge,editButton,confirmButton);
-            const valueInput=document.createElement('textarea');valueInput.value=parts.editableValue;valueInput.placeholder='Enter value...';valueInput.maxLength=20000;valueInput.rows=4;valueInput.setAttribute('aria-label','Field value');valueInput.className='annotation-definition-input';valueInput.disabled=readonly;
+            const valueInput=document.createElement('textarea');valueInput.value=parts.editableValue;valueInput.placeholder='Enter value...';valueInput.maxLength=20000;valueInput.rows=1;valueInput.setAttribute('aria-label','Field value');valueInput.className='annotation-definition-input';valueInput.disabled=readonly;
+            const valueTools=document.createElement('div');valueTools.className='annotation-definition-tools';
+            const expandButton=document.createElement('button');expandButton.type='button';expandButton.className='annotation-definition-expand';expandButton.innerHTML='<span class="material-symbols-outlined">open_in_full</span><span>Xem toàn bộ</span>';expandButton.title='Mở rộng vùng Definition';
+            valueTools.append(expandButton);
+            const chips=document.createElement('div');chips.className='annotation-definition-chips';chips.hidden=key!=='industry';
             const meta=document.createElement('div');meta.className='annotation-field-card__meta';
-            const pageInput=document.createElement('input');pageInput.type='number';pageInput.min='1';pageInput.max=String(pdfPageCount||9999);pageInput.step='1';pageInput.required=true;pageInput.value=row.sourcePage==null?'':String(row.sourcePage);pageInput.setAttribute('aria-label','Source page');pageInput.setAttribute('aria-readonly','true');pageInput.readOnly=true;pageInput.title='Click to jump to this PDF page';pageInput.className='annotation-page-input';pageInput.disabled=false;pageInput.hidden=true;
+            const pageInput=document.createElement('input');pageInput.type='number';pageInput.min='1';pageInput.max=String(pdfPageCount||9999);pageInput.step='1';pageInput.required=true;pageInput.value=row.sourcePage==null?'':String(row.sourcePage);pageInput.setAttribute('aria-label','Source Page');pageInput.setAttribute('aria-readonly','true');pageInput.readOnly=true;pageInput.title='Click to jump to this PDF page';pageInput.className='annotation-page-input';pageInput.disabled=false;pageInput.hidden=true;
             const pageButton=document.createElement('button');pageButton.type='button';pageButton.className='annotation-page-chip';pageButton.title='Đến trang nguồn trong PDF';
             const confidence=document.createElement('span');confidence.className='annotation-confidence';const confidencePct=row.confidence==null?null:Math.round(row.confidence*100);confidence.textContent=`AI ${confidencePct==null?'—':`${confidencePct}%`}`;confidence.dataset.level=confidencePct==null?'unknown':confidencePct>=90?'high':confidencePct>=70?'medium':'low';
             const currentValue=parts.editableValue.trim();const suspicious=(key==='report_period'&&currentValue&&/^fy$/i.test(currentValue))||(key==='report_year'&&currentValue&&!/^\d{4}$/.test(currentValue))||(key==='revenue'&&currentValue&&!/[\d]/.test(currentValue));
             const warning=document.createElement('span');warning.className='annotation-warning';warning.hidden=!suspicious;warning.title='Giá trị cần kiểm tra lại với tài liệu nguồn.';warning.innerHTML='<span class="material-symbols-outlined">warning</span>';
-            const sourceToggle=document.createElement('button');sourceToggle.type='button';sourceToggle.className='annotation-source-toggle';sourceToggle.textContent='Xem nguồn';sourceToggle.disabled=!pageInput.value;sourceToggle.title=pageInput.value?'Xem nhãn nguồn':'Chưa có trang nguồn';
-            meta.append(pageButton,pageInput,confidence,warning,sourceToggle);
+            meta.append(pageButton,pageInput,confidence,warning);
+            const sourceLabel=document.createElement('div');sourceLabel.className='annotation-source-label';sourceLabel.hidden=!parts.sourceLabel;sourceLabel.innerHTML='<strong>Source label</strong><span></span>';sourceLabel.querySelector('span').textContent=parts.sourceLabel||'';
             const hasSavedValue=Boolean(row.labelName||row.labelValue||row.sourcePage);
             const saveState=document.createElement('span');saveState.className='annotation-save-state';
             const cardState={termInput,valueInput,pageInput,sourceLabel:parts.sourceLabel,confidence:row.confidence,saveState,dirty:false,saved:hasSavedValue,confirmed:false};
-            const paintState=()=>{const state=readonly?'Read-only':cardState.confirmed?'Approved':cardState.dirty?'Edited':hasSavedValue?'Pending review':'Empty';stateBadge.textContent=state;stateBadge.dataset.state=readonly?'readonly':cardState.confirmed?'confirmed':cardState.dirty?'edited':'pending';saveState.textContent=readonly?'Read-only':cardState.dirty?'Unsaved':cardState.saved?'Saved':'Empty';pageButton.textContent=pageInput.value?`Page ${pageInput.value}`:'No source page';pageButton.disabled=!pageInput.value;sourceToggle.disabled=!pageInput.value;sourceToggle.title=pageInput.value?'View source label':'No source page';};
+            const paintState=()=>{const state=readonly?'Read-only':cardState.confirmed?'Approved':cardState.dirty?'Edited':hasSavedValue?'Pending review':'Empty';stateBadge.textContent=state;stateBadge.dataset.state=readonly?'readonly':cardState.confirmed?'confirmed':cardState.dirty?'edited':'pending';saveState.textContent=readonly?'Read-only':cardState.dirty?'Unsaved':cardState.saved?'Saved':'Empty';pageButton.textContent=pageInput.value?`Page ${pageInput.value}`:'No source page';pageButton.disabled=!pageInput.value;};
             const changed=()=>{if(readonly)return;cardState.dirty=true;cardState.confirmed=false;saveState.dataset.state='dirty';paintState();queueAutoSave(cardState);};
+            const renderValueMeta=()=>{chips.replaceChildren(...valueInput.value.split(';').map(item=>item.trim()).filter(Boolean).slice(0,12).map(item=>{const chip=document.createElement('span');chip.textContent=item;return chip;}));};
+            const autoGrow=()=>{valueInput.style.height='auto';const maxHeight=card.classList.contains('is-expanded')?Math.max(360,valueInput.scrollHeight):360;valueInput.style.height=`${Math.max(140,Math.min(valueInput.scrollHeight,maxHeight))}px`;valueInput.style.overflowY=valueInput.scrollHeight>maxHeight?'auto':'hidden';renderValueMeta();};
+            expandButton.onclick=()=>{card.classList.toggle('is-expanded');const expanded=card.classList.contains('is-expanded');expandButton.querySelector('span:last-child').textContent=expanded?'Thu gọn':'Xem toàn bộ';expandButton.querySelector('.material-symbols-outlined').textContent=expanded?'close_fullscreen':'open_in_full';autoGrow();};
             const jumpToSource=()=>{const raw=Number(pageInput.value);if(!Number.isFinite(raw))return;const max=pdfPageCount||Number(pageInput.max)||9999;const page=Math.min(max,Math.max(1,Math.trunc(raw)));pageInput.value=String(page);const iframe=$('#pdfViewer');const viewer=iframe?.contentWindow?.PDFViewerApplication?.pdfViewer;if(viewer){viewer.currentPageNumber=page;return;}if(iframe?.src)iframe.src=iframe.src.replace(/#.*/,'')+`#page=${page}&zoom=page-width`;};
             const original={term:termInput.value,value:valueInput.value,page:pageInput.value};
             editButton.onclick=()=>{if(card.classList.contains('is-editing')){termInput.value=original.term;valueInput.value=original.value;pageInput.value=original.page;valueInput.readOnly=true;pageInput.readOnly=true;cardState.dirty=false;card.classList.remove('is-editing');labelBlock.hidden=false;termInput.hidden=true;pageInput.hidden=true;paintState();return;}card.classList.add('is-editing');labelBlock.hidden=true;termInput.hidden=false;termInput.disabled=readonly;valueInput.readOnly=false;pageInput.readOnly=true;pageInput.hidden=false;termInput.focus();};
             confirmButton.onclick=()=>{cardState.confirmed=true;changed();paintState();};
             const definitionLabel=document.createElement('label');definitionLabel.className='annotation-legacy-label';definitionLabel.textContent='Definition';
-            const source=document.createElement('div');source.className='annotation-source-label';source.hidden=false;
-            const sourceTitle=document.createElement('strong');sourceTitle.textContent='SOURCE LABEL';
-            const sourceValue=document.createElement('span');sourceValue.textContent=parts.sourceLabel||'NO AI SOURCE LABEL YET';
-            source.append(sourceTitle,sourceValue);
-            sourceToggle.onclick=()=>{if(sourceToggle.disabled)return;source.hidden=!source.hidden;sourceToggle.textContent=source.hidden?'Xem nguồn':'Ẩn nguồn';};pageButton.onclick=jumpToSource;pageInput.addEventListener('click',jumpToSource);pageInput.addEventListener('change',()=>{jumpToSource();changed();});pageInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();jumpToSource();changed();}});
-            termInput.addEventListener('input',changed);valueInput.addEventListener('input',changed);
+            pageButton.onclick=jumpToSource;pageInput.addEventListener('click',jumpToSource);pageInput.addEventListener('change',()=>{jumpToSource();changed();});pageInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();jumpToSource();changed();}});
+            termInput.addEventListener('input',changed);valueInput.addEventListener('input',()=>{autoGrow();changed();});
             valueInput.addEventListener('keydown',event=>{if(event.key==='Escape'&&card.classList.contains('is-editing')){editButton.click();return;}if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();confirmButton.click();}if(event.key==='Tab'&&!event.shiftKey){const index=cards.indexOf(cardState);const next=cards[index+1];if(next){event.preventDefault();next.valueInput.focus();}}});
-            card.append(top,definitionLabel,valueInput,meta,source);paintState();cards.push(cardState);panel.append(card);return valueInput;
+            card.append(top,definitionLabel,valueInput,meta,sourceLabel);paintState();cards.push(cardState);panel.append(card);autoGrow();return valueInput;
         }
         const editor={
-            get value(){return JSON.stringify(cards.map(c=>{const editableValue=c.valueInput.value;return {labelName:c.termInput.value.trim(),labelValue:c.sourceLabel?`${editableValue}\nNhãn nguồn: ${c.sourceLabel}`:editableValue,sourcePage:c.pageInput.value?Number(c.pageInput.value):null,confidence:c.confidence};}).filter(c=>c.labelName||c.labelValue));},
+            get value(){return JSON.stringify(cards.map(c=>{const label={labelName:c.termInput.value.trim(),labelValue:c.valueInput.value,sourcePage:c.pageInput.value?Number(c.pageInput.value):null,confidence:c.confidence};if(c.sourceLabel)label.sourceLabel=c.sourceLabel;return label;}).filter(c=>c.labelName||c.labelValue));},
             set value(value){clearCards();const rows=JSON.parse(value);rows.forEach(addLabel);if(!rows.length&&labeler)addLabel();const saveDock=panel.querySelector('.annotation-panel-save');if(saveDock)panel.append(saveDock);},
             get readOnly(){return readonly;},
             set readOnly(value){readonly=value;cards.forEach(c=>{c.termInput.disabled=readonly;c.valueInput.readOnly=readonly;c.pageInput.disabled=false;c.pageInput.readOnly=true;c.saveState.textContent=readonly?'Read-only':c.dirty?'Unsaved':c.saved?'Saved':'Empty';});},
@@ -1428,7 +1615,7 @@
         };
         editor.value='[]';
         reviewBodies.slice(1).forEach(body=>body.replaceChildren());
-        // Other extraction/status panels contain mock results and are unavailable until an inference API exists.
+        // Other extraction/status panels stay unavailable until an inference API exists.
         $$('main h2,main h3').filter(h=>['Extraction Status','Processing Details'].includes(text(h))).forEach(h=>{
             const section=h.parentElement;[...section.children].filter(c=>c!==h).forEach(c=>c.remove());const p=document.createElement('p');p.textContent='No AI processing data yet.';section.append(p);
         });
@@ -1472,7 +1659,7 @@
             buttons(/Save|Submit|Nộp bài|Approve|Analyze/).forEach(b=>unavailable(b,'No task assigned.'));
             notice(id?'Task not found or access denied.':'No task assigned.',Boolean(id));return;
         }
-        let task, fileUrl, workTimer, completionGuard;
+        let task, fileUrl, workTimer, completionGuard, loadSequence=0, submitTaskButton=null;
         const title=$('#sessionTitle');
         const type=null;
         const docHeading=$$('main h3').find(h=>['Document Information','Document Info','Thông tin tài liệu'].includes(text(h)));
@@ -1480,21 +1667,41 @@
         if(docHeading){while(docHeading.nextSibling)docHeading.nextSibling.remove();docInfo=document.createElement('p');docHeading.after(docInfo);docHeading.textContent='Document Info';}
         if(heading)heading.textContent='Extracted Information';
         const renderTask=()=>{
-            editor.value=JSON.stringify(task.labels.map(l=>({labelName:l.label_name,labelValue:l.label_value,sourcePage:l.source_page,confidence:l.confidence})),null,2);
+            editor.value=JSON.stringify(task.labels.map(l=>({labelName:l.label_name,labelValue:l.label_value,sourcePage:l.source_page,sourceLabel:l.source_label||l.sourceLabel||'',confidence:l.confidence})),null,2);
             // Manual labelers must be able to correct extracted values in their
             // assigned fields. Other roles keep the submitted/approved lock.
             editor.readOnly=!labeler||(!isManualLabeler&&['SUBMITTED','APPROVED'].includes(task.status));
             document.title=`${task.document_title} — ${task.status}`;
+            if(submitTaskButton){
+                const terminal=['SUBMITTED','APPROVED'].includes(String(task.status||'').toUpperCase());
+                const label=String(task.status||'').toUpperCase()==='APPROVED'?'Approved':terminal?'Submitted':'Submit Task';
+                submitTaskButton.disabled=terminal;
+                submitTaskButton.dataset.terminalState=String(terminal);
+                submitTaskButton.setAttribute('aria-disabled',String(terminal));
+                submitTaskButton.title=terminal?'This task is read-only and waiting for review.':'Save all fields before submitting the task.';
+                const buttonLabel=submitTaskButton.querySelector('.task-button-label');
+                if(buttonLabel)buttonLabel.textContent=label;else submitTaskButton.textContent=label;
+            }
         };
         const refresh=async()=>{task=await request(`/tasks/${task.id}`);renderTask();};
         async function loadTask(row){
+            const sequence=++loadSequence;
             if(task&&task.id!==row.id)await flushAutoSave();
             if(workTimer)await workTimer.stop('MANUAL');
-            task=await request(`/tasks/${row.id}`);
+            const loadedTask=await request(`/tasks/${row.id}`);
+            if(sequence!==loadSequence)return;
+            task=loadedTask;
+            if(labeler&&!task.labels?.length){
+                const aiRows=await request(`/tasks/${row.id}/ai-results`,{suppressAuthRedirect:true}).catch(()=>[]);
+                if(Array.isArray(aiRows)&&aiRows.length){
+                    const latestRun=aiRows[0].run_id;
+                    task.labels=aiRows.filter(item=>item.run_id===latestRun).reverse().map(item=>({label_name:item.indicator_name,label_value:item.indicator_value,source_page:item.source_page,source_label:item.source_label||item.sourceLabel||'',confidence:item.confidence}));
+                }
+            }
             pdfPageCount=null;
             const persistedDotState=readDocumentSaveState(task.id);
             setDocumentSaveState(task.id,persistedDotState!=='none'?persistedDotState:(task.labels?.length?'saved':'none'));
-            history.replaceState(null,'',`?id=${row.id}`);
+            try { history.replaceState(null,'',`?id=${row.id}`); } catch { /* Embedded preview or fixture URL. */ }
             if(title)title.textContent=row.session_name||task.document_title;
             if(type)type.textContent=task.task_type;
             if(docInfo)docInfo.textContent=task.document_title;
@@ -1505,27 +1712,42 @@
                 button.setAttribute('aria-current',selected?'true':'false');
             });
             const iframe=$('#pdfViewer');
-            if(iframe){iframe.removeAttribute('src');iframe.srcdoc='<p style="font-family:sans-serif;padding:24px">Đang tải tài liệu PDF…</p>';}
+            let pdfState=iframe?.parentElement?.querySelector('[data-pdf-state]');
+            if(iframe&&!pdfState){
+                pdfState=document.createElement('div');
+                pdfState.dataset.pdfState='true';
+                pdfState.className='pdf-loading-state';
+                iframe.parentElement?.append(pdfState);
+            }
+            if(iframe){
+                if(pdfState){pdfState.hidden=false;pdfState.textContent='Loading PDF…';}
+                iframe.removeAttribute('src');iframe.srcdoc='<p style="font-family:sans-serif;padding:24px">Loading PDF…</p>';
+            }
             try {
                 const blob=await request(`/documents/${task.document_id}/file`,{blob:true});
+                if(sequence!==loadSequence)return;
                 if(fileUrl)URL.revokeObjectURL(fileUrl);
                 fileUrl=URL.createObjectURL(blob);
                 if(iframe){
                     const viewerUrl=`/resource/pdfjs/viewer.html?file=${encodeURIComponent(fileUrl)}&title=${encodeURIComponent(task.document_title)}#page=1&zoom=page-width`;
                     const openedTaskId=task.id;
                     iframe.onload=()=>{
+                        if(sequence!==loadSequence||task.id!==openedTaskId)return;
+                        if(pdfState){pdfState.hidden=true;pdfState.textContent='';}
                         const addPdfControls=()=>{
                             const documentInFrame=iframe.contentDocument;
                             const toolbar=documentInFrame?.querySelector('#toolbarViewerRight');
                             if(!toolbar||documentInFrame.querySelector('[data-aair-pdf-control]'))return;
-                            [['fit-width','↔','Vừa chiều rộng'],['fit-page','□','Vừa toàn trang'],['rotate','↻','Xoay trang']].forEach(([action,icon,title])=>{
-                                const button=documentInFrame.createElement('button');button.type='button';button.dataset.aairPdfControl=action;button.title=title;button.className='toolbarButton';button.textContent=icon;
+                            [['fit-width','fit_width','Vừa chiều rộng'],['fit-page','fit_screen','Vừa toàn trang'],['rotate','rotate_right','Xoay trang']].forEach(([action,icon,title])=>{
+                                const button=documentInFrame.createElement('button');button.type='button';button.dataset.aairPdfControl=action;button.title=title;button.className='toolbarButton';const iconNode=documentInFrame.createElement('span');iconNode.className='material-symbols-outlined';iconNode.textContent=icon;button.append(iconNode);
                                 button.onclick=()=>{const viewer=iframe.contentWindow?.PDFViewerApplication?.pdfViewer;if(!viewer)return;if(action==='fit-width')viewer.currentScaleValue='page-width';if(action==='fit-page')viewer.currentScaleValue='page-fit';if(action==='rotate')viewer.pagesRotation=(viewer.pagesRotation+90)%360;};toolbar.append(button);
                             });
                         };
                         let attempts=0;
                         const syncPageCount=()=>{
                             if(task.id!==openedTaskId)return;
+                            const viewer=iframe.contentWindow?.PDFViewerApplication?.pdfViewer;
+                            if(viewer) viewer.currentScaleValue='page-width';
                             const count=Number(iframe.contentWindow?.PDFViewerApplication?.pdfDocument?.numPages||0);
                             if(count>0){pdfPageCount=count;cards.forEach(card=>{card.pageInput.max=String(count);card.pageInput.title=`Trang hợp lệ: 1-${count}`;});addPdfControls();return;}
                             if(++attempts<30)setTimeout(syncPageCount,200);
@@ -1538,27 +1760,40 @@
                 notice(`Đã mở tài liệu ${task.document_title}.`);
                 if(completionGuard)await completionGuard.refresh();
             } catch(error) {
-                if(iframe)iframe.srcdoc=`<p style="font-family:sans-serif;padding:24px;color:#b91c1c">Không tải được tài liệu PDF.</p>`;
+                if(pdfState){
+                    pdfState.hidden=false;
+                    pdfState.replaceChildren(document.createTextNode('PDF unavailable. '));
+                    const retry=document.createElement('button');
+                    retry.type='button';
+                    retry.textContent='Retry';
+                    retry.className='pdf-retry-button';
+                    retry.onclick=()=>loadTask(task).catch(failure=>notice(failure.message,true));
+                    pdfState.append(retry);
+                }
+                if(iframe)iframe.srcdoc=`<p style="font-family:sans-serif;padding:24px;color:#b91c1c">PDF unavailable.</p>`;
                 throw error;
             }
         }
         await loadTask(initial);
-        const submitTaskButton=buttons(/^(Submit Task|Nộp bài)$/)[0]; if(submitTaskButton)submitTaskButton.setAttribute('aria-label','Submit Task');
+        submitTaskButton=buttons(/^(Submit Task|Nộp bài)$/)[0]; if(submitTaskButton){submitTaskButton.setAttribute('aria-label','Submit Task');renderTask();}
         if(window.AAIR.SessionCompletion&&submitTaskButton){
             completionGuard=AAIR.SessionCompletion.create({
                 button:submitTaskButton,
                 loadStatus:()=>request(`/session-completion${task?.session_id?`?sessionId=${task.session_id}`:''}`),
                 findItem:documentStatus=>documentButtons.get(Number(documentStatus.id)),
-                blockedTitle:status=>`Còn ${(status.missingItems||[]).length} tài liệu chưa hoàn tất`,
+                blockedTitle:status=>{const documents=Array.isArray(status.documents)?status.documents:[],total=documents.length||tasks.filter(item=>String(item.session_id)===String(task?.session_id)).length,done=documents.filter(item=>item.status==='done'||['SUBMITTED','APPROVED','COMPLETED'].includes(String(item.status||'').toUpperCase())).length;return total?`Cần lưu cả ${total} tài liệu (đã lưu ${done}/${total})`:`Còn ${(status.missingItems||[]).length} tài liệu chưa hoàn tất`;},
                 onStatus:status=>{
-                    const reported=status.documents||[];
-                    const sessionTasks=reported.length?reported:tasks.filter(item=>String(item.session_id)===String(task?.session_id));
+                    const reported=Array.isArray(status.documents)?status.documents:[];
+                    const taskApiDocuments=tasks.filter(item=>String(item.session_id)===String(task?.session_id));
+                    const sessionTasks=reported.length?reported:taskApiDocuments;
                     const total=sessionTasks.length,done=sessionTasks.filter(item=>item.status==='done'||['SUBMITTED','APPROVED','COMPLETED'].includes(item.status)).length;
                     const percent=total?Math.round(done/total*100):0;
                     const progress=$('#sessionProgressTrack'),bar=$('#sessionProgressBar'),label=$('#sessionProgressText');
                     if(progress)progress.setAttribute('aria-valuenow',String(percent));
                     if(bar)bar.style.width=`${percent}%`;
                     if(label)label.textContent=`${done}/${total} documents · ${percent}%`;
+                    const submitButton=buttons(/^(Submit Task|Nộp bài)$/)[0];
+                    if(submitButton){submitButton.classList.toggle('session-ready',percent===100);submitButton.title=percent===100?'All documents are saved. You can submit this session.':'Save all documents before submitting.';}
                 }
             });
             await completionGuard.refresh();
@@ -1566,51 +1801,44 @@
         window.addEventListener('pagehide',()=>{if(fileUrl)URL.revokeObjectURL(fileUrl);});
         const runAiButton=buttons(/Run AI|Chạy AI/)[0];
         if(runAiButton && ['AI_LABELER','MANUAL_LABELER'].includes(user.role)){ runAiButton.setAttribute('aria-label','Run AI');
-            if(normalizedRole==='MANUAL_LABELER'){
-                if(modelSelect)modelSelect.value='Gemini';
-                modelSelect?.closest('div')?.querySelector('label[for="manualAiModel"]')?.setAttribute('hidden','');
-            }
+            // Manual labelers can explicitly run the background Gemini extraction.
+            // Keep the model fixed so this action does not depend on assistance_mode
+            // or expose a model choice that is not supported by the manual workflow.
+            if(normalizedRole==='MANUAL_LABELER' && modelSelect)modelSelect.value='Gemini';
             const updateRunAiState=()=>{
-                const blocked=task?.task_type==='MANUAL'&&task?.assistance_mode==='NONE';
+                const blocked=['SUBMITTED','APPROVED'].includes(String(task?.status||'').toUpperCase());
                 runAiButton.disabled=blocked||!modelSelect?.value;
                 runAiButton.style.opacity=runAiButton.disabled?'0.5':'';
-                runAiButton.title=blocked?'This task is configured without AI assistance.':runAiButton.disabled?'Select a model before running AI.':'';
+                runAiButton.title=blocked?'This task is read-only.':runAiButton.disabled?'Select a model before running AI.':'';
             };
             modelSelect?.addEventListener('change',updateRunAiState);updateRunAiState();
             bind(runAiButton,async()=>{
                 if(!modelSelect?.value)throw new Error('Select a model before running AI.');
+                if(cards.some(card=>card.dirty)&&!window.confirm('Run AI sẽ thay thế dữ liệu chưa lưu. Bạn có muốn tiếp tục không?'))return;
                 const oldMarkup=runAiButton.innerHTML;
-                runAiButton.textContent='Running AI...';
+                runAiButton.disabled=true;runAiButton.classList.add('is-running');runAiButton.innerHTML='<span class="task-button-label">Running AI…</span>';
                 try{
                     const selectedPrompt=prompts.find(item=>String(item.id)===promptSelect?.value);
                     const prompt=selectedPrompt?.content||systemPrompt;
-                    const result=await request(`/tasks/${task.id}/run-ai`,{method:'POST',json:{provider:modelSelect.value,prompt:prompt||null}});
+                    const provider=normalizedRole==='MANUAL_LABELER'?'Gemini':modelSelect.value;
+                    const result=await request(`/tasks/${task.id}/run-ai`,{method:'POST',json:{provider,prompt:prompt||null}});
                     editor.value=JSON.stringify(result.labels||[]);editor.readOnly=false;
                     setDocumentSaveState(task.id,'ai-pending');
                     cards.forEach(card=>{card.dirty=true;card.saveState.dataset.state='dirty';card.saveState.textContent='Unsaved';});
+                    if(toolbarSaveButton){toolbarSaveButton.disabled=false;toolbarSaveButton.classList.add('is-dirty');}
                     queueAutoSave();
                     notice(`Extracted ${result.labels?.length||0} fields using ${result.provider}. Review them and click Save.`);
-                }finally{runAiButton.innerHTML=oldMarkup;}
+                }finally{runAiButton.innerHTML=oldMarkup;runAiButton.disabled=false;runAiButton.classList.remove('is-running');updateRunAiState();}
             });
         }else if(runAiButton)unavailable(runAiButton,'Chỉ AI Labeler được chạy mô hình AI.');
-        const runAiSilently=async()=>{
-            if(normalizedRole!=='MANUAL_LABELER'||task?.assistance_mode==='NONE'||task?.labels?.length)return;
-            try{
-                const result=await request(`/tasks/${task.id}/run-ai`,{method:'POST',json:{provider:'Gemini',prompt:systemPrompt||null}});
-                editor.value=JSON.stringify(result.labels||[]);editor.readOnly=false;
-                setDocumentSaveState(task.id,'ai-pending');
-                cards.forEach(card=>{card.dirty=true;card.saveState.dataset.state='dirty';card.saveState.textContent='AI result not saved';});
-                queueAutoSave();
-            }catch(error){
-                console.warn('Background AI extraction failed.',error);
-            }
-        };
         function labels(){
             let data;try{data=JSON.parse(editor.value);}catch{throw new Error('Nhãn phải là JSON hợp lệ.');}
             if(!Array.isArray(data)||data.length>500||data.some(l=>!l||typeof l.labelName!=='string'||!l.labelName.trim()||l.labelName.length>150||!(l.labelValue==null||typeof l.labelValue==='string')||(l.labelValue?.length||0)>20000||!Number.isInteger(l.sourcePage)||l.sourcePage<1||(pdfPageCount&&l.sourcePage>pdfPageCount)||!(l.confidence==null||typeof l.confidence==='number'&&l.confidence>=0&&l.confidence<=1)))throw new Error(`Mỗi chỉ tiêu cần tên, giá trị, trang nguồn từ 1${pdfPageCount?`-${pdfPageCount}`:''} và confidence từ 0 đến 1 (hoặc null); tối đa 500 chỉ tiêu.`);
             return data;
         }
-        const manualSaveButton=$('#manualSaveButton')||$('#aiSaveButton');
+        let manualSaveButton=null;
+        const toolbarSaveButton=$('#taskSaveButton');
+        const setButtonLabel=(button,label)=>{const target=button?.querySelector('.task-button-label');if(target)target.textContent=label;else if(button)button.textContent=label;};
         const save=async(showNotice=true,track=true,refreshAfter=true)=>{
             const data=labels();
             if(['PENDING','REJECTED'].includes(task.status)){await request(`/tasks/${task.id}/start`,{method:'POST'});task.status='IN_PROGRESS';}
@@ -1619,10 +1847,10 @@
             if(track&&workTimer)await workTimer.stop('SAVE',true);
             if(showNotice)notice('Data saved successfully.');
         };
-        if(manualSaveButton){
-            manualSaveButton.disabled=true;
-            manualSaveButton.setAttribute('aria-label','Save');
-            bind(manualSaveButton,async()=>{manualSaveButton.disabled=true;manualSaveButton.textContent='Saving…';try{await save();setDocumentSaveState(task.id,'saved');cards.forEach(card=>{card.dirty=false;card.saved=true;card.saveState.dataset.state='saved';card.saveState.textContent='Saved';});window.location.reload();}catch(error){manualSaveButton.disabled=false;manualSaveButton.textContent='Save';throw error;}manualSaveButton.textContent='Save';});
+        if(labeler && panel && !aiContent){
+            manualSaveButton=toolbarSaveButton||document.createElement('button');
+            if(!toolbarSaveButton){const saveWrap=document.createElement('div');saveWrap.className='annotation-panel-save';manualSaveButton.type='button';manualSaveButton.textContent='Save';manualSaveButton.className='annotation-save-button';manualSaveButton.setAttribute('aria-label','Save');saveWrap.append(manualSaveButton);panel.append(saveWrap);}
+            manualSaveButton.onclick=async()=>{if(manualSaveButton.disabled)return;manualSaveButton.disabled=true;manualSaveButton.classList.remove('is-dirty');setButtonLabel(manualSaveButton,'Saving…');try{await save();setDocumentSaveState(task.id,'saved');cards.forEach(card=>{card.dirty=false;card.saved=true;card.saveState.dataset.state='saved';card.saveState.textContent='Saved';});}catch(error){manualSaveButton.disabled=false;manualSaveButton.classList.add('is-dirty');setButtonLabel(manualSaveButton,'Save');throw error;}setButtonLabel(manualSaveButton,'Save');};
         }
         let autoSaveTimer=null,autoSavePromise=Promise.resolve();
         const setSaveState=(state,message)=>cards.filter(card=>card.dirty).forEach(card=>{card.saveState.dataset.state=state;card.saveState.textContent=message;});
@@ -1642,28 +1870,21 @@
         };
         queueAutoSave=()=>{
             if(autoSaveTimer)clearTimeout(autoSaveTimer);
-            if(manualSaveButton){manualSaveButton.disabled=false;return;}
-            if(aiContent)return;
+            if(manualSaveButton){manualSaveButton.disabled=false;manualSaveButton.classList.add('is-dirty');return;}
+            if(aiContent){if(toolbarSaveButton){toolbarSaveButton.disabled=false;toolbarSaveButton.classList.add('is-dirty');}return;}
             autoSaveTimer=setTimeout(()=>{autoSaveTimer=null;autoSavePromise=autoSavePromise.then(performAutoSave,performAutoSave);},1000);
         };
-        if(normalizedRole==='MANUAL_LABELER')void runAiSilently();
         bindText(/^(Submit Task|Nộp bài)$/,async()=>{if(!labels().length)throw new Error('Add at least one field before submitting.');await flushAutoSave();if(['PENDING','REJECTED'].includes(task.status))await save(false,false,false);if(completionGuard&&!await completionGuard.ensure('Unable to submit the task'))return;await request(`/tasks/${task.id}/submit`,{method:'POST'});if(workTimer)await workTimer.stop('SUBMIT');await refresh();if(completionGuard)await completionGuard.refresh();notice('Task submitted successfully.');});
         if(labeler){
             const saveDock=panel.querySelector('.annotation-panel-save');
             if(saveDock) panel.append(saveDock);
         }
-        if(aiContent && !manualSaveButton){
+        if(aiContent){
             const topHeader=$$('header')[1];
             buttons(/^Edit$/,topHeader).forEach(button=>button.remove());
-            const saveWrap=document.createElement('div');
-            saveWrap.className='annotation-panel-save';
-            const saveButton=document.createElement('button');
-            saveButton.type='button';
-            saveButton.className='annotation-save-button ai-save-results';
-            saveButton.textContent='Save'; saveButton.setAttribute('aria-label','Save');
-            saveWrap.append(saveButton);
-            aiContent.append(saveWrap);
-            bind(saveButton,async()=>{saveButton.disabled=true;try{await save();setDocumentSaveState(task.id,'saved');if(user.role==='MANUAL_LABELER')exportJson(labels(),`task-${task.id}-labels.json`);window.location.reload();}finally{saveButton.disabled=false;}});
+            const saveButton=toolbarSaveButton||document.createElement('button');
+            if(!toolbarSaveButton){const saveWrap=document.createElement('div');saveWrap.className='annotation-panel-save';saveButton.type='button';saveButton.className='annotation-save-button ai-save-results';saveButton.textContent='Save';saveButton.setAttribute('aria-label','Save');saveWrap.append(saveButton);aiContent.append(saveWrap);}
+            bind(saveButton,async()=>{saveButton.disabled=true;saveButton.classList.remove('is-dirty');setButtonLabel(saveButton,'Saving…');try{await save();setDocumentSaveState(task.id,'saved');if(user.role==='MANUAL_LABELER')exportJson(labels(),`task-${task.id}-labels.json`);}finally{setButtonLabel(saveButton,'Save');saveButton.disabled=false;}});
         }
         if(reviewBodies.length){
             const firstHeader=reviewBodies[0].previousElementSibling;if(firstHeader)firstHeader.textContent=`${initial.assignee||'Annotator'} — ${task.task_type}`;
@@ -1710,7 +1931,15 @@
     async function permissionsPage() {
         if (window.AAIRPermissionsPage) return window.AAIRPermissionsPage({request,notice,user});
         const [roles,users]=await Promise.all([request('/roles'),request('/users')]);
-        const roleNames={ADMIN:'Administrator',MANAGER:'Manager'};
+        const roleNames={ADMIN:'Administrator',MANAGER:'Manager',USER:'User',EXPERT:'Expert',REVIEWER:'Reviewer',RESULT_ANALYST:'Result Analyst',AI_LABELER:'AI Labeler',MANUAL_LABELER:'Manual Labeler'};
+        if(!$('main h4')){
+            const root=$('main');
+            root.innerHTML=`<section class="permission-page mx-auto max-w-[1540px] px-6 py-6"><div class="grid grid-cols-12 gap-5"><aside class="col-span-12 lg:col-span-4"><h2 class="mb-3 text-sm font-semibold text-on-surface-variant">Available roles</h2><div id="fallbackRoleList" class="space-y-2"></div></aside><section class="col-span-12 rounded-xl border border-outline-variant bg-white lg:col-span-8"><div class="border-b border-outline-variant px-5 py-4"><h3>Access Matrix</h3></div><table class="w-full"><thead><tr><th>Feature</th><th>Read</th><th>Write</th><th>Execute</th><th>Delete</th></tr></thead><tbody></tbody></table></section></div></section>`;
+            const list=$('#fallbackRoleList');
+            roles.forEach(role=>{const card=document.createElement('button');card.type='button';card.className='group w-full rounded-lg border border-outline-variant bg-white p-4 text-left';card.innerHTML=`<h4 class="font-semibold">${escapeHtml(roleNames[role]||role)}</h4><p class="mt-1 text-xs text-on-surface-variant">${users.filter(item=>String(item.role).toUpperCase()===role).length} Members</p>`;list.append(card);});
+        }
+        const fallbackRoleList=$('#fallbackRoleList');
+        if(!roles.length){if(fallbackRoleList)fallbackRoleList.innerHTML='<p class="rounded-lg border border-dashed border-outline-variant p-4 text-center text-sm text-on-surface-variant">No roles available.</p>';const empty=$('main tbody');if(empty)empty.innerHTML='<tr><td colspan="5" class="p-8 text-center text-sm text-on-surface-variant">No permission data available.</td></tr>';return;}
         const roleFeatures={
             ADMIN:new Set(['DASHBOARD','USER_MANAGEMENT','PERMISSION_MANAGEMENT','AUDIT_LOGS']),
             MANAGER:new Set(['DASHBOARD','USER_MANAGEMENT','PERMISSION_MANAGEMENT','DOCUMENTS','SESSIONS','TASKS','STATISTICS'])
@@ -1746,7 +1975,7 @@
         const coverageNode=$$('main span').find(s=>text(s).includes('%'));
         const saveButton=buttons(/Save Changes/)[0];
         const tbody=$('table tbody');
-        let selectedRole='ADMIN', snapshot=null, changes=new Map();
+        let selectedRole=roles[0]||null, snapshot=null, changes=new Map();
 
         function setCardState() {
             for(const [role,card] of roleCards) {
@@ -1765,7 +1994,8 @@
             const progress=$$('main div').find(d=>d.classList.contains('bg-primary')&&d.classList.contains('h-full')&&d.classList.contains('w-full'));
             if(progress){progress.classList.remove('w-full');progress.style.width=`${data.coverage}%`;}
             if(!tbody)return;
-            tbody.replaceChildren(...data.features.map(feature=>{
+            const featureRows=Array.isArray(data?.features)?data.features:[];
+            tbody.replaceChildren(...(featureRows.length?featureRows.map(feature=>{
                 const tr=document.createElement('tr');tr.className='hover:bg-surface-container-low/30 transition-colors group';
                 const td=document.createElement('td');td.className='px-6 py-4 sticky left-0 bg-white/95 backdrop-blur-sm z-10';
                 td.textContent=feature.label;tr.append(td);
@@ -1774,13 +2004,13 @@
                     const input=document.createElement('input');input.type='checkbox';input.checked=Boolean(feature.actions[actionName]);
                     input.className='w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary/20';
                     input.setAttribute('aria-label',`${actionName} ${feature.key}`);
-                    const editable=user.role==='ADMIN' && roleFeatures[selectedRole].has(feature.key);
+                    const editable=user.role==='ADMIN' && (roleFeatures[selectedRole]||new Set()).has(feature.key);
                     input.disabled=!editable;
                     input.onchange=()=>changes.set(`${feature.key}:${actionName}`,{feature:feature.key,action:actionName,enabled:input.checked});
                     cell.append(input);tr.append(cell);
                 }
                 return tr;
-            }));
+            }):[(()=>{const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;td.className='p-8 text-center text-sm text-on-surface-variant';td.textContent='No permission data available.';tr.append(td);return tr;})()]));
         }
         async function selectRole(role) {
             selectedRole=role; setCardState();
@@ -1795,7 +2025,7 @@
             const data=await request(`/permissions/${selectedRole}`,{method:'PUT',json:{permissions}});
             renderSnapshot(data); notice('Đã lưu thay đổi permission.');
         });
-        await selectRole(selectedRole);
+        if(selectedRole) await selectRole(selectedRole);
     }
     async function dashboardPage() {
         if (user.role === 'TERMINOLOGY' && window.AAIRTerminologyDashboardPage) {
@@ -1804,24 +2034,80 @@
         const data=await request('/dashboard');
         const role=user.role;
         const greeting=$$('header h2').find(h=>/^Good (Morning|Afternoon|Evening)/.test(text(h)));if(greeting){const currentGreeting=window.AAIRGreeting?.getGreeting?.(new Date())||'Good Morning,';greeting.textContent=`${currentGreeting} ${user.username}`;}
-        const rows=await request(role==='ADMIN'?'/audit-logs':role==='TERMINOLOGY'?'/terms':'/tasks');
+        let rows=await request(role==='ADMIN'?'/audit-logs':role==='TERMINOLOGY'?'/terms':'/tasks');
+        if(document.body.classList.contains('review-dashboard-page')){
+            const statuses=rows.map(row=>String(row.status||'PENDING').toUpperCase());
+            const count=(...values)=>statuses.filter(value=>values.includes(value)).length;
+            const values=[count('PENDING','IN_PROGRESS','SUBMITTED'),count('APPROVED'),count('REJECTED'),'—','—'];
+            const labels=['Pending Reviews','Approved','Revision Requests','Review Accuracy','Avg. Review Time'];
+            const icons=['pending_actions','task_alt','assignment_return','insights','timer'];
+            $$('.review-dashboard-kpi').forEach((card,index)=>{
+                card.replaceChildren();
+                const icon=document.createElement('span');icon.className='material-symbols-outlined';icon.textContent=icons[index]||'insights';
+                const label=document.createElement('p');label.className='font-label-md text-on-surface-variant mb-1';label.textContent=labels[index]||'Metric';
+                const value=document.createElement('h3');value.className='font-headline-lg text-headline-lg font-bold text-on-surface';value.textContent=String(values[index]??'—');
+                const note=document.createElement('small');note.className='text-[12px] text-on-surface-variant';note.textContent=index>=3?'No API data available':'From API data';
+                card.append(icon,label,value,note);
+            });
+            const progress=$$('main h3').find(node=>text(node)==='Review Progress');
+            if(progress){const card=progress.closest('.bg-white');if(card){card.replaceChildren(progress);const message=document.createElement('p');message.className='p-6 text-sm text-on-surface-variant';message.textContent=rows.length?'Progress details are available in the review queue.':'No review progress data available.';card.append(message);}}
+            for(const title of ['Top Reviewers','Recent Activity']){
+                const heading=$$('main h3').find(node=>text(node)===title);const card=heading?.closest('.bg-white');
+                if(card){card.replaceChildren(heading);const message=document.createElement('p');message.className='p-6 text-sm text-on-surface-variant';message.textContent=title==='Recent Activity'&&rows.length?'Recent activity is available in the review queue.':'No data available.';card.append(message);}
+            }
+            return;
+        }
         if(document.body.classList.contains('manual-labeling-dashboard')){
+            const taskPriority={PENDING:0,IN_PROGRESS:1,REJECTED:2,SUBMITTED:3,APPROVED:4};
+            rows=[...rows].sort((left,right)=>{const a=String(left.status||'PENDING').toUpperCase(),b=String(right.status||'PENDING').toUpperCase();const priority=(taskPriority[a]??5)-(taskPriority[b]??5);if(priority)return priority;const leftDate=new Date(left.updated_at||left.created_at||left.updatedAt||0).getTime(),rightDate=new Date(right.updated_at||right.created_at||right.updatedAt||0).getTime();return rightDate-leftDate;});
             const total=rows.length;
-            const pending=rows.filter(row=>['PENDING','IN_PROGRESS'].includes(row.status)).length;
-            const completed=rows.filter(row=>row.status==='APPROVED').length;
+            const pending=rows.filter(row=>['PENDING','IN_PROGRESS','REJECTED'].includes(String(row.status||'').toUpperCase())).length;
+            const submitted=rows.filter(row=>String(row.status||'').toUpperCase()==='SUBMITTED').length;
+            const completed=rows.filter(row=>String(row.status||'').toUpperCase()==='APPROVED').length;
+            const resumableTask=rows.find(row=>['IN_PROGRESS','REJECTED'].includes(String(row.status||'').toUpperCase()));
             const assignedSessions=new Set(rows.map(row=>row.session_id).filter(value=>value!=null)).size;
             const percent=total?Math.round(completed/total*100):0;
             $('#assignedSessionsValue').textContent=String(assignedSessions);
             $('#pendingTasksValue').textContent=String(pending);
+            $('#submittedTasksValue').textContent=String(submitted);
             $('#completedTasksValue').textContent=String(completed);
             $('#overallProgressValue').textContent=`${percent}%`;
+            const submittedText=`${completed} approved · ${submitted} submitted`;
+            $('#overallProgressSub').textContent=submittedText;
             $('#overallProgressBar')?.style.setProperty('width',`${percent}%`);
+            const dashboardState=$('#manualDashboardState');
+            if(dashboardState){
+                dashboardState.hidden=false;
+                dashboardState.textContent=pending===0&&submitted>0
+                    ? `All assigned work has been submitted. ${submitted} task${submitted===1?' is':'s are'} waiting for reviewer approval.`
+                    : pending>0 ? `${pending} task${pending===1?'':'s'} still need${pending===1?'s':''} your attention.`
+                    : 'No tasks are currently assigned to you.';
+            }
             const taskStatusLabels={PENDING:'Pending',IN_PROGRESS:'In progress',SUBMITTED:'Submitted',APPROVED:'Approved',REJECTED:'Rejected'};
             const taskStatusClasses={PENDING:'pending',IN_PROGRESS:'progress',SUBMITTED:'submitted',APPROVED:'approved',REJECTED:'rejected'};
             const relativeTaskTime=value=>{const parsed=new Date(value||'');if(Number.isNaN(parsed.getTime()))return '—';const seconds=Math.max(0,Math.round((Date.now()-parsed.getTime())/1000));if(seconds<60)return 'Just now';if(seconds<3600)return `${Math.floor(seconds/60)} min ago`;if(seconds<86400)return `${Math.floor(seconds/3600)} hr ago`;return `${Math.floor(seconds/86400)} days ago`;};
-            const tasksBody=$('#myTasksBody');if(tasksBody){tasksBody.innerHTML=rows.slice(0,5).map(row=>{const status=String(row.status||'PENDING').toUpperCase();const updated=row.updated_at||row.created_at||row.updatedAt;return `<tr class="my-task-row" tabindex="0" data-task-id="${row.id||''}"><td>${row.document_title||'Untitled document'}</td><td>${row.session_name||'Unassigned session'}</td><td><span class="my-task-status my-task-status--${taskStatusClasses[status]||'pending'}">${taskStatusLabels[status]||'Pending'}</span></td><td title="${updated||''}">${relativeTaskTime(updated)}</td><td><a href="Task.html?id=${row.id||''}" class="text-primary font-semibold hover:underline">Continue</a></td></tr>`;}).join('')||'<tr><td colspan="5">No tasks assigned.</td></tr>';tasksBody.querySelectorAll('.my-task-row').forEach(row=>{const open=()=>go(`Task.html?id=${row.dataset.taskId}`);row.addEventListener('click',event=>{if(event.target.closest('a'))return;open();});row.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();open();}});});}
-            bind($('#continueLastSession'),()=>go(rows[0]?`Task.html?id=${rows[0].id}`:'ViewAll.html'));
+            const formatDue=value=>{const parsed=new Date(value||'');return Number.isNaN(parsed.getTime())?'—':new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric'}).format(parsed);};
+            const tasksBody=$('#myTasksBody');if(tasksBody){tasksBody.innerHTML=rows.slice(0,5).map(row=>{const status=String(row.status||'PENDING').toUpperCase();const updated=row.updated_at||row.created_at||row.updatedAt;const due=row.due_at||row.dueAt;const action=status==='APPROVED'||status==='SUBMITTED'?'View':status==='PENDING'?'Start':'Continue';return `<tr class="my-task-row" tabindex="0" data-task-id="${escapeHtml(row.id||'')}"><td>${escapeHtml(row.document_title||'Untitled document')}</td><td>${escapeHtml(row.session_name||'Unassigned session')}</td><td><span class="my-task-status my-task-status--${escapeHtml(taskStatusClasses[status]||'pending')}">${escapeHtml(taskStatusLabels[status]||'Pending')}</span></td><td>${escapeHtml(formatDue(due))}</td><td title="${escapeHtml(updated||'')}">${escapeHtml(relativeTaskTime(updated))}</td><td><a href="Task.html?id=${encodeURIComponent(row.id||'')}" class="text-primary font-semibold hover:underline">${escapeHtml(action)}</a></td></tr>`;}).join('')||'<tr><td colspan="6">No tasks assigned.</td></tr>';tasksBody.querySelectorAll('.my-task-row').forEach(row=>{const open=()=>go(`Task.html?id=${row.dataset.taskId}`);row.addEventListener('click',event=>{if(event.target.closest('a'))return;open();});row.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();open();}});});}
+            tasksBody?.querySelectorAll('.my-task-row').forEach(rowElement=>{const item=rows.find(row=>String(row.id)===rowElement.dataset.taskId);if(!item)return;const status=String(item.status||'PENDING').toUpperCase();const actionLink=$('a',rowElement);const documentCell=$('td',rowElement);const updated=item.updated_at||item.created_at||item.updatedAt;if(documentCell){documentCell.classList.add('my-task-document-cell');documentCell.title=item.document_title||'Untitled document';}if(actionLink){const label=status==='APPROVED'||status==='SUBMITTED'?'View':status==='PENDING'?'Start':'Continue';actionLink.textContent=label;actionLink.classList.add('my-task-action');if(label==='View')actionLink.classList.add('my-task-action--view');}const updatedCell=$$('td',rowElement)[4];if(updatedCell){const parsed=new Date(updated);updatedCell.title=Number.isNaN(parsed.getTime())?'Exact time unavailable':new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(parsed);}});
+            $$('[data-dashboard-link]').forEach(card=>{const open=()=>{location.href=card.dataset.dashboardLink;};card.addEventListener('click',open);card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();open();}});});
+            const continueButton=$('#continueLastSession');
+            if(continueButton){
+                continueButton.disabled=!resumableTask;
+                continueButton.setAttribute('aria-disabled',String(!resumableTask));
+                continueButton.title=resumableTask?'Tiếp tục tác vụ đang làm dở':'Chưa có tác vụ nào đang làm dở';
+                if(resumableTask)bind(continueButton,()=>go(`Task.html?id=${resumableTask.id}`));
+            }
             bind($('#refreshDashboard'),()=>location.reload());
+            return;
+        }
+        if(role==='USER'&&document.body.classList.contains('basic-user-dashboard')){
+            const statuses=rows.map(row=>String(row.status||'PENDING').toUpperCase());
+            const counts={total:rows.length,pending:statuses.filter(value=>['PENDING','IN_PROGRESS','REJECTED'].includes(value)).length,submitted:statuses.filter(value=>value==='SUBMITTED').length,approved:statuses.filter(value=>value==='APPROVED').length};
+            const set=(selector,value)=>{const node=$(selector);if(node)node.textContent=String(value);};
+            set('#userTotalTasks',counts.total);set('#userPendingTasks',counts.pending);set('#userSubmittedTasks',counts.submitted);set('#userApprovedTasks',counts.approved);
+            const label={PENDING:'Pending',IN_PROGRESS:'In progress',SUBMITTED:'Submitted',APPROVED:'Approved',REJECTED:'Returned'};
+            const body=$('#userTasksBody');
+            if(body)body.innerHTML=rows.slice(0,20).map(row=>{const state=String(row.status||'PENDING').toUpperCase();const due=row.due_at||row.dueAt;const date=due?new Date(due):null;const formatted=date&&!Number.isNaN(date.getTime())?new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric'}).format(date):'—';return `<tr><td>${escapeHtml(row.document_title||'Untitled document')}</td><td>${escapeHtml(row.session_name||'Unassigned session')}</td><td><span class="basic-user-status basic-user-status--${escapeHtml(state.toLowerCase())}">${escapeHtml(label[state]||state)}</span></td><td>${escapeHtml(formatted)}</td></tr>`;}).join('')||'<tr><td colspan="4">No tasks are assigned to you.</td></tr>';
             return;
         }
         // All dashboard designs have their KPI cards in the first grid.
@@ -1860,7 +2146,7 @@
                 id:row.id??index,
                 time:row.created_at||row.timestamp||row.logged_at||row.updated_at,
                 user:row.username||row.user||'Unknown',
-                role:({ADMIN:'Admin',MANAGER:'Manager',REVIEWER:'Reviewer',LABELER:'Labeler',MANUAL_LABELER:'Labeler',ANALYST:'Analyst',RESULT_ANALYST:'Analyst'}[row.role||row.user_role]||row.role||'User'),
+                role:({ADMIN:'Administrator',MANAGER:'Manager',USER:'User',AI_LABELER:'AI Labeler',MANUAL_LABELER:'Manual Labeler',REVIEWER:'Reviewer',LABELER:'Labeler',ANALYST:'Result Analyst',RESULT_ANALYST:'Result Analyst'}[row.role||row.user_role]||row.role||'User'),
                 resource:row.resource_type||row.resource||'SYSTEM',
                 resourceId:row.resource_id??row.id??'—',
                 action:String(row.action||'UNKNOWN').toUpperCase(),
@@ -1884,7 +2170,7 @@
                 });
                                 const tableEl=$('table',document);const body=tableEl?.querySelector('tbody');const head=tableEl?.querySelector('thead tr');if(!body||!head)return;
                 tableEl.classList.add('admin-audit-table');head.innerHTML='<th>Time</th><th>User</th><th>Resource</th><th>Action</th><th>Details</th>';body.replaceChildren();
-                filtered.slice(0,8).forEach(row=>{const tr=document.createElement('tr');tr.className='admin-audit-row';tr.tabIndex=0;const timeCell=document.createElement('td');timeCell.className='admin-audit-time';const time=document.createElement('time');time.dateTime=row.time||'';time.title=fullTime(row.time);time.textContent=relativeTime(row.time);timeCell.append(time);tr.append(timeCell);const userCell=document.createElement('td');userCell.innerHTML=`<span class="admin-audit-user"><i class="admin-audit-avatar">${row.user.slice(0,2).toUpperCase()}</i><span><strong>${row.user}</strong><span class="admin-role-badge">${row.role}</span></span></span>`;tr.append(userCell);const resourceCell=document.createElement('td');resourceCell.innerHTML=`<a class="admin-resource-link" href="#${row.resource}-${row.resourceId}">${row.resource} #${row.resourceId}</a>`;tr.append(resourceCell);const actionCell=document.createElement('td');actionCell.innerHTML=`<span class="admin-action-badge admin-action--${actionTone(row.action)}">${row.action.replaceAll('_',' ')}</span>`;tr.append(actionCell);const detailCell=document.createElement('td');detailCell.textContent=row.details;tr.append(detailCell);body.append(tr);});
+                filtered.slice(0,8).forEach(row=>{const tr=document.createElement('tr');tr.className='admin-audit-row';tr.tabIndex=0;const timeCell=document.createElement('td');timeCell.className='admin-audit-time';const time=document.createElement('time');time.dateTime=row.time||'';time.title=fullTime(row.time);time.textContent=relativeTime(row.time);timeCell.append(time);tr.append(timeCell);const userCell=document.createElement('td');userCell.innerHTML=`<span class="admin-audit-user"><i class="admin-audit-avatar">${escapeHtml(row.user.slice(0,2).toUpperCase())}</i><span><strong>${escapeHtml(row.user)}</strong><span class="admin-role-badge">${escapeHtml(row.role)}</span></span></span>`;tr.append(userCell);const resourceCell=document.createElement('td');resourceCell.innerHTML=`<a class="admin-resource-link" href="#${encodeURIComponent(`${row.resource}-${row.resourceId}`)}">${escapeHtml(row.resource)} #${escapeHtml(row.resourceId)}</a>`;tr.append(resourceCell);const actionCell=document.createElement('td');actionCell.innerHTML=`<span class="admin-action-badge admin-action--${escapeHtml(actionTone(row.action))}">${escapeHtml(row.action.replaceAll('_',' '))}</span>`;tr.append(actionCell);const detailCell=document.createElement('td');detailCell.textContent=row.details;tr.append(detailCell);body.append(tr);});
                 const alertCount=auditRows.filter(row=>['LOGIN_FAILED','LOCK'].includes(row.action)).length;const count=securityCard?.querySelector('[data-security-count]');if(count)count.textContent=String(alertCount);if(securityCard){securityCard.classList.toggle('admin-security-card--alert',alertCount>0);const state=securityCard.querySelector('.admin-security-state');const trend=securityCard.querySelector('.admin-kpi-trend');if(state){state.textContent=alertCount?'Action required':'All clear';const securityIcon=securityCard.querySelector('.admin-security-svg');if(securityIcon)securityIcon.innerHTML=alertCount?'<path d="M12 3 5 6v5c0 4.55 2.84 8.74 7 10 4.16-1.26 7-5.45 7-10V6l-7-3Z"></path><path d="M12 8v4M12 16h.01"></path>':'<path d="M12 3 5 6v5c0 4.55 2.84 8.74 7 10 4.16-1.26 7-5.45 7-10V6l-7-3Z"></path><path d="m9 12 2 2 4-4"></path>';}if(trend){trend.textContent=alertCount?`${alertCount} security event${alertCount===1?'':'s'} in 24 hours`:'All clear';}}
             };
             const userSelect=$('#adminAuditUser'),actionSelect=$('#adminAuditAction');[...new Set(auditRows.map(row=>row.user))].forEach(userName=>userSelect?.append(new Option(userName,userName)));[...new Set(auditRows.map(row=>row.action))].forEach(action=>actionSelect?.append(new Option(action,action)));['adminAuditSearch','adminAuditUser','adminAuditAction','adminTimeFilter'].forEach(id=>{const element=$(`#${id}`);element?.addEventListener(element.tagName==='SELECT'?'change':'input',renderAdminAudit);});
@@ -1905,21 +2191,30 @@
             const managerFullDate=value=>{const date=managerDate(value);return date?new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(date):'Timestamp unavailable';};
             const managerInitials=name=>String(name||'User').slice(0,2).toUpperCase();
             const managerPeriodLimit=value=>({today:1,'7d':7,'30d':30,all:Infinity}[value]??30);
+            const renderManagerActivity=()=>{
+                const days=[...Array(7)].map((_,index)=>{const date=new Date();date.setHours(0,0,0,0);date.setDate(date.getDate()-(6-index));return date;});
+                const counts=days.map(day=>rows.filter(row=>{const created=managerDate(row.created_at||row.createdAt);if(!created)return false;const value=new Date(created);value.setHours(0,0,0,0);return value.getTime()===day.getTime();}).length);
+                const max=Math.max(1,...counts);
+                const activity=document.querySelectorAll('.manager-day');
+                activity.forEach((day,index)=>{const value=counts[index]||0;const label=day.querySelector('b');const bar=day.querySelector('i');const date=days[index];const dayName=new Intl.DateTimeFormat('en-US',{weekday:'short'}).format(date);if(label)label.textContent=String(value);if(bar)bar.style.height=(value?Math.max(12,Math.round(value/max*100)):0)+'%';const caption=day.querySelector('small');if(caption)caption.textContent=dayName;});
+                const range=document.querySelector('#managerActivityRange');if(range)range.textContent='Last 7 days';
+            };
             const renderManagerDashboard=()=>{['Total Tasks','Pending Review','Approved','In Progress'].forEach((label,index)=>{const node=document.querySelectorAll('.manager-kpi-label')[index];if(node)node.textContent=label;});
                 const limit=managerPeriodLimit(managerFilter?.value||'30d');
                 const visible=rows.filter(row=>{const date=managerDate(row.created_at||row.createdAt||row.updated_at);return !date||limit===Infinity||(Date.now()-date.getTime())/86400000<=limit;});
-                const counts={total:visible.length,pending:visible.filter(row=>String(row.status||'').toUpperCase()==='PENDING').length,progress:visible.filter(row=>String(row.status||'').toUpperCase()==='IN_PROGRESS').length,submitted:visible.filter(row=>String(row.status||'').toUpperCase()==='SUBMITTED').length,approved:visible.filter(row=>String(row.status||'').toUpperCase()==='APPROVED').length};
+                const counts={total:visible.length,pending:visible.filter(row=>String(row.status||'').toUpperCase()==='SUBMITTED').length,progress:visible.filter(row=>String(row.status||'').toUpperCase()==='IN_PROGRESS').length,approved:visible.filter(row=>String(row.status||'').toUpperCase()==='APPROVED').length};
                 Object.entries({total:counts.total,pending:counts.pending,progress:counts.progress,approved:counts.approved}).forEach(([key,value])=>{const node=document.querySelector('[data-manager-stat="'+key+'"]');if(node)node.textContent=String(value);});
                 const approvedSub=document.querySelector('.manager-kpi-card:nth-child(3) .manager-kpi-sub strong');if(approvedSub)approvedSub.textContent=(counts.total?Math.round(counts.approved/counts.total*100):0)+'% of total tasks';
                 if(managerTable){
                     const body=managerTable.querySelector('tbody');
-                    if(body)body.innerHTML=visible.slice(0,10).map(row=>{const status=String(row.status||'PENDING');const assignee=row.assignee||row.assigned_to||'Unassigned';const role=String(assignee).toLowerCase().includes('ai')?'AI Labeler':'Manual Labeler';const id=row.id??'';return '<tr tabindex="0" data-task-id="'+id+'"><td><span class="manager-document" title="'+(row.document_title||'Untitled document')+'">'+(row.document_title||'Untitled document')+'</span></td><td><span class="manager-assignee"><i class="manager-avatar">'+managerInitials(assignee)+'</i><span><span class="manager-user-name">'+assignee+'</span><span class="manager-role">'+role+'</span></span></span></td><td><span class="manager-status manager-status--'+(statusClasses[status]||'pending')+'">'+(statusLabels[status]||'Pending')+'</span></td><td><time class="manager-created" title="'+managerFullDate(row.created_at||row.createdAt||row.updated_at)+'">'+managerRelative(row.created_at||row.createdAt||row.updated_at)+'</time></td></tr>';}).join('')||'<tr><td colspan="4" style="text-align:center;color:#64748b">No tasks in this period.</td></tr>';
+                    if(body)body.innerHTML=visible.slice(0,10).map(row=>{const status=String(row.status||'PENDING').toUpperCase();const assignee=row.assignee||row.assigned_to||'Unassigned';const role=userRoleLabel(row.assignee_role||row.assigneeRole||'USER');const id=row.id??row.task_id??'';return '<tr tabindex="0" data-task-id="'+escapeHtml(id)+'"><td><span class="manager-document" title="'+escapeHtml(row.document_title||'Untitled document')+'">'+escapeHtml(row.document_title||'Untitled document')+'</span></td><td><span class="manager-assignee"><i class="manager-avatar">'+escapeHtml(managerInitials(assignee))+'</i><span><span class="manager-user-name">'+escapeHtml(assignee)+'</span><span class="manager-role">'+escapeHtml(role)+'</span></span></span></td><td><span class="manager-status manager-status--'+escapeHtml(statusClasses[status]||'pending')+'">'+escapeHtml(statusLabels[status]||'Pending')+'</span></td><td><time class="manager-created" title="'+escapeHtml(managerFullDate(row.created_at||row.createdAt||row.updated_at))+'">'+escapeHtml(managerRelative(row.created_at||row.createdAt||row.updated_at))+'</time></td></tr>';}).join('')||'<tr><td colspan="4" style="text-align:center;color:#64748b">No tasks in this period.</td></tr>';
                     body.querySelectorAll('tr[data-task-id]').forEach(row=>{row.addEventListener('click',()=>go('Task.html?id='+encodeURIComponent(row.dataset.taskId)));row.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();row.click();}});});
                 }
-                const distribution=[counts.pending,counts.progress,counts.submitted,counts.approved];document.querySelectorAll('.manager-role-line').forEach((line,index)=>{const value=distribution[index]||0;const label=line.querySelector('b');const bar=line.querySelector('i');if(label)label.textContent=String(value);if(bar)bar.style.width=(counts.total?Math.round(value/counts.total*100):0)+'%';});
+                const distribution=[visible.filter(row=>String(row.status||'').toUpperCase()==='PENDING').length,counts.progress,visible.filter(row=>String(row.status||'').toUpperCase()==='SUBMITTED').length,counts.approved];document.querySelectorAll('.manager-role-line').forEach((line,index)=>{const value=distribution[index]||0;const label=line.querySelector('b');const bar=line.querySelector('i');if(label)label.textContent=String(value);if(bar)bar.style.width=(counts.total?Math.round(value/counts.total*100):0)+'%';});
+                renderManagerActivity();
             };
             managerFilter?.addEventListener('change',renderManagerDashboard);
-            bind($('#managerRefresh'),()=>{renderManagerDashboard();});
+            bind($('#managerRefresh'),async()=>{try{rows=await request('/tasks');renderManagerDashboard();notice('Dashboard refreshed.');}catch(error){notice(error.message,true);}});
             renderManagerDashboard();
             bindText(/View Detailed Logs/,()=>go('Session.html'));
         }else if(role==='AI_LABELER'){
@@ -1929,9 +2224,9 @@
             const kpiGrid=$('main .grid');
             if(kpiGrid){kpiGrid.className='ai-kpi-grid';const daily=rows.length,pending=rows.filter(row=>['PENDING','IN_PROGRESS'].includes(String(row.status||'').toUpperCase())).length,approved=rows.filter(row=>String(row.status||'').toUpperCase()==='APPROVED').length,urgent=rows.filter(row=>{const due=new Date(row.due_at||'');return !Number.isNaN(due.getTime())&&due<new Date()&&!['APPROVED','SUBMITTED'].includes(String(row.status||'').toUpperCase());}).length;const cards=[['assignment','Daily Tasks',daily,'Assigned today'],['task_alt','Pending Review',pending,'All pending items'],['check_circle','Approved',approved,'Approved tasks'],['priority_high','Urgent Tasks',urgent,urgent?'Needs attention':'Nothing urgent']];kpiGrid.replaceChildren(...cards.map(([icon,label,value,sub])=>{const card=document.createElement('article');card.className='ai-kpi-card';card.innerHTML=`<div class="ai-kpi-card__icon"><span class="material-symbols-outlined">${icon}</span></div><p class="ai-kpi-card__label">${label}</p><strong class="ai-kpi-card__value">${value}</strong><p class="ai-kpi-card__sub">${sub}</p>`;return card;}));}
             const sessions=$$('h2,h3').find(h=>text(h)==='Current AI Labeling Sessions');
-            if(sessions){const section=sessions.parentElement.parentElement;const cards=$('.grid',section);if(cards){cards.className='ai-session-list';cards.replaceChildren(...rows.slice(0,4).map(row=>{const card=document.createElement('article');const status=String(row.status||'PENDING').toUpperCase();const completed=Number(row.completed_sections||row.labeled_sections||0),total=Number(row.total_sections||row.sections_total||0),percent=total?Math.round(completed/total*100):0;const stage=row.stage||row.task_stage||(row.assistance_mode==='AI_ASSISTED'?'AI-assisted':'AI labeling');card.className='ai-session-card';card.innerHTML=`<div class="ai-session-card__top"><h3>${row.document_title||'Untitled document'}</h3><span class="ai-badge ai-badge--${statusClasses[status]||'pending'}">${statusLabels[status]||'Pending Review'}</span></div><div class="ai-session-card__meta"><div><span>Session</span><strong>${row.session_name||'—'}</strong></div><div><span>Status</span><strong><span class="ai-badge ai-badge--${statusClasses[status]||'pending'}">${statusLabels[status]||'Pending Review'}</span></strong></div><div><span>Stage</span><strong>${stage}</strong></div></div><div class="ai-session-card__progress"><div class="ai-session-card__progress-head"><span>Progress</span><span>${completed}/${total||0} sections · ${percent}%</span></div><div class="ai-session-card__bar"><span style="width:${percent}%"></span></div></div><a class="ai-session-card__action" href="Task.html?id=${row.id}">Continue</a>`;return card;}));}}
+            if(sessions){const section=sessions.parentElement.parentElement;const cards=$('.grid',section);if(cards){cards.className='ai-session-list';cards.replaceChildren(...rows.slice(0,4).map(row=>{const card=document.createElement('article');const status=String(row.status||'PENDING').toUpperCase();const completed=Number(row.completed_sections||row.labeled_sections||0),total=Number(row.total_sections||row.sections_total||0),percent=total?Math.round(completed/total*100):0;const stage=row.stage||row.task_stage||(row.assistance_mode==='AI_ASSISTED'?'AI-assisted':'AI labeling');card.className='ai-session-card';card.innerHTML=`<div class="ai-session-card__top"><h3>${escapeHtml(row.document_title||'Untitled document')}</h3><span class="ai-badge ai-badge--${escapeHtml(statusClasses[status]||'pending')}">${escapeHtml(statusLabels[status]||'Pending Review')}</span></div><div class="ai-session-card__meta"><div><span>Session</span><strong>${escapeHtml(row.session_name||'—')}</strong></div><div><span>Status</span><strong><span class="ai-badge ai-badge--${escapeHtml(statusClasses[status]||'pending')}">${escapeHtml(statusLabels[status]||'Pending')}</span></strong></div><div><span>Stage</span><strong>${escapeHtml(stage)}</strong></div></div><div class="ai-session-card__progress"><div class="ai-session-card__progress-head"><span>Progress</span><span>${completed}/${total||0} sections · ${percent}%</span></div><div class="ai-session-card__bar"><span style="width:${percent}%"></span></div></div><a class="ai-session-card__action" href="Task.html?id=${encodeURIComponent(row.id)}">Continue</a>`;return card;}));}}
             const recentHeading=$$('h3,h4').find(h=>text(h)==='Recent Activity');
-            if(recentHeading){replacePanel(recentHeading,[]);const container=recentHeading.parentElement.parentElement;const content=container.lastElementChild;if(content){content.className='ai-recent-list';content.innerHTML=rows.slice(0,5).map(row=>{const status=String(row.status||'PENDING').toUpperCase();return `<div class="ai-recent-item"><span class="ai-recent-document">${row.document_title||'Untitled document'} ${status.toLowerCase()}</span><span class="ai-badge ai-badge--${statusClasses[status]||'pending'}">${statusLabels[status]||'Pending Review'}</span><time>${relative(row.updated_at||row.created_at)}</time></div>`;}).join('')||'<p class="ai-empty">No recent activity.</p>';}}
+            if(recentHeading){replacePanel(recentHeading,[]);const container=recentHeading.parentElement.parentElement;const content=container.lastElementChild;if(content){content.className='ai-recent-list';content.innerHTML=rows.slice(0,5).map(row=>{const status=String(row.status||'PENDING').toUpperCase();return `<div class="ai-recent-item"><span class="ai-recent-document">${escapeHtml(row.document_title||'Untitled document')} ${escapeHtml(status.toLowerCase())}</span><span class="ai-badge ai-badge--${escapeHtml(statusClasses[status]||'pending')}">${escapeHtml(statusLabels[status]||'Pending Review')}</span><time>${escapeHtml(relative(row.updated_at||row.created_at))}</time></div>`;}).join('')||'<p class="ai-empty">No recent activity.</p>';}}
         }else{
             $$('table').forEach(t=>table(t,[['Document','document_title'],['Assignee','assignee'],['Status','status'],['Action','$actions']],rows.slice(0,10),r=>[action('Open',()=>go(`Task.html?id=${r.id}`))]));
             bindText(/View All|Full Comparison|Full Audit/,()=>go('ViewAll.html'));
@@ -1972,10 +2267,6 @@
         const statisticsRoot=$('main');
         if(statisticsRoot){
             statisticsRoot.replaceChildren();
-            const loading=document.createElement('p');
-            loading.className='workspace-api-loading';
-            loading.textContent='Loading data…';
-            statisticsRoot.append(loading);
         }
         const [data,tasks,assignees,sessions]=await Promise.all([request('/statistics'),request('/tasks'),request('/assignees'),request('/sessions')]);
         const main=$('main');
@@ -2000,8 +2291,8 @@
             const taskIds=new Set(sections.map(row=>row.task_id));
             const people=(data.userProductivity||[]).filter(row=>!sessionId||sections.some(section=>section.username===row.username));
             const reviewed=sections.filter(row=>row.section_status==='REVIEWED').length,totalSections=sections.filter(row=>row.field_key).length;
-            $('#statsKpis').innerHTML=[['Total Tasks',taskIds.size||data.statuses.reduce((n,row)=>n+Number(row.total),0),'assignment','All tracked tasks'],['Approved',statusTotals.APPROVED||0,'task_alt','Tasks approved'],['Sections Completed',`${reviewed}/${totalSections}`,'view_week','Reviewed sections'],['Overdue Tasks',(data.overdueTasks||[]).length,'warning','Needs attention']].map(([label,value,icon,sub])=>`<article class="${label==='Overdue Tasks'&&Number(value)>0?'kpi-alert':''}"><span class="stats-icon">${statsIcon(icon,22)}</span><small>${label}</small><strong>${value}</strong><em>${sub}</em></article>`).join('');
-            $('#productivityBody').innerHTML=people.length?people.map(row=>{const total=Number(row.saved_sections||0)+Number(row.submitted_sections||0)+Number(row.reviewed_sections||0),done=Number(row.reviewed_sections||0),percent=total?Math.round(done/total*100):0;return `<tr><td><b class="stats-person-name">${row.username||'Unassigned'}</b></td><td>${row.completed_tasks}/${row.assigned_tasks}</td><td>${done}/${total}</td><td><div class="progress-cell"><span style="width:${percent}%"></span></div><small>${percent}%</small></td><td><span class="${Number(row.overdue_tasks)?'status-overdue':'status-ok'}">${row.overdue_tasks||0}</span></td></tr>`;}).join(''):'<tr><td colspan="5">No matching data.</td></tr>';
+        $('#statsKpis').innerHTML=[['Total Tasks',taskIds.size||data.statuses.reduce((n,row)=>n+Number(row.total),0),'assignment','All tracked tasks'],['Approved',statusTotals.APPROVED||0,'task_alt','Tasks approved'],['Sections Completed',`${reviewed}/${totalSections}`,'view_week','Reviewed sections'],['Overdue Tasks',(data.overdueTasks||[]).length,'warning','Needs attention']].map(([label,value,icon,sub])=>`<article class="${label==='Overdue Tasks'&&Number(value)>0?'kpi-alert':''}"><span class="stats-icon">${statsIcon(icon,22)}</span><small>${escapeHtml(label)}</small><strong>${escapeHtml(value)}</strong><em>${escapeHtml(sub)}</em></article>`).join('');
+        $('#productivityBody').innerHTML=people.length?people.map(row=>{const total=Number(row.saved_sections||0)+Number(row.submitted_sections||0)+Number(row.reviewed_sections||0),done=Number(row.reviewed_sections||0),percent=total?Math.round(done/total*100):0;return `<tr><td><b class="stats-person-name">${escapeHtml(row.username||'Unassigned')}</b></td><td>${escapeHtml(`${row.completed_tasks}/${row.assigned_tasks}`)}</td><td>${escapeHtml(`${done}/${total}`)}</td><td><div class="progress-cell"><span style="width:${percent}%"></span></div><small>${escapeHtml(percent)}%</small></td><td><span class="${Number(row.overdue_tasks)?'status-overdue':'status-ok'}">${escapeHtml(row.overdue_tasks||0)}</span></td></tr>`;}).join(''):'<tr><td colspan="5">No matching data.</td></tr>';
         };
         const comparisons=data.timeComparison||[];const maxTime=Math.max(1,...comparisons.map(row=>Number(row.average_seconds)||0));
         const modeLabel=mode=>mode==='AI_ASSISTED'?'AI-assisted':'Manual';
@@ -2010,23 +2301,18 @@
         const statusClass={PENDING:'pending',IN_PROGRESS:'progress',SUBMITTED:'submitted',APPROVED:'approved',REJECTED:'rejected'};
         const comparisonModes=['NONE','AI_ASSISTED'];const comparisonByMode=Object.fromEntries(comparisons.map(row=>[row.assistance_mode,row]));
         const availableComparisonModes=comparisonModes.filter(mode=>comparisonByMode[mode]);
-        $('#timeComparison').innerHTML=availableComparisonModes.length?availableComparisonModes.map(mode=>{const row=comparisonByMode[mode];const seconds=Number(row.average_seconds||0);return `<div><header><b>${modeLabel(mode)}</b><span>${Math.round(seconds/60)} min avg · n=${Number(row.sample_size||0)}</span></header><span class="time-bar"><i style="width:${seconds/maxTime*100}%"></i></span><small>Median ${Math.round(Number(row.median_seconds||0)/60)} min</small></div>`;}).join(''):'<p class="manager-empty">No data available.</p>';
-        const overdue=data.overdueTasks||[];$('#overdueCount').textContent=overdue.length?`${overdue.length} overdue`:'None overdue';$('#overdueBody').innerHTML=overdue.length?overdue.map(row=>`<tr><td><span class="stats-document-name">${row.document_title||'Untitled document'}</span></td><td><span class="stats-person-name">${row.username||'—'}</span></td><td><span class="mode-badge">${modeLabel(row.assistance_mode)}</span></td><td><span class="task-status task-status--${statusClass[row.status]||'pending'}">${statusLabel[row.status]||'Pending'}</span></td><td class="due-date">${formatStatsDate(row.due_at)}</td></tr>`).join(''):'<tr><td colspan="5"><span class="status-ok">No overdue tasks.</span></td></tr>';
+        $('#timeComparison').innerHTML=availableComparisonModes.length?availableComparisonModes.map(mode=>{const row=comparisonByMode[mode];const seconds=Number(row.average_seconds||0);return `<div><header><b>${escapeHtml(modeLabel(mode))}</b><span>${escapeHtml(`${Math.round(seconds/60)} min avg · n=${Number(row.sample_size||0)}`)}</span></header><span class="time-bar"><i style="width:${seconds/maxTime*100}%"></i></span><small>${escapeHtml(`Median ${Math.round(Number(row.median_seconds||0)/60)} min`)}</small></div>`;}).join(''):'<p class="manager-empty">No data available.</p>';
+        const overdue=data.overdueTasks||[];$('#overdueCount').textContent=overdue.length?`${overdue.length} overdue`:'None overdue';$('#overdueBody').innerHTML=overdue.length?overdue.map(row=>`<tr><td><span class="stats-document-name">${escapeHtml(row.document_title||'Untitled document')}</span></td><td><span class="stats-person-name">${escapeHtml(row.username||'—')}</span></td><td><span class="mode-badge">${escapeHtml(modeLabel(row.assistance_mode))}</span></td><td><span class="task-status task-status--${escapeHtml(statusClass[row.status]||'pending')}">${escapeHtml(statusLabel[row.status]||'Pending')}</span></td><td class="due-date">${escapeHtml(formatStatsDate(row.due_at))}</td></tr>`).join(''):'<tr><td colspan="5"><span class="status-ok">No overdue tasks.</span></td></tr>';
         sessionSelect.addEventListener('change',render);modeSelect.addEventListener('change',render);render();
         bind($('#exportStatistics'),()=>exportJson(data,'aair-manager-statistics.json'));
         $('#reviewCaseForm').addEventListener('submit',event=>{event.preventDefault();run(event.submitter,async()=>{const leftId=Number($('#reviewLeft').value),rightId=Number($('#reviewRight').value),assignedTo=Number($('#reviewerSelect').value),due=$('#reviewDue').value;if(!leftId||!rightId||!assignedTo||!due)throw new Error('Select both sources, a reviewer, and a deadline.');await request('/review-cases',{method:'POST',json:{leftTaskId:leftId,rightTaskId:rightId,assignedTo,dueAt:`${due}:00`}});$('#reviewCaseMessage').textContent='Review case created and assigned to the reviewer.';});});
     }
     async function monitoringPage() {
         const logs=await request('/audit-logs');
-        table($('table'),[['Timestamp',r=>date(r.created_at)],['User','username'],['Resource','resource_type'],['Action','action']],logs.slice(0,10));
-        $$('main h3,main h4').filter(h=>['CPU & Memory Usage (24h)','API Latency vs GPU Load'].includes(text(h))).forEach(h=>replacePanel(h,['Chưa có API cung cấp số liệu giám sát.']));
-        buttons(/^Restart$|^Logs$|filter_list/).forEach(b=>unavailable(b,'Chưa có API quản lý dịch vụ.'));
-        bindText(/View All Full Logs/,()=>go('LogView.html'));
-        $$('main h3').filter(h=>['RTMPose','Model Server','REST API','Database','Storage Service'].includes(text(h))).forEach(h=>{
-            const card=h.closest('.bg-white')||h.parentElement.parentElement;
-            $$('p,span',card).filter(e=>!e.classList.contains('material-symbols-outlined')).forEach(e=>{if(e.children.length===0)e.textContent='—';});
-        });
-        notice('API đang phản hồi. Chưa có API giám sát CPU/GPU, mô hình và dịch vụ.');
+        const root=$('main');
+        root.className='w-full min-h-[calc(100vh-106px)] bg-surface pt-6';
+        root.innerHTML='<section class="mx-auto max-w-[1540px] px-6 py-6"><div class="mb-5"><h2 class="text-xl font-bold">System activity</h2><p class="mt-1 text-sm text-on-surface-variant">Live audit events returned by the API.</p></div><div class="overflow-hidden rounded-xl border border-outline-variant bg-white"><table class="w-full"><thead><tr><th>Timestamp</th><th>User</th><th>Resource</th><th>Action</th></tr></thead><tbody></tbody></table></div></section>';
+        table($('table'),[['Timestamp',r=>date(r.created_at)],['User','username'],['Resource','resource_type'],['Action','action']],Array.isArray(logs)?logs.slice(0,10):[]);
     }
     let main;
     let loadingOverlay;
@@ -2038,20 +2324,46 @@
             if (separator?.classList.contains('w-[1px]')) separator.remove();
             link.remove();
         });
-        main=$('main');if(main)main.style.visibility='hidden';
+        main=$('main');if(main){main.style.visibility='hidden';main.setAttribute('aria-busy','true');}
         loadingOverlay=document.createElement('div');
         loadingOverlay.className='workspace-api-loading';
-        loadingOverlay.textContent='Loading data…';
+        loadingOverlay.setAttribute('role','status');
+        loadingOverlay.setAttribute('aria-live','polite');
+        loadingOverlay.innerHTML='<span class="workspace-loading-spinner" aria-hidden="true"></span><span class="workspace-loading-message">Đang tải dữ liệu...</span>';
         document.body.append(loadingOverlay);
-        // Clear sample rows immediately so network failures never look like real data.
-        $$('tbody').forEach(body=>{const el=body.closest('table');tableStyles.set(el,$$('tr:first-child td',body).map(c=>c.className));const columns=$$('thead th',el).length;body.replaceChildren();const td=body.insertRow().insertCell();td.colSpan=columns||1;td.className='p-4';td.textContent='Loading data…';});
-        user=await AAIR.guard();if(!user){loadingOverlay.remove();if(main)main.style.visibility='visible';return;}window.AAIRGuidelineModal?.init();
+        const dismissLoadingOverlay=()=>{if(!loadingOverlay)return;loadingOverlay.classList.add('is-hiding');window.setTimeout(()=>loadingOverlay?.remove(),200);};
+        function renderTableSkeleton(tbody, colCount = 4, rowCount = 4) {
+            tbody.replaceChildren();
+            for (let r = 0; r < rowCount; r++) {
+                const tr = document.createElement('tr');
+                tr.className = 'aair-skeleton-row';
+                for (let c = 0; c < colCount; c++) {
+                    const td = document.createElement('td');
+                    td.className = 'px-4 py-3.5';
+                    const bar = document.createElement('div');
+                    bar.className = 'aair-skeleton-shimmer-bar';
+                    const widths = [45, 70, 85, 55, 65, 40];
+                    const w = widths[(r * 2 + c) % widths.length];
+                    bar.style.width = `${w}%`;
+                    td.appendChild(bar);
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            }
+        }
+        // Clear initial rows immediately and render the loading placeholders.
+        $$('tbody').forEach(body=>{const el=body.closest('table');tableStyles.set(el,$$('tr:first-child td',body).map(c=>c.className));const columns=$$('thead th',el).length||4;renderTableSkeleton(body,columns,4);});
+        user=await AAIR.guard();if(!user){dismissLoadingOverlay();if(main){main.style.visibility='visible';main.removeAttribute('aria-busy');}return;}window.AAIRGuidelineModal?.init();
+        $$('button.manual-navbar__logout, #logoutButton').forEach(button=>bind(button,()=>{if(confirm('Are you sure you want to log out?'))AAIR.logout();}));
         const profile=$('header .hidden.md\\:block');
-        if(profile){const ps=$$('p',profile);const roleNames={ADMIN:'Administrator',MANAGER:'Manager',ANALYST:'Analyst',RESULT_ANALYST:'Analyst',AI_LABELER:'AI Labeler',MANUAL_LABELER:'Manual Labeler',REVIEWER:'Reviewer'};if(ps[0])ps[0].textContent=user.username;if(ps[1])ps[1].textContent=roleNames[user.role]||user.role;
+        if(profile){const ps=$$('p',profile);const roleNames={ADMIN:'Administrator',MANAGER:'Manager',USER:'User',ANALYST:'Result Analyst',RESULT_ANALYST:'Result Analyst',AI_LABELER:'AI Labeler',MANUAL_LABELER:'Manual Labeler',REVIEWER:'Reviewer'};if(ps[0])ps[0].textContent=user.username;if(ps[1])ps[1].textContent=roleNames[user.role]||user.role;
             const avatar=profile.previousElementSibling;if(avatar){avatar.replaceChildren();const node=avatarNode(user,'w-full h-full');avatar.append(node);}
+            Array.from(profile.parentElement.childNodes).forEach(node => {
+                if (node !== avatar && node !== profile) node.remove();
+            });
             const logout=document.createElement('button');
             logout.type='button';logout.setAttribute('aria-label','Log out');logout.title='Log out of the system';
-            logout.className='ml-2 inline-flex min-h-9 items-center gap-2 rounded-lg border border-white/40 bg-white/15 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white/70';
+            logout.className='aair-header-logout-btn';
             const label=document.createElement('span');label.textContent='Log out';
             logout.append(label);bind(logout,()=>{if(confirm('Are you sure you want to log out?'))AAIR.logout();});
             profile.parentElement.append(logout);
@@ -2070,17 +2382,18 @@
         else if(page==='Dashboard.html')await dashboardPage();
         else if(page==='Statistics.html')await statisticsPage();
         else if(page==='SystemMonitoring.html')await monitoringPage();
-        if(main)main.style.visibility='visible';
-        loadingOverlay?.remove();
+        if(main){main.style.visibility='visible';main.removeAttribute('aria-busy');}
+        dismissLoadingOverlay();
     }catch(error){
-        loadingOverlay?.remove();
+        loadingOverlay?.classList.add('is-hiding');
         if(main){
             main.replaceChildren();
             const state=document.createElement('section');state.className='workspace-api-error';
             const message=document.createElement('p');message.textContent=error.message||'Unable to load data.';
             const retry=document.createElement('button');retry.type='button';retry.textContent='Retry';retry.onclick=()=>location.reload();
-            state.append(message,retry);main.append(state);main.style.visibility='visible';
+            state.append(message,retry);main.append(state);main.style.visibility='visible';main.removeAttribute('aria-busy');
         }
+        window.setTimeout(()=>loadingOverlay?.remove(),200);
         notice(error.message,true);
     }
 })();

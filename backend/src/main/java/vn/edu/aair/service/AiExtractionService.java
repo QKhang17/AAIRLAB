@@ -34,6 +34,7 @@ public class AiExtractionService {
     private final WorkspaceService workspace;
     private final ObjectMapper json;
     private final JdbcTemplate db;
+    private final AiRateLimiter aiRateLimiter;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(20)).build();
     private final Map<String, Provider> providers;
 
@@ -41,6 +42,7 @@ public class AiExtractionService {
             WorkspaceService workspace,
             ObjectMapper json,
             JdbcTemplate db,
+            AiRateLimiter aiRateLimiter,
             @Value("${app.ai.gemini.api-key:}") String geminiKey,
             @Value("${app.ai.gemini.model:gemini-2.5-flash}") String geminiModel,
             @Value("${app.ai.groq.api-key:}") String groqKey,
@@ -52,6 +54,7 @@ public class AiExtractionService {
         this.workspace = workspace;
         this.json = json;
         this.db = db;
+        this.aiRateLimiter = aiRateLimiter;
         this.providers = Map.of(
                 "Gemini", new Provider(geminiKey, geminiModel),
                 "Groq", new Provider(groqKey, groqModel),
@@ -71,6 +74,14 @@ public class AiExtractionService {
         if (List.of("SUBMITTED", "APPROVED").contains(String.valueOf(task.get("status"))))
             throw WorkspaceService.error(HttpStatus.CONFLICT, "Tác vụ đã nộp nên không thể chạy lại AI");
 
+        var provider = providers.get(providerName);
+        if (provider == null) throw WorkspaceService.error(HttpStatus.BAD_REQUEST, "Nhà cung cấp AI không hợp lệ");
+        if (provider.apiKey() == null || provider.apiKey().isBlank())
+            throw WorkspaceService.error(HttpStatus.CONFLICT, "Chưa cấu hình API key cho " + providerName);
+        if (!aiRateLimiter.tryAcquire(actor.id()))
+            throw WorkspaceService.error(HttpStatus.TOO_MANY_REQUESTS,
+                    "Bạn đã dùng hết hạn mức chạy AI tạm thời; vui lòng thử lại sau");
+
         var document = workspace.document(((Number) task.get("document_id")).longValue());
         if (!(document.get("file_data") instanceof byte[] pdf) || pdf.length == 0)
             throw WorkspaceService.error(HttpStatus.CONFLICT, "Tài liệu chưa có dữ liệu PDF");
@@ -86,10 +97,6 @@ public class AiExtractionService {
         byte[] attachedPdf = pdfContent.searchable() ? null : pdf;
         Map<String, Object> result;
         List<Map<String, Object>> labels;
-        var provider = providers.get(providerName);
-        if (provider == null) throw WorkspaceService.error(HttpStatus.BAD_REQUEST, "Nhà cung cấp AI không hợp lệ");
-        if (provider.apiKey() == null || provider.apiKey().isBlank())
-            throw WorkspaceService.error(HttpStatus.CONFLICT, "Chưa cấu hình API key cho " + providerName);
         labels = runSingle(providerName, provider, prompt, attachedPdf);
         if (labels.isEmpty())
             throw WorkspaceService.error(HttpStatus.BAD_GATEWAY, "AI không rút trích được chỉ tiêu nào từ tài liệu");

@@ -1,0 +1,60 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    expose:
+      - "8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      AI_KEYS_FILE: /run/secrets/aair-application.yml
+      UPLOAD_DIRECTORY: /app/uploads
+    secrets:
+      - source: aair_application
+        target: aair-application.yml
+    volumes:
+      - aair_uploads:/app/uploads
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - aair_internal
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      AAIR_DOMAIN: ${AAIR_DOMAIN:?Set AAIR_DOMAIN in deploy/compose.env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - aair_internal
+
+volumes:
+  aair_uploads:
+  caddy_data:
+  caddy_config:
+
+secrets:
+  aair_application:
+    file: ${AAIR_SECRET_FILE:?Set AAIR_SECRET_FILE in deploy/compose.env}
+
+networks:
+  aair_internal:
+    driver: bridge

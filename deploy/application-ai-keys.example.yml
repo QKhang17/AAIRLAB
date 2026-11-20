@@ -1,0 +1,39 @@
+# Copy to ./secrets/application-ai-keys.yml on the VPS and replace every value.
+# This file is a template only; never commit the active secret file.
+
+spring:
+  datasource:
+    url: "jdbc:postgresql://managed-postgres.example.com:5432/aair_db?sslmode=require"
+    username: "aair_app"
+    password: "REPLACE_WITH_DATABASE_PASSWORD"
+  mail:
+    host: "smtp.example.com"
+    port: 587
+    username: "REPLACE_WITH_SMTP_USERNAME"
+    password: "REPLACE_WITH_SMTP_PASSWORD"
+
+app:
+  cors:
+    allowed-origin: "https://app.example.com"
+    allow-credentials: true
+  auth:
+    cookie-secure: true
+    cookie-same-site: "Lax"
+  jwt:
+    secret: "REPLACE_WITH_A_RANDOM_SECRET_AT_LEAST_32_BYTES"
+    expiration-ms: 3600000
+  mail:
+    from: "REPLACE_WITH_VERIFIED_SENDER"
+  ai:
+    gemini:
+      model: "gemini-2.5-flash"
+      api-key: "REPLACE_WITH_GEMINI_API_KEY"
+    groq:
+      model: "llama-3.3-70b-versatile"
+      api-key: "REPLACE_WITH_GROQ_API_KEY"
+    openai:
+      model: "gpt-5"
+      api-key: "REPLACE_WITH_OPENAI_API_KEY"
+    claude:
+      model: "claude-sonnet-4-6"
+      api-key: "REPLACE_WITH_ANTHROPIC_API_KEY"

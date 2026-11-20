@@ -31,6 +31,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     try {
         // A fresh login must never inherit an expired token from an older tab.
         AAIR.clearSession();
+        await AAIR.csrf();
         const result = await AAIR.request('/auth/login', { method: 'POST', json: {
             username: document.getElementById('username').value.trim(),
             password: document.getElementById('password').value,
@@ -40,7 +41,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
             ? requestedPath
             : null;
         const destination = sameOriginPath || AAIR.home(result.user.role);
-        AAIR.saveSession(result.accessToken, result.user);
+        AAIR.saveSession(null, result.user);
         location.assign(destination);
     } catch (reason) {
         error.textContent = reason.message;
